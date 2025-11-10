@@ -17,7 +17,7 @@ export const AuthProvider = ({ children }) => {
   const login = async (email, password, role) => {
     setLoading(true);
     try {
-      const response = await fetch('https://satisfied-nature.up.railway.app/api/auth/login', {
+      const response = await fetch(`${process.env.REACT_APP_API_URL}/auth/login`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
