@@ -2,13 +2,25 @@ import React from 'react';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import Login from './components/auth/Login';
 import CustomerDashboard from './components/customer/CustomerDashboard';
-
 function AppContent() {
   const { user } = useAuth();
 
-  console.log('🔍 Current user:', user);
+  // Test backend connection on app start
+  useEffect(() => {
+    const testConnection = async () => {
+      try {
+        const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+        const response = await fetch(`${API_URL}/auth/test`);
+        const data = await response.json();
+        console.log('✅ Backend connection test:', data);
+      } catch (error) {
+        console.log('❌ Backend connection failed:', error.message);
+      }
+    };
+    
+    testConnection();
+  }, []);
 
-  // If no user, show login
   if (!user) {
     return <Login />;
   }
