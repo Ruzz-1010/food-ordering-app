@@ -20,24 +20,29 @@ export const AuthProvider = ({ children }) => {
     console.log('🔐 Login attempt:', { email, role });
     
     try {
-      // For now, just create a mock user without API call
-      const mockUser = {
-        id: 1,
-        name: email.split('@')[0],
-        email: email,
-        role: role,
-        isApproved: true
-      };
+      // Use environment variable with fallback for local development
+      const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+      
+      const response = await fetch(`${API_URL}/auth/login`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email, password, role }),
+      });
 
-      const mockToken = 'mock-jwt-token';
+      console.log('🔐 Login response status:', response.status);
       
-      // Simulate API delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      console.log('🔐 Login successful, setting user:', mockUser);
-      setUser(mockUser);
-      localStorage.setItem('token', mockToken);
-      localStorage.setItem('user', JSON.stringify(mockUser));
+      if (response.ok) {
+        const data = await response.json();
+        console.log('🔐 Login successful:', data);
+        setUser(data.user);
+        localStorage.setItem('token', data.token);
+        localStorage.setItem('user', JSON.stringify(data.user));
+      } else {
+        const errorData = await response.json();
+        alert(errorData.message || 'Login failed');
+      }
       
     } catch (error) {
       console.log('🔐 Login error:', error.message);
