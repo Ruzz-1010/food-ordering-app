@@ -5,11 +5,30 @@ const Login = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [role, setRole] = useState('customer');
-  const { login, loading } = useAuth();
+  const [loading, setLoading] = useState(false);
+  const { login } = useAuth();
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    login(email, password, role);
+    setLoading(true);
+    
+    try {
+      // For now, just simulate successful login
+      const mockUser = {
+        id: 1,
+        name: email.split('@')[0],
+        email: email,
+        role: role,
+        isApproved: true
+      };
+      
+      // Call the login function from AuthContext
+      await login(email, password, role);
+      
+    } catch (error) {
+      alert('Login failed: ' + error.message);
+      setLoading(false);
+    }
   };
 
   return (
@@ -58,7 +77,7 @@ const Login = () => {
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-primary text-white p-2 rounded hover:bg-orange-600 disabled:opacity-50"
+            className="w-full bg-orange-500 text-white p-2 rounded hover:bg-orange-600 disabled:opacity-50"
           >
             {loading ? 'Logging in...' : 'Login'}
           </button>

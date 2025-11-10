@@ -6,25 +6,31 @@ import CustomerDashboard from './components/customer/CustomerDashboard';
 function AppContent() {
   const { user } = useAuth();
 
+  console.log('🔍 Current user:', user);
+
+  // If no user, show login
   if (!user) {
     return <Login />;
   }
 
-  // Role-based routing
+  // If user exists, show dashboard based on role
   switch (user.role) {
     case 'customer':
       return <CustomerDashboard />;
     case 'restaurant':
       return <div className="p-6 text-center">
-        <h1 className="text-3xl font-bold text-restaurant">Restaurant Owner Dashboard - Coming Soon</h1>
+        <h1 className="text-3xl font-bold text-green-600">Restaurant Owner Dashboard</h1>
+        <p>Welcome, {user.name}!</p>
       </div>;
     case 'rider':
       return <div className="p-6 text-center">
-        <h1 className="text-3xl font-bold text-rider">Rider Dashboard - Coming Soon</h1>
+        <h1 className="text-3xl font-bold text-yellow-600">Rider Dashboard</h1>
+        <p>Welcome, {user.name}!</p>
       </div>;
     case 'admin':
       return <div className="p-6 text-center">
-        <h1 className="text-3xl font-bold text-admin">Admin Dashboard - Coming Soon</h1>
+        <h1 className="text-3xl font-bold text-blue-600">Admin Dashboard</h1>
+        <p>Welcome, {user.name}!</p>
       </div>;
     default:
       return <Login />;
