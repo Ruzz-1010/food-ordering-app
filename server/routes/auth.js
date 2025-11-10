@@ -12,15 +12,30 @@ router.post('/login', (req, res) => {
   
   console.log('Login attempt:', { email, role });
   
-  // Simple response for testing
+  // Simple response
   res.json({
     message: 'Login successful!',
-    token: 'test-jwt-token-123',
+    token: 'jwt-token-123',
     user: {
       id: 1,
-      name: 'Test User',
+      name: email.split('@')[0],
       email: email,
       role: role,
+      isApproved: true
+    }
+  });
+});
+
+// Register route
+router.post('/register', (req, res) => {
+  res.json({
+    message: 'Registration successful!',
+    token: 'jwt-token-123',
+    user: {
+      id: 2,
+      name: req.body.name,
+      email: req.body.email,
+      role: req.body.role,
       isApproved: true
     }
   });

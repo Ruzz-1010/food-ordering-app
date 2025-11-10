@@ -41,4 +41,10 @@ router.patch('/:id/approve', auth, requireRole(['admin']), async (req, res) => {
   }
 });
 
+
+
+router.get('/', (req, res) => {
+  res.json({ message: 'Users route working' });
+});
+
 module.exports = router;
