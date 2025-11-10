@@ -5,30 +5,11 @@ const Login = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [role, setRole] = useState('customer');
-  const [loading, setLoading] = useState(false);
-  const { login } = useAuth();
+  const { login, loading } = useAuth();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setLoading(true);
-    
-    try {
-      // For now, just simulate successful login
-      const mockUser = {
-        id: 1,
-        name: email.split('@')[0],
-        email: email,
-        role: role,
-        isApproved: true
-      };
-      
-      // Call the login function from AuthContext
-      await login(email, password, role);
-      
-    } catch (error) {
-      alert('Login failed: ' + error.message);
-      setLoading(false);
-    }
+    await login(email, password, role);
   };
 
   return (

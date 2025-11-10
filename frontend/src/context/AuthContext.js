@@ -1,4 +1,4 @@
-import React, { createContext, useState, useContext, useEffect } from 'react';
+import React, { createContext, useState, useContext } from 'react';
 
 const AuthContext = createContext();
 
@@ -10,10 +10,7 @@ export const AuthProvider = ({ children }) => {
     setLoading(true);
     
     try {
-      // DIRECT URL - WALANG ENV VARIABLE
       const API_URL = 'https://food-ordering-app-production-35eb.up.railway.app/api';
-      
-      console.log('🔐 Sending login to backend...');
       
       const response = await fetch(`${API_URL}/auth/login`, {
         method: 'POST',
@@ -23,22 +20,16 @@ export const AuthProvider = ({ children }) => {
         body: JSON.stringify({ email, password, role }),
       });
 
-      console.log('🔐 Response status:', response.status);
-      
-      const data = await response.json();
-      console.log('🔐 Response data:', data);
-      
       if (response.ok) {
+        const data = await response.json();
         setUser(data.user);
         localStorage.setItem('token', data.token);
         localStorage.setItem('user', JSON.stringify(data.user));
-        console.log('✅ LOGIN SUCCESS!');
       } else {
-        alert(data.message || 'Login failed');
+        alert('Login failed');
       }
       
     } catch (error) {
-      console.log('❌ Login error:', error);
       alert('Login failed: ' + error.message);
     } finally {
       setLoading(false);

@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react'; // DAGDAGAN NG useEffect
+import React from 'react';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import Login from './components/auth/Login';
 import CustomerDashboard from './components/customer/CustomerDashboard';
@@ -6,27 +6,10 @@ import CustomerDashboard from './components/customer/CustomerDashboard';
 function AppContent() {
   const { user } = useAuth();
 
-  // Test backend connection on app start
-  useEffect(() => {
-    const testConnection = async () => {
-      try {
-        const API_URL = 'https://food-ordering-app-production-35eb.up.railway.app/api';
-        const response = await fetch(`${API_URL}/auth/test`);
-        const data = await response.json();
-        console.log('✅ Backend connection test:', data);
-      } catch (error) {
-        console.log('❌ Backend connection failed:', error.message);
-      }
-    };
-    
-    testConnection();
-  }, []);
-
   if (!user) {
     return <Login />;
   }
 
-  // Role-based routing
   switch (user.role) {
     case 'customer':
       return <CustomerDashboard />;
