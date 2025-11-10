@@ -1,9 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { 
-    Search, MapPin, Package, Clock, Star, 
-    ShoppingCart, Heart, Filter, User,
-    Phone, Mail, Map, Facebook, Twitter, 
-    Instagram, Youtube, ChevronDown
+    Search, MapPin, Clock, Star, 
+    ShoppingCart, Filter,
+    Facebook, Twitter, Instagram, Youtube
 } from 'lucide-react';
 
 // Login Form Component
@@ -249,7 +248,6 @@ const CustomerDashboard = () => {
     const [user, setUser] = useState(null);
     const [showAuthModal, setShowAuthModal] = useState(false);
     const [authMode, setAuthMode] = useState('login');
-    const [cart, setCart] = useState([]);
     const [restaurants, setRestaurants] = useState([]);
     const [searchQuery, setSearchQuery] = useState('');
 
@@ -302,7 +300,7 @@ const CustomerDashboard = () => {
         if (token && userData) {
             setUser(JSON.parse(userData));
         }
-    }, []);
+    }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
     const handleLogin = async (email, password) => {
         try {
@@ -398,11 +396,6 @@ const CustomerDashboard = () => {
                                 <>
                                     <button className="relative flex items-center space-x-2 text-gray-700 hover:text-red-800">
                                         <ShoppingCart size={24} />
-                                        {cart.length > 0 && (
-                                            <span className="absolute -top-2 -right-2 bg-red-800 text-white rounded-full w-5 h-5 text-xs flex items-center justify-center">
-                                                {cart.length}
-                                            </span>
-                                        )}
                                         <span className="font-medium">CART</span>
                                     </button>
                                     
@@ -538,7 +531,66 @@ const CustomerDashboard = () => {
                             </div>
                         </div>
                         
-                        {/* Footer sections... */}
+                        <div>
+                            <h4 className="font-bold text-white mb-4">QUICK LINKS</h4>
+                            <ul className="space-y-2 text-gray-400">
+                                {['About Us', 'Contact Us', 'FAQs', 'Privacy Policy'].map((link, index) => (
+                                    <li key={index}>
+                                        <button className="hover:text-white transition-colors">
+                                            {link}
+                                        </button>
+                                    </li>
+                                ))}
+                            </ul>
+                        </div>
+
+                        <div>
+                            <h4 className="font-bold text-white mb-4">CONTACT INFO</h4>
+                            <div className="space-y-2 text-gray-400">
+                                <div className="flex items-center space-x-2 hover:text-white transition-colors">
+                                    <span>📞 09105019330</span>
+                                </div>
+                                <div className="flex items-center space-x-2 hover:text-white transition-colors">
+                                    <span>✉️ foodexpress@delivery.com</span>
+                                </div>
+                                <div className="flex items-center space-x-2 hover:text-white transition-colors">
+                                    <span>📍 Puerto Princesa City, Philippines</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div>
+                            <h4 className="font-bold text-white mb-4">NEWSLETTER</h4>
+                            <p className="text-gray-400 mb-4">Subscribe to get special offers and updates</p>
+                            <div className="flex">
+                                <input 
+                                    type="email" 
+                                    placeholder="Your email" 
+                                    className="flex-1 px-3 py-2 bg-gray-800 border border-gray-700 rounded-l focus:outline-none focus:border-red-800 transition-colors"
+                                />
+                                <button className="bg-red-800 text-white px-4 py-2 rounded-r hover:bg-red-900 transition-colors">
+                                    SUBSCRIBE
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div className="border-t border-gray-800">
+                    <div className="max-w-7xl mx-auto px-4 py-4">
+                        <div className="flex flex-col md:flex-row justify-between items-center text-sm text-gray-400">
+                            <p>&copy; 2025 FoodExpress Delivery Service. All rights reserved.</p>
+                            <div className="flex space-x-4 mt-2 md:mt-0">
+                                {['Terms & Conditions', 'Privacy Policy', 'Sitemap'].map((item, index) => (
+                                    <span 
+                                        key={index}
+                                        className="hover:text-white transition-colors cursor-pointer"
+                                    >
+                                        {item}
+                                    </span>
+                                ))}
+                            </div>
+                        </div>
                     </div>
                 </div>
             </footer>
