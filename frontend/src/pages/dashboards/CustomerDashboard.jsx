@@ -1,0 +1,568 @@
+import React, { useState, useEffect } from 'react';
+import { 
+    Search, MapPin, Package, Clock, Star, 
+    ShoppingCart, Heart, Filter, User,
+    Phone, Mail, Map, Facebook, Twitter, 
+    Instagram, Youtube, ChevronDown
+} from 'lucide-react';
+
+// Login Form Component
+const LoginForm = ({ onLogin, onSwitchToRegister, onClose }) => {
+    const [email, setEmail] = useState('');
+    const [password, setPassword] = useState('');
+    const [loading, setLoading] = useState(false);
+
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        setLoading(true);
+        await onLogin(email, password);
+        setLoading(false);
+    };
+
+    return (
+        <div className="bg-white rounded-lg shadow-xl p-8 max-w-md w-full mx-4">
+            <div className="text-center mb-8">
+                <div className="mx-auto h-16 w-16 bg-red-800 rounded-lg flex items-center justify-center shadow-md mb-4">
+                    <span className="text-white font-bold text-xl">FX</span>
+                </div>
+                <h2 className="text-2xl font-bold text-gray-900 mb-2">Welcome Back</h2>
+                <p className="text-gray-600">Sign in to your FoodExpress account</p>
+            </div>
+
+            <form onSubmit={handleSubmit} className="space-y-6">
+                <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Email Address
+                    </label>
+                    <input
+                        type="email"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-800 focus:border-red-800"
+                        placeholder="Enter your email"
+                        required
+                    />
+                </div>
+                
+                <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Password
+                    </label>
+                    <input
+                        type="password"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-800 focus:border-red-800"
+                        placeholder="Enter your password"
+                        required
+                    />
+                </div>
+
+                <button
+                    type="submit"
+                    disabled={loading}
+                    className="w-full bg-red-800 text-white py-3 rounded-lg font-semibold hover:bg-red-900 transition-colors disabled:opacity-50"
+                >
+                    {loading ? 'Signing in...' : 'SIGN IN TO ORDER'}
+                </button>
+
+                <div className="text-center">
+                    <button
+                        type="button"
+                        onClick={onSwitchToRegister}
+                        className="text-red-800 hover:text-red-900 font-medium"
+                    >
+                        Don't have an account? Sign up now
+                    </button>
+                </div>
+            </form>
+        </div>
+    );
+};
+
+// Register Form Component
+const RegisterForm = ({ onRegister, onSwitchToLogin, onClose }) => {
+    const [formData, setFormData] = useState({
+        name: '',
+        email: '',
+        password: '',
+        phone: '',
+        address: ''
+    });
+    const [loading, setLoading] = useState(false);
+
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        setLoading(true);
+        await onRegister(formData);
+        setLoading(false);
+    };
+
+    const handleChange = (e) => {
+        setFormData({ ...formData, [e.target.name]: e.target.value });
+    };
+
+    return (
+        <div className="bg-white rounded-lg shadow-xl p-8 max-w-md w-full mx-4">
+            <div className="text-center mb-8">
+                <div className="mx-auto h-16 w-16 bg-red-800 rounded-lg flex items-center justify-center shadow-md mb-4">
+                    <span className="text-white font-bold text-xl">FX</span>
+                </div>
+                <h2 className="text-2xl font-bold text-gray-900 mb-2">Join FoodExpress</h2>
+                <p className="text-gray-600">Create your account to start ordering</p>
+            </div>
+
+            <form onSubmit={handleSubmit} className="space-y-4">
+                <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Full Name</label>
+                    <input
+                        type="text"
+                        name="name"
+                        value={formData.name}
+                        onChange={handleChange}
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-800 focus:border-red-800"
+                        placeholder="Enter your full name"
+                        required
+                    />
+                </div>
+
+                <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Email Address</label>
+                    <input
+                        type="email"
+                        name="email"
+                        value={formData.email}
+                        onChange={handleChange}
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-800 focus:border-red-800"
+                        placeholder="Enter your email"
+                        required
+                    />
+                </div>
+
+                <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Password</label>
+                    <input
+                        type="password"
+                        name="password"
+                        value={formData.password}
+                        onChange={handleChange}
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-800 focus:border-red-800"
+                        placeholder="Create a password"
+                        required
+                    />
+                </div>
+
+                <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Phone Number</label>
+                    <input
+                        type="tel"
+                        name="phone"
+                        value={formData.phone}
+                        onChange={handleChange}
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-800 focus:border-red-800"
+                        placeholder="09XXXXXXXXX"
+                        required
+                    />
+                </div>
+
+                <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Address</label>
+                    <textarea
+                        name="address"
+                        value={formData.address}
+                        onChange={handleChange}
+                        rows="3"
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-800 focus:border-red-800"
+                        placeholder="Enter your delivery address"
+                        required
+                    />
+                </div>
+
+                <button
+                    type="submit"
+                    disabled={loading}
+                    className="w-full bg-red-800 text-white py-3 rounded-lg font-semibold hover:bg-red-900 transition-colors disabled:opacity-50"
+                >
+                    {loading ? 'Creating account...' : 'CREATE ACCOUNT & START ORDERING'}
+                </button>
+
+                <div className="text-center">
+                    <button
+                        type="button"
+                        onClick={onSwitchToLogin}
+                        className="text-red-800 hover:text-red-900 font-medium"
+                    >
+                        Already have an account? Sign in
+                    </button>
+                </div>
+            </form>
+        </div>
+    );
+};
+
+// Restaurant Card Component
+const RestaurantCard = ({ restaurant, onOrderClick }) => {
+    return (
+        <div className="bg-white rounded-lg shadow-md hover:shadow-lg transition-all duration-300 overflow-hidden border border-gray-200">
+            <div className="h-48 bg-gradient-to-br from-red-700 to-red-900 flex items-center justify-center">
+                <span className="text-white text-4xl">🍕</span>
+            </div>
+            
+            <div className="p-4">
+                <div className="flex justify-between items-start mb-3">
+                    <h3 className="text-xl font-bold text-gray-900">{restaurant.name}</h3>
+                    <div className="flex items-center space-x-1">
+                        <Star size={16} className="text-yellow-400 fill-current" />
+                        <span className="text-sm font-bold">4.5</span>
+                    </div>
+                </div>
+                
+                <div className="flex items-center text-gray-600 text-sm mb-3">
+                    <MapPin size={14} className="mr-1 text-red-800" />
+                    <span>{restaurant.address}</span>
+                </div>
+
+                <div className="flex justify-between items-center text-sm text-gray-500 mb-4">
+                    <span className="bg-gray-100 px-3 py-1 rounded">Fast Food</span>
+                    <span className="text-green-600 font-semibold flex items-center">
+                        <Clock size={14} className="mr-1" />
+                        20-30 min
+                    </span>
+                </div>
+
+                <div className="flex justify-between items-center">
+                    <span className="text-red-800 font-bold text-lg">₱35 delivery</span>
+                    <button
+                        onClick={onOrderClick}
+                        className="bg-red-800 text-white px-6 py-2 rounded hover:bg-red-900 transition-colors"
+                    >
+                        ORDER
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+};
+
+// Main Customer Dashboard Component
+const CustomerDashboard = () => {
+    const [user, setUser] = useState(null);
+    const [showAuthModal, setShowAuthModal] = useState(false);
+    const [authMode, setAuthMode] = useState('login');
+    const [cart, setCart] = useState([]);
+    const [restaurants, setRestaurants] = useState([]);
+    const [searchQuery, setSearchQuery] = useState('');
+
+    // Sample restaurants data
+    const sampleRestaurants = [
+        {
+            id: 1,
+            name: "McDonald's",
+            address: "123 Main Street, City",
+            cuisine: "Fast Food",
+            deliveryTime: "20-30 min",
+            rating: 4.5,
+            deliveryFee: 35
+        },
+        {
+            id: 2,
+            name: "Jollibee",
+            address: "456 Oak Avenue, City",
+            cuisine: "Filipino",
+            deliveryTime: "25-35 min",
+            rating: 4.7,
+            deliveryFee: 35
+        },
+        {
+            id: 3,
+            name: "Pizza Hut",
+            address: "789 Pine Road, City",
+            cuisine: "Pizza",
+            deliveryTime: "30-40 min",
+            rating: 4.3,
+            deliveryFee: 35
+        },
+        {
+            id: 4,
+            name: "KFC",
+            address: "321 Elm Street, City",
+            cuisine: "Fried Chicken",
+            deliveryTime: "20-30 min",
+            rating: 4.4,
+            deliveryFee: 35
+        }
+    ];
+
+    useEffect(() => {
+        setRestaurants(sampleRestaurants);
+        
+        // Check if user is logged in
+        const token = localStorage.getItem('token');
+        const userData = localStorage.getItem('user');
+        if (token && userData) {
+            setUser(JSON.parse(userData));
+        }
+    }, []);
+
+    const handleLogin = async (email, password) => {
+        try {
+            // For demo - always successful
+            const userData = {
+                id: 1,
+                name: email.split('@')[0],
+                email: email,
+                phone: '09123456789',
+                address: 'Sample Address'
+            };
+            
+            setUser(userData);
+            localStorage.setItem('token', 'demo-token');
+            localStorage.setItem('user', JSON.stringify(userData));
+            setShowAuthModal(false);
+        } catch (error) {
+            alert('Login failed: ' + error.message);
+        }
+    };
+
+    const handleRegister = async (formData) => {
+        try {
+            // For demo - always successful
+            const userData = {
+                id: Date.now(),
+                name: formData.name,
+                email: formData.email,
+                phone: formData.phone,
+                address: formData.address
+            };
+            
+            setUser(userData);
+            localStorage.setItem('token', 'demo-token');
+            localStorage.setItem('user', JSON.stringify(userData));
+            setShowAuthModal(false);
+        } catch (error) {
+            alert('Registration failed: ' + error.message);
+        }
+    };
+
+    const handleLogout = () => {
+        setUser(null);
+        localStorage.clear();
+    };
+
+    const handleOrderClick = (restaurant) => {
+        if (!user) {
+            setShowAuthModal(true);
+            setAuthMode('login');
+            return;
+        }
+        alert(`Ordering from ${restaurant.name}`);
+    };
+
+    const filteredRestaurants = restaurants.filter(restaurant =>
+        restaurant.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        restaurant.cuisine.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+
+    return (
+        <div className="min-h-screen bg-gray-50">
+            {/* Header */}
+            <header className="bg-white shadow-md sticky top-0 z-50">
+                <div className="bg-gray-800 text-white py-2">
+                    <div className="max-w-7xl mx-auto px-4 text-center text-sm">
+                        Free delivery on orders over ₱299! • ⭐ Rate your experience and get rewards
+                    </div>
+                </div>
+
+                <div className="max-w-7xl mx-auto px-4 py-4">
+                    <div className="flex items-center justify-between">
+                        <div className="flex items-center space-x-3">
+                            <div className="w-12 h-12 bg-red-800 rounded-lg flex items-center justify-center text-white font-bold text-xl shadow-md">
+                                FX
+                            </div>
+                            <div>
+                                <h1 className="text-2xl font-bold text-red-800">FOODEXPRESS</h1>
+                                <p className="text-xs text-gray-600">Delivery Service</p>
+                            </div>
+                        </div>
+
+                        <nav className="hidden lg:flex items-center space-x-8">
+                            <button className="font-semibold text-sm text-red-800 border-b-2 border-red-800">HOME</button>
+                            <button className="font-semibold text-sm text-gray-700 hover:text-red-800">RESTAURANTS</button>
+                            <button className="font-semibold text-sm text-gray-700 hover:text-red-800">MY ORDERS</button>
+                            <button className="font-semibold text-sm text-gray-700 hover:text-red-800">TRACK ORDER</button>
+                            <button className="font-semibold text-sm text-gray-700 hover:text-red-800">PROFILE</button>
+                        </nav>
+
+                        <div className="flex items-center space-x-4">
+                            {user ? (
+                                <>
+                                    <button className="relative flex items-center space-x-2 text-gray-700 hover:text-red-800">
+                                        <ShoppingCart size={24} />
+                                        {cart.length > 0 && (
+                                            <span className="absolute -top-2 -right-2 bg-red-800 text-white rounded-full w-5 h-5 text-xs flex items-center justify-center">
+                                                {cart.length}
+                                            </span>
+                                        )}
+                                        <span className="font-medium">CART</span>
+                                    </button>
+                                    
+                                    <button 
+                                        onClick={handleLogout}
+                                        className="bg-red-800 text-white px-4 py-2 rounded hover:bg-red-900 transition-colors shadow-md"
+                                    >
+                                        LOGOUT
+                                    </button>
+                                </>
+                            ) : (
+                                <div className="flex items-center space-x-3">
+                                    <button 
+                                        onClick={() => { setShowAuthModal(true); setAuthMode('login'); }}
+                                        className="text-gray-700 hover:text-red-800 font-medium"
+                                    >
+                                        LOGIN
+                                    </button>
+                                    <button 
+                                        onClick={() => { setShowAuthModal(true); setAuthMode('register'); }}
+                                        className="bg-red-800 text-white px-4 py-2 rounded hover:bg-red-900 transition-colors shadow-md"
+                                    >
+                                        SIGN UP
+                                    </button>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+
+                <div className="bg-gray-100 border-t border-b border-gray-200 py-4">
+                    <div className="max-w-7xl mx-auto px-4">
+                        <div className="flex items-center space-x-4">
+                            <div className="flex-1 max-w-2xl">
+                                <div className="relative">
+                                    <Search size={20} className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400" />
+                                    <input 
+                                        type="text" 
+                                        placeholder="Search for restaurants, cuisines, or dishes..." 
+                                        value={searchQuery}
+                                        onChange={(e) => setSearchQuery(e.target.value)}
+                                        className="w-full pl-12 pr-4 py-3 bg-white border border-gray-300 rounded focus:ring-2 focus:ring-red-800 focus:border-red-800"
+                                    />
+                                </div>
+                            </div>
+                            <button className="flex items-center space-x-2 bg-red-800 text-white px-6 py-3 rounded hover:bg-red-900 transition-colors">
+                                <Search size={16} />
+                                <span>SEARCH</span>
+                            </button>
+                            <button className="flex items-center space-x-2 bg-white border border-gray-300 px-4 py-3 rounded hover:border-red-800 transition-colors">
+                                <Filter size={16} />
+                                <span className="font-semibold">FILTER</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </header>
+
+            {/* Hero Banner */}
+            <div className="bg-gradient-to-r from-red-800 to-red-900 text-white py-16">
+                <div className="max-w-7xl mx-auto px-4 text-center">
+                    <h1 className="text-4xl md:text-5xl font-bold mb-6">
+                        DELICIOUS FOOD DELIVERED TO YOUR DOORSTEP
+                    </h1>
+                    <p className="text-lg md:text-xl mb-8 opacity-90">
+                        Experience the best food delivery service in town
+                    </p>
+                    <div className="flex flex-col sm:flex-row justify-center space-y-4 sm:space-y-0 sm:space-x-6">
+                        <button 
+                            onClick={() => user ? console.log('Order now') : setShowAuthModal(true)}
+                            className="bg-white text-red-800 px-8 py-4 rounded font-bold text-lg hover:bg-gray-100 transition-colors"
+                        >
+                            {user ? "ORDER NOW" : "LOGIN TO ORDER"}
+                        </button>
+                        <button className="border-2 border-white text-white px-8 py-4 rounded font-bold text-lg hover:bg-white hover:text-red-800 transition-colors">
+                            BROWSE RESTAURANTS
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            {/* Featured Restaurants */}
+            <div className="max-w-7xl mx-auto px-4 py-12">
+                <div className="flex justify-between items-center mb-8">
+                    <h2 className="text-3xl font-bold text-gray-900">FEATURED RESTAURANTS</h2>
+                    <button className="text-red-800 hover:text-red-900 font-semibold">
+                        VIEW ALL →
+                    </button>
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                    {filteredRestaurants.map(restaurant => (
+                        <RestaurantCard 
+                            key={restaurant.id}
+                            restaurant={restaurant}
+                            onOrderClick={() => handleOrderClick(restaurant)}
+                        />
+                    ))}
+                </div>
+            </div>
+
+            {/* Special Offer */}
+            <div className="bg-red-800 text-white py-12">
+                <div className="max-w-7xl mx-auto px-4 text-center">
+                    <h2 className="text-4xl font-bold mb-4">SPECIAL OFFER!</h2>
+                    <p className="text-xl mb-6">Get 20% OFF on your first order with promo code: WELCOME20</p>
+                    <button 
+                        onClick={() => user ? console.log('Grab offer') : setShowAuthModal(true)}
+                        className="bg-white text-red-800 px-8 py-3 rounded font-bold text-lg hover:bg-gray-100 transition-colors"
+                    >
+                        {user ? "GRAB THIS OFFER" : "LOGIN TO GET OFFER"}
+                    </button>
+                </div>
+            </div>
+
+            {/* Footer */}
+            <footer className="bg-gray-900 text-white">
+                <div className="max-w-7xl mx-auto px-4 py-12">
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
+                        <div>
+                            <h3 className="text-xl font-bold text-white mb-4">FOODEXPRESS</h3>
+                            <p className="text-gray-400 mb-4">
+                                Delivering delicious food to your doorstep with the best quality and service.
+                            </p>
+                            <div className="flex space-x-4">
+                                {[Facebook, Twitter, Instagram, Youtube].map((Icon, index) => (
+                                    <Icon 
+                                        key={index}
+                                        size={20} 
+                                        className="text-gray-400 hover:text-white cursor-pointer" 
+                                    />
+                                ))}
+                            </div>
+                        </div>
+                        
+                        {/* Footer sections... */}
+                    </div>
+                </div>
+            </footer>
+
+            {/* Auth Modal */}
+            {showAuthModal && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+                    {authMode === 'login' ? (
+                        <LoginForm 
+                            onLogin={handleLogin}
+                            onSwitchToRegister={() => setAuthMode('register')}
+                            onClose={() => setShowAuthModal(false)}
+                        />
+                    ) : (
+                        <RegisterForm 
+                            onRegister={handleRegister}
+                            onSwitchToLogin={() => setAuthMode('login')}
+                            onClose={() => setShowAuthModal(false)}
+                        />
+                    )}
+                </div>
+            )}
+        </div>
+    );
+};
+
+export default CustomerDashboard;
