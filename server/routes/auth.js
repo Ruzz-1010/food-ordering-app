@@ -1,44 +1,28 @@
 const express = require('express');
 const router = express.Router();
 
-// Test route
-router.get('/test', (req, res) => {
-  res.json({ message: 'Auth route is working!' });
-});
-
-// Login route
+// LOGIN ROUTE - WORKING NA TO!
 router.post('/login', (req, res) => {
-  const { email, password, role } = req.body;
+  console.log('✅ Login received:', req.body);
   
-  console.log('Login attempt:', { email, role });
-  
-  // Simple response
+  const user = {
+    id: 1,
+    name: req.body.email.split('@')[0],
+    email: req.body.email,
+    role: req.body.role,
+    isApproved: true
+  };
+
   res.json({
-    message: 'Login successful!',
-    token: 'jwt-token-123',
-    user: {
-      id: 1,
-      name: email.split('@')[0],
-      email: email,
-      role: role,
-      isApproved: true
-    }
+    message: 'Login successful! 🎉',
+    token: 'jwt-token-' + Date.now(),
+    user: user
   });
 });
 
-// Register route
-router.post('/register', (req, res) => {
-  res.json({
-    message: 'Registration successful!',
-    token: 'jwt-token-123',
-    user: {
-      id: 2,
-      name: req.body.name,
-      email: req.body.email,
-      role: req.body.role,
-      isApproved: true
-    }
-  });
+// TEST ROUTE
+router.get('/test', (req, res) => {
+  res.json({ message: 'Auth route is WORKING! ✅' });
 });
 
 module.exports = router;

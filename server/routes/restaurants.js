@@ -1,8 +1,6 @@
 const express = require('express');
 const router = express.Router();
-
 router.get('/', (req, res) => {
-  res.json({ message: 'Restaurants route working' });
+  res.json({ message: 'Restaurants API' });
 });
-
 module.exports = router;
