@@ -1,21 +1,26 @@
+// pages/dashboards/CustomerDashboard.jsx
 import React, { useState, useEffect } from 'react';
 import { 
     Search, MapPin, Clock, Star, 
     ShoppingCart, Filter,
     Facebook, Twitter, Instagram, Youtube
 } from 'lucide-react';
+import { useAuth } from '../../context/AuthContext';
 
 // Login Form Component
-const LoginForm = ({ onLogin, onSwitchToRegister, onClose }) => {
+const LoginForm = ({ onLogin, onSwitchToRegister, onClose, loading }) => {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
-    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState('');
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        setLoading(true);
-        await onLogin(email, password);
-        setLoading(false);
+        setError('');
+        
+        const result = await onLogin(email, password);
+        if (!result.success) {
+            setError(result.message);
+        }
     };
 
     return (
@@ -27,6 +32,12 @@ const LoginForm = ({ onLogin, onSwitchToRegister, onClose }) => {
                 <h2 className="text-2xl font-bold text-gray-900 mb-2">Welcome Back</h2>
                 <p className="text-gray-600">Sign in to your FoodExpress account</p>
             </div>
+
+            {error && (
+                <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+                    {error}
+                </div>
+            )}
 
             <form onSubmit={handleSubmit} className="space-y-6">
                 <div>
@@ -40,6 +51,7 @@ const LoginForm = ({ onLogin, onSwitchToRegister, onClose }) => {
                         className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-800 focus:border-red-800"
                         placeholder="Enter your email"
                         required
+                        disabled={loading}
                     />
                 </div>
                 
@@ -54,13 +66,14 @@ const LoginForm = ({ onLogin, onSwitchToRegister, onClose }) => {
                         className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-800 focus:border-red-800"
                         placeholder="Enter your password"
                         required
+                        disabled={loading}
                     />
                 </div>
 
                 <button
                     type="submit"
                     disabled={loading}
-                    className="w-full bg-red-800 text-white py-3 rounded-lg font-semibold hover:bg-red-900 transition-colors disabled:opacity-50"
+                    className="w-full bg-red-800 text-white py-3 rounded-lg font-semibold hover:bg-red-900 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                     {loading ? 'Signing in...' : 'SIGN IN TO ORDER'}
                 </button>
@@ -70,6 +83,7 @@ const LoginForm = ({ onLogin, onSwitchToRegister, onClose }) => {
                         type="button"
                         onClick={onSwitchToRegister}
                         className="text-red-800 hover:text-red-900 font-medium"
+                        disabled={loading}
                     >
                         Don't have an account? Sign up now
                     </button>
@@ -80,7 +94,7 @@ const LoginForm = ({ onLogin, onSwitchToRegister, onClose }) => {
 };
 
 // Register Form Component
-const RegisterForm = ({ onRegister, onSwitchToLogin, onClose }) => {
+const RegisterForm = ({ onRegister, onSwitchToLogin, onClose, loading }) => {
     const [formData, setFormData] = useState({
         name: '',
         email: '',
@@ -88,13 +102,16 @@ const RegisterForm = ({ onRegister, onSwitchToLogin, onClose }) => {
         phone: '',
         address: ''
     });
-    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState('');
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        setLoading(true);
-        await onRegister(formData);
-        setLoading(false);
+        setError('');
+        
+        const result = await onRegister(formData);
+        if (!result.success) {
+            setError(result.message);
+        }
     };
 
     const handleChange = (e) => {
@@ -111,6 +128,12 @@ const RegisterForm = ({ onRegister, onSwitchToLogin, onClose }) => {
                 <p className="text-gray-600">Create your account to start ordering</p>
             </div>
 
+            {error && (
+                <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+                    {error}
+                </div>
+            )}
+
             <form onSubmit={handleSubmit} className="space-y-4">
                 <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">Full Name</label>
@@ -122,6 +145,7 @@ const RegisterForm = ({ onRegister, onSwitchToLogin, onClose }) => {
                         className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-800 focus:border-red-800"
                         placeholder="Enter your full name"
                         required
+                        disabled={loading}
                     />
                 </div>
 
@@ -135,6 +159,7 @@ const RegisterForm = ({ onRegister, onSwitchToLogin, onClose }) => {
                         className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-800 focus:border-red-800"
                         placeholder="Enter your email"
                         required
+                        disabled={loading}
                     />
                 </div>
 
@@ -148,6 +173,7 @@ const RegisterForm = ({ onRegister, onSwitchToLogin, onClose }) => {
                         className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-800 focus:border-red-800"
                         placeholder="Create a password"
                         required
+                        disabled={loading}
                     />
                 </div>
 
@@ -161,6 +187,7 @@ const RegisterForm = ({ onRegister, onSwitchToLogin, onClose }) => {
                         className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-800 focus:border-red-800"
                         placeholder="09XXXXXXXXX"
                         required
+                        disabled={loading}
                     />
                 </div>
 
@@ -174,13 +201,14 @@ const RegisterForm = ({ onRegister, onSwitchToLogin, onClose }) => {
                         className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-800 focus:border-red-800"
                         placeholder="Enter your delivery address"
                         required
+                        disabled={loading}
                     />
                 </div>
 
                 <button
                     type="submit"
                     disabled={loading}
-                    className="w-full bg-red-800 text-white py-3 rounded-lg font-semibold hover:bg-red-900 transition-colors disabled:opacity-50"
+                    className="w-full bg-red-800 text-white py-3 rounded-lg font-semibold hover:bg-red-900 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                     {loading ? 'Creating account...' : 'CREATE ACCOUNT & START ORDERING'}
                 </button>
@@ -190,6 +218,7 @@ const RegisterForm = ({ onRegister, onSwitchToLogin, onClose }) => {
                         type="button"
                         onClick={onSwitchToLogin}
                         className="text-red-800 hover:text-red-900 font-medium"
+                        disabled={loading}
                     >
                         Already have an account? Sign in
                     </button>
@@ -200,7 +229,7 @@ const RegisterForm = ({ onRegister, onSwitchToLogin, onClose }) => {
 };
 
 // Restaurant Card Component
-const RestaurantCard = ({ restaurant, onOrderClick }) => {
+const RestaurantCard = ({ restaurant, onOrderClick, user }) => {
     return (
         <div className="bg-white rounded-lg shadow-md hover:shadow-lg transition-all duration-300 overflow-hidden border border-gray-200">
             <div className="h-48 bg-gradient-to-br from-red-700 to-red-900 flex items-center justify-center">
@@ -232,10 +261,11 @@ const RestaurantCard = ({ restaurant, onOrderClick }) => {
                 <div className="flex justify-between items-center">
                     <span className="text-red-800 font-bold text-lg">₱35 delivery</span>
                     <button
-                        onClick={onOrderClick}
-                        className="bg-red-800 text-white px-6 py-2 rounded hover:bg-red-900 transition-colors"
+                        onClick={() => onOrderClick(restaurant)}
+                        className="bg-red-800 text-white px-6 py-2 rounded hover:bg-red-900 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        disabled={!user}
                     >
-                        ORDER
+                        {user ? 'ORDER' : 'LOGIN TO ORDER'}
                     </button>
                 </div>
             </div>
@@ -245,13 +275,14 @@ const RestaurantCard = ({ restaurant, onOrderClick }) => {
 
 // Main Customer Dashboard Component
 const CustomerDashboard = () => {
-    const [user, setUser] = useState(null);
+    const { user, login, register, logout, loading: authLoading } = useAuth();
     const [showAuthModal, setShowAuthModal] = useState(false);
     const [authMode, setAuthMode] = useState('login');
     const [restaurants, setRestaurants] = useState([]);
     const [searchQuery, setSearchQuery] = useState('');
+    const [loadingRestaurants, setLoadingRestaurants] = useState(true);
 
-    // Sample restaurants data
+    // Sample restaurants data (you can replace this with API call)
     const sampleRestaurants = [
         {
             id: 1,
@@ -292,59 +323,35 @@ const CustomerDashboard = () => {
     ];
 
     useEffect(() => {
-        setRestaurants(sampleRestaurants);
-        
-        // Check if user is logged in
-        const token = localStorage.getItem('token');
-        const userData = localStorage.getItem('user');
-        if (token && userData) {
-            setUser(JSON.parse(userData));
-        }
-    }, []); // eslint-disable-line react-hooks/exhaustive-deps
+        // Simulate API call to get restaurants
+        const fetchRestaurants = async () => {
+            setLoadingRestaurants(true);
+            try {
+                // Replace with actual API call
+                // const response = await fetch('https://food-ordering-app-production-35eb.up.railway.app/api/restaurants');
+                // const data = await response.json();
+                // setRestaurants(data);
+                
+                setTimeout(() => {
+                    setRestaurants(sampleRestaurants);
+                    setLoadingRestaurants(false);
+                }, 1000);
+            } catch (error) {
+                console.error('Error fetching restaurants:', error);
+                setRestaurants(sampleRestaurants);
+                setLoadingRestaurants(false);
+            }
+        };
+
+        fetchRestaurants();
+    }, []);
 
     const handleLogin = async (email, password) => {
-        try {
-            // For demo - always successful
-            const userData = {
-                id: 1,
-                name: email.split('@')[0],
-                email: email,
-                phone: '09123456789',
-                address: 'Sample Address'
-            };
-            
-            setUser(userData);
-            localStorage.setItem('token', 'demo-token');
-            localStorage.setItem('user', JSON.stringify(userData));
-            setShowAuthModal(false);
-        } catch (error) {
-            alert('Login failed: ' + error.message);
-        }
+        return await login(email, password);
     };
 
     const handleRegister = async (formData) => {
-        try {
-            // For demo - always successful
-            const userData = {
-                id: Date.now(),
-                name: formData.name,
-                email: formData.email,
-                phone: formData.phone,
-                address: formData.address
-            };
-            
-            setUser(userData);
-            localStorage.setItem('token', 'demo-token');
-            localStorage.setItem('user', JSON.stringify(userData));
-            setShowAuthModal(false);
-        } catch (error) {
-            alert('Registration failed: ' + error.message);
-        }
-    };
-
-    const handleLogout = () => {
-        setUser(null);
-        localStorage.clear();
+        return await register(formData);
     };
 
     const handleOrderClick = (restaurant) => {
@@ -354,12 +361,24 @@ const CustomerDashboard = () => {
             return;
         }
         alert(`Ordering from ${restaurant.name}`);
+        // Here you can navigate to restaurant menu page
     };
 
     const filteredRestaurants = restaurants.filter(restaurant =>
         restaurant.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         restaurant.cuisine.toLowerCase().includes(searchQuery.toLowerCase())
     );
+
+    if (authLoading) {
+        return (
+            <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+                <div className="text-center">
+                    <div className="w-16 h-16 border-4 border-red-800 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+                    <p className="text-gray-600">Loading...</p>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="min-h-screen bg-gray-50">
@@ -394,13 +413,16 @@ const CustomerDashboard = () => {
                         <div className="flex items-center space-x-4">
                             {user ? (
                                 <>
+                                    <div className="flex items-center space-x-2">
+                                        <span className="text-gray-700">Welcome, {user.name}!</span>
+                                    </div>
                                     <button className="relative flex items-center space-x-2 text-gray-700 hover:text-red-800">
                                         <ShoppingCart size={24} />
                                         <span className="font-medium">CART</span>
                                     </button>
                                     
                                     <button 
-                                        onClick={handleLogout}
+                                        onClick={logout}
                                         className="bg-red-800 text-white px-4 py-2 rounded hover:bg-red-900 transition-colors shadow-md"
                                     >
                                         LOGOUT
@@ -486,15 +508,25 @@ const CustomerDashboard = () => {
                     </button>
                 </div>
                 
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                    {filteredRestaurants.map(restaurant => (
-                        <RestaurantCard 
-                            key={restaurant.id}
-                            restaurant={restaurant}
-                            onOrderClick={() => handleOrderClick(restaurant)}
-                        />
-                    ))}
-                </div>
+                {loadingRestaurants ? (
+                    <div className="flex justify-center items-center py-12">
+                        <div className="text-center">
+                            <div className="w-12 h-12 border-4 border-red-800 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+                            <p className="text-gray-600">Loading restaurants...</p>
+                        </div>
+                    </div>
+                ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                        {filteredRestaurants.map(restaurant => (
+                            <RestaurantCard 
+                                key={restaurant.id}
+                                restaurant={restaurant}
+                                onOrderClick={handleOrderClick}
+                                user={user}
+                            />
+                        ))}
+                    </div>
+                )}
             </div>
 
             {/* Special Offer */}
@@ -603,12 +635,14 @@ const CustomerDashboard = () => {
                             onLogin={handleLogin}
                             onSwitchToRegister={() => setAuthMode('register')}
                             onClose={() => setShowAuthModal(false)}
+                            loading={authLoading}
                         />
                     ) : (
                         <RegisterForm 
                             onRegister={handleRegister}
                             onSwitchToLogin={() => setAuthMode('login')}
                             onClose={() => setShowAuthModal(false)}
+                            loading={authLoading}
                         />
                     )}
                 </div>
