@@ -24,7 +24,7 @@ router.post('/register', async (req, res) => {
     const newUser = new User({
       name,
       email,
-      password, // Will be hashed automatically by the model
+      password,
       phone,
       address,
       role,
@@ -67,7 +67,7 @@ router.post('/login', async (req, res) => {
   try {
     console.log('🔐 Login attempt:', req.body);
     
-    const { email, password, role = 'customer' } = req.body;
+    const { email, password } = req.body;
 
     // Find user in REAL MongoDB
     const user = await User.findOne({ email });
@@ -78,20 +78,20 @@ router.post('/login', async (req, res) => {
       });
     }
 
-    // Check if user is approved
-    if (!user.isApproved) {
-      return res.status(400).json({ 
-        success: false,
-        message: 'Account pending approval' 
-      });
-    }
-
     // Check password
     const isPasswordValid = await user.comparePassword(password);
     if (!isPasswordValid) {
       return res.status(400).json({ 
         success: false,
         message: 'Invalid email or password' 
+      });
+    }
+
+    // Check if user is approved
+    if (!user.isApproved && user.role !== 'customer') {
+      return res.status(400).json({ 
+        success: false,
+        message: 'Account pending approval' 
       });
     }
 
