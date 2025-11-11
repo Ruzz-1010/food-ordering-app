@@ -1,23 +1,127 @@
 const express = require('express');
 const router = express.Router();
+const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
+const User = require('../models/User');
 
-// LOGIN ROUTE - WORKING NA TO!
-router.post('/login', (req, res) => {
-  console.log('✅ Login received:', req.body);
-  
-  const user = {
-    id: 1,
-    name: req.body.email.split('@')[0],
-    email: req.body.email,
-    role: req.body.role,
-    isApproved: true
-  };
+// REGISTER ROUTE
+router.post('/register', async (req, res) => {
+  try {
+    console.log('📝 Register attempt:', req.body);
+    
+    const { name, email, password, phone, address, role = 'customer' } = req.body;
 
-  res.json({
-    message: 'Login successful! 🎉',
-    token: 'jwt-token-' + Date.now(),
-    user: user
-  });
+    // Check if user already exists
+    const existingUser = await User.findOne({ email });
+    if (existingUser) {
+      return res.status(400).json({ 
+        success: false,
+        message: 'User already exists with this email' 
+      });
+    }
+
+    // Create new user
+    const newUser = new User({
+      name,
+      email,
+      password, // Will be hashed automatically by the model
+      phone,
+      address,
+      role,
+      isApproved: role === 'customer' // Auto-approve customers
+    });
+
+    await newUser.save();
+
+    // Generate JWT token
+    const token = jwt.sign(
+      { userId: newUser._id, email: newUser.email }, 
+      process.env.JWT_SECRET || 'fallback-secret-key',
+      { expiresIn: '7d' }
+    );
+
+    res.status(201).json({
+      success: true,
+      message: 'User registered successfully! 🎉',
+      token,
+      user: {
+        id: newUser._id,
+        name: newUser.name,
+        email: newUser.email,
+        role: newUser.role,
+        isApproved: newUser.isApproved
+      }
+    });
+
+  } catch (error) {
+    console.error('❌ Registration error:', error);
+    res.status(500).json({ 
+      success: false,
+      message: 'Registration failed: ' + error.message 
+    });
+  }
+});
+
+// LOGIN ROUTE - REAL AUTHENTICATION
+router.post('/login', async (req, res) => {
+  try {
+    console.log('🔐 Login attempt:', req.body);
+    
+    const { email, password, role = 'customer' } = req.body;
+
+    // Find user in REAL MongoDB
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res.status(400).json({ 
+        success: false,
+        message: 'Invalid email or password' 
+      });
+    }
+
+    // Check if user is approved
+    if (!user.isApproved) {
+      return res.status(400).json({ 
+        success: false,
+        message: 'Account pending approval' 
+      });
+    }
+
+    // Check password
+    const isPasswordValid = await user.comparePassword(password);
+    if (!isPasswordValid) {
+      return res.status(400).json({ 
+        success: false,
+        message: 'Invalid email or password' 
+      });
+    }
+
+    // Generate JWT token
+    const token = jwt.sign(
+      { userId: user._id, email: user.email }, 
+      process.env.JWT_SECRET || 'fallback-secret-key',
+      { expiresIn: '7d' }
+    );
+
+    res.json({
+      success: true,
+      message: 'Login successful! 🎉',
+      token,
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        isApproved: user.isApproved
+      }
+    });
+
+  } catch (error) {
+    console.error('❌ Login error:', error);
+    res.status(500).json({ 
+      success: false,
+      message: 'Login failed: ' + error.message 
+    });
+  }
 });
 
 // TEST ROUTE
