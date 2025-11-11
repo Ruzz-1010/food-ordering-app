@@ -282,46 +282,6 @@ const CustomerDashboard = () => {
     const [searchQuery, setSearchQuery] = useState('');
     const [loadingRestaurants, setLoadingRestaurants] = useState(true);
 
-    // Sample restaurants data (you can replace this with API call)
-    const sampleRestaurants = [
-        {
-            id: 1,
-            name: "McDonald's",
-            address: "123 Main Street, City",
-            cuisine: "Fast Food",
-            deliveryTime: "20-30 min",
-            rating: 4.5,
-            deliveryFee: 35
-        },
-        {
-            id: 2,
-            name: "Jollibee",
-            address: "456 Oak Avenue, City",
-            cuisine: "Filipino",
-            deliveryTime: "25-35 min",
-            rating: 4.7,
-            deliveryFee: 35
-        },
-        {
-            id: 3,
-            name: "Pizza Hut",
-            address: "789 Pine Road, City",
-            cuisine: "Pizza",
-            deliveryTime: "30-40 min",
-            rating: 4.3,
-            deliveryFee: 35
-        },
-        {
-            id: 4,
-            name: "KFC",
-            address: "321 Elm Street, City",
-            cuisine: "Fried Chicken",
-            deliveryTime: "20-30 min",
-            rating: 4.4,
-            deliveryFee: 35
-        }
-    ];
-
     useEffect(() => {
         // Simulate API call to get restaurants
         const fetchRestaurants = async () => {
@@ -333,18 +293,74 @@ const CustomerDashboard = () => {
                 // setRestaurants(data);
                 
                 setTimeout(() => {
-                    setRestaurants(sampleRestaurants);
+                    setRestaurants([
+                        {
+                            id: 1,
+                            name: "McDonald's",
+                            address: "123 Main Street, City",
+                            cuisine: "Fast Food",
+                            deliveryTime: "20-30 min",
+                            rating: 4.5,
+                            deliveryFee: 35
+                        },
+                        {
+                            id: 2,
+                            name: "Jollibee",
+                            address: "456 Oak Avenue, City",
+                            cuisine: "Filipino",
+                            deliveryTime: "25-35 min",
+                            rating: 4.7,
+                            deliveryFee: 35
+                        },
+                        {
+                            id: 3,
+                            name: "Pizza Hut",
+                            address: "789 Pine Road, City",
+                            cuisine: "Pizza",
+                            deliveryTime: "30-40 min",
+                            rating: 4.3,
+                            deliveryFee: 35
+                        },
+                        {
+                            id: 4,
+                            name: "KFC",
+                            address: "321 Elm Street, City",
+                            cuisine: "Fried Chicken",
+                            deliveryTime: "20-30 min",
+                            rating: 4.4,
+                            deliveryFee: 35
+                        }
+                    ]);
                     setLoadingRestaurants(false);
                 }, 1000);
             } catch (error) {
                 console.error('Error fetching restaurants:', error);
-                setRestaurants(sampleRestaurants);
+                setRestaurants([
+                    {
+                        id: 1,
+                        name: "McDonald's",
+                        address: "123 Main Street, City",
+                        cuisine: "Fast Food",
+                        deliveryTime: "20-30 min",
+                        rating: 4.5,
+                        deliveryFee: 35
+                    },
+                    {
+                        id: 2,
+                        name: "Jollibee",
+                        address: "456 Oak Avenue, City",
+                        cuisine: "Filipino",
+                        deliveryTime: "25-35 min",
+                        rating: 4.7,
+                        deliveryFee: 35
+                    }
+                ]);
                 setLoadingRestaurants(false);
             }
         };
 
         fetchRestaurants();
-    }, []);
+    }, []); // Empty dependency array is now safe
 
     const handleLogin = async (email, password) => {
         return await login(email, password);
