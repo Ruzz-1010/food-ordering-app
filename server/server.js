@@ -14,16 +14,18 @@ app.use(cors({
 
 app.use(express.json());
 
-// ROUTES - DAPAT NASA BABA CORS
+// MongoDB - CONNECT FIRST
+mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/foodordering')
+  .then(() => console.log('✅ MongoDB Connected'))
+  .catch(err => console.log('❌ MongoDB Error:', err));
+
+// ROUTES - AFTER DATABASE CONNECTION
+const healthRoutes = require('./routes/health'); // Move this here
+app.use('/api', healthRoutes);
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/users', require('./routes/users'));
 app.use('/api/restaurants', require('./routes/restaurants'));
 app.use('/api/orders', require('./routes/orders'));
-
-// MongoDB
-mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/foodordering')
-  .then(() => console.log('✅ MongoDB Connected'))
-  .catch(err => console.log('❌ MongoDB Error:', err));
 
 // Basic route
 app.get('/', (req, res) => {
