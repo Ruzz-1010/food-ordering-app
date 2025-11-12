@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { 
     Search, MapPin, Clock, Star, 
-    ShoppingCart, Filter,
-    Facebook, Twitter, Instagram, Youtube
+    ShoppingCart
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 
@@ -143,7 +142,6 @@ const RestaurantCard = ({ restaurant, onOrderClick, user }) => {
 const CustomerDashboard = () => {
     const { user, login, logout, loading: authLoading } = useAuth();
     const [showAuthModal, setShowAuthModal] = useState(false);
-    const [authMode, setAuthMode] = useState('login');
     const [restaurants, setRestaurants] = useState([]);
     const [searchQuery, setSearchQuery] = useState('');
     const [loadingRestaurants, setLoadingRestaurants] = useState(true);
@@ -181,7 +179,6 @@ const CustomerDashboard = () => {
     const handleOrderClick = (restaurant) => {
         if (!user) {
             setShowAuthModal(true);
-            setAuthMode('login');
             return;
         }
         alert(`Ordering from ${restaurant.name}`);
@@ -245,7 +242,7 @@ const CustomerDashboard = () => {
                             ) : (
                                 <div className="flex items-center space-x-3">
                                     <button 
-                                        onClick={() => { setShowAuthModal(true); setAuthMode('login'); }}
+                                        onClick={() => setShowAuthModal(true)}
                                         className="text-gray-700 hover:text-red-800 font-medium"
                                     >
                                         LOGIN
@@ -342,7 +339,7 @@ const CustomerDashboard = () => {
                 <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
                     <LoginForm 
                         onLogin={handleLogin}
-                        onSwitchToRegister={() => setAuthMode('register')}
+                        onSwitchToRegister={() => {}}
                         onClose={() => setShowAuthModal(false)}
                         loading={authLoading}
                     />
