@@ -1,4 +1,3 @@
-// pages/dashboards/CustomerDashboard.jsx
 import React, { useState, useEffect } from 'react';
 import { 
     Search, MapPin, Clock, Star, 
@@ -20,6 +19,9 @@ const LoginForm = ({ onLogin, onSwitchToRegister, onClose, loading }) => {
         const result = await onLogin(email, password);
         if (!result.success) {
             setError(result.message);
+        } else {
+            // Login successful - modal will close automatically due to role-based redirect
+            onClose();
         }
     };
 
@@ -111,6 +113,9 @@ const RegisterForm = ({ onRegister, onSwitchToLogin, onClose, loading }) => {
         const result = await onRegister(formData);
         if (!result.success) {
             setError(result.message);
+        } else {
+            // Registration successful - modal will close automatically
+            onClose();
         }
     };
 
@@ -241,7 +246,7 @@ const RestaurantCard = ({ restaurant, onOrderClick, user }) => {
                     <h3 className="text-xl font-bold text-gray-900">{restaurant.name}</h3>
                     <div className="flex items-center space-x-1">
                         <Star size={16} className="text-yellow-400 fill-current" />
-                        <span className="text-sm font-bold">4.5</span>
+                        <span className="text-sm font-bold">{restaurant.rating}</span>
                     </div>
                 </div>
                 
@@ -251,15 +256,15 @@ const RestaurantCard = ({ restaurant, onOrderClick, user }) => {
                 </div>
 
                 <div className="flex justify-between items-center text-sm text-gray-500 mb-4">
-                    <span className="bg-gray-100 px-3 py-1 rounded">Fast Food</span>
+                    <span className="bg-gray-100 px-3 py-1 rounded">{restaurant.cuisine}</span>
                     <span className="text-green-600 font-semibold flex items-center">
                         <Clock size={14} className="mr-1" />
-                        20-30 min
+                        {restaurant.deliveryTime}
                     </span>
                 </div>
 
                 <div className="flex justify-between items-center">
-                    <span className="text-red-800 font-bold text-lg">₱35 delivery</span>
+                    <span className="text-red-800 font-bold text-lg">₱{restaurant.deliveryFee} delivery</span>
                     <button
                         onClick={() => onOrderClick(restaurant)}
                         className="bg-red-800 text-white px-6 py-2 rounded hover:bg-red-900 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
@@ -282,85 +287,51 @@ const CustomerDashboard = () => {
     const [searchQuery, setSearchQuery] = useState('');
     const [loadingRestaurants, setLoadingRestaurants] = useState(true);
 
+    // Fetch REAL restaurants from API
     useEffect(() => {
-        // Simulate API call to get restaurants
         const fetchRestaurants = async () => {
             setLoadingRestaurants(true);
             try {
-                // Replace with actual API call
-                // const response = await fetch('https://food-ordering-app-production-35eb.up.railway.app/api/restaurants');
-                // const data = await response.json();
-                // setRestaurants(data);
-                
-                setTimeout(() => {
-                    setRestaurants([
-                        {
-                            id: 1,
-                            name: "McDonald's",
-                            address: "123 Main Street, City",
-                            cuisine: "Fast Food",
-                            deliveryTime: "20-30 min",
-                            rating: 4.5,
-                            deliveryFee: 35
-                        },
-                        {
-                            id: 2,
-                            name: "Jollibee",
-                            address: "456 Oak Avenue, City",
-                            cuisine: "Filipino",
-                            deliveryTime: "25-35 min",
-                            rating: 4.7,
-                            deliveryFee: 35
-                        },
-                        {
-                            id: 3,
-                            name: "Pizza Hut",
-                            address: "789 Pine Road, City",
-                            cuisine: "Pizza",
-                            deliveryTime: "30-40 min",
-                            rating: 4.3,
-                            deliveryFee: 35
-                        },
-                        {
-                            id: 4,
-                            name: "KFC",
-                            address: "321 Elm Street, City",
-                            cuisine: "Fried Chicken",
-                            deliveryTime: "20-30 min",
-                            rating: 4.4,
-                            deliveryFee: 35
-                        }
-                    ]);
-                    setLoadingRestaurants(false);
-                }, 1000);
+                const response = await fetch('https://food-ordering-app-production-35eb.up.railway.app/api/restaurants');
+                if (response.ok) {
+                    const data = await response.json();
+                    setRestaurants(data);
+                } else {
+                    // Fallback to sample data if API fails
+                    setRestaurants(getSampleRestaurants());
+                }
             } catch (error) {
                 console.error('Error fetching restaurants:', error);
-                setRestaurants([
-                    {
-                        id: 1,
-                        name: "McDonald's",
-                        address: "123 Main Street, City",
-                        cuisine: "Fast Food",
-                        deliveryTime: "20-30 min",
-                        rating: 4.5,
-                        deliveryFee: 35
-                    },
-                    {
-                        id: 2,
-                        name: "Jollibee",
-                        address: "456 Oak Avenue, City",
-                        cuisine: "Filipino",
-                        deliveryTime: "25-35 min",
-                        rating: 4.7,
-                        deliveryFee: 35
-                    }
-                ]);
+                setRestaurants(getSampleRestaurants());
+            } finally {
                 setLoadingRestaurants(false);
             }
         };
 
         fetchRestaurants();
-    }, []); // Empty dependency array is now safe
+    }, []);
+
+    // Sample restaurants fallback
+    const getSampleRestaurants = () => [
+        {
+            id: 1,
+            name: "McDonald's",
+            address: "123 Main Street, City",
+            cuisine: "Fast Food",
+            deliveryTime: "20-30 min",
+            rating: 4.5,
+            deliveryFee: 35
+        },
+        {
+            id: 2,
+            name: "Jollibee",
+            address: "456 Oak Avenue, City",
+            cuisine: "Filipino",
+            deliveryTime: "25-35 min",
+            rating: 4.7,
+            deliveryFee: 35
+        }
+    ];
 
     const handleLogin = async (email, password) => {
         return await login(email, password);
@@ -382,7 +353,7 @@ const CustomerDashboard = () => {
 
     const filteredRestaurants = restaurants.filter(restaurant =>
         restaurant.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        restaurant.cuisine.toLowerCase().includes(searchQuery.toLowerCase())
+        (restaurant.cuisine && restaurant.cuisine.toLowerCase().includes(searchQuery.toLowerCase()))
     );
 
     if (authLoading) {
