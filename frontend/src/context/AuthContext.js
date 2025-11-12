@@ -38,7 +38,7 @@ export const AuthProvider = ({ children }) => {
         setUser(data.user);
         localStorage.setItem('token', data.token);
         localStorage.setItem('user', JSON.stringify(data.user));
-        return { success: true, message: 'Login successful' };
+        return { success: true, message: 'Login successful', user: data.user };
       } else {
         return { success: false, message: data.message || 'Login failed' };
       }
@@ -83,6 +83,8 @@ export const AuthProvider = ({ children }) => {
     setUser(null);
     localStorage.removeItem('token');
     localStorage.removeItem('user');
+    // Redirect to customer dashboard after logout
+    window.location.href = '/';
   };
 
   return (
