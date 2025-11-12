@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { 
     Search, MapPin, Clock, Star, 
     ShoppingCart, Filter,
-    Facebook, Twitter, Instagram, Youtube
+    Facebook, Twitter, Instagram, Youtube,
+    AlertCircle
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 
@@ -20,7 +21,6 @@ const LoginForm = ({ onLogin, onSwitchToRegister, onClose, loading }) => {
         if (!result.success) {
             setError(result.message);
         } else {
-            // Login successful - modal will close automatically due to role-based redirect
             onClose();
         }
     };
@@ -114,7 +114,6 @@ const RegisterForm = ({ onRegister, onSwitchToLogin, onClose, loading }) => {
         if (!result.success) {
             setError(result.message);
         } else {
-            // Registration successful - modal will close automatically
             onClose();
         }
     };
@@ -238,7 +237,7 @@ const RestaurantCard = ({ restaurant, onOrderClick, user }) => {
     return (
         <div className="bg-white rounded-lg shadow-md hover:shadow-lg transition-all duration-300 overflow-hidden border border-gray-200">
             <div className="h-48 bg-gradient-to-br from-red-700 to-red-900 flex items-center justify-center">
-                <span className="text-white text-4xl">🍕</span>
+                <span className="text-white text-4xl">🏪</span>
             </div>
             
             <div className="p-4">
@@ -246,25 +245,25 @@ const RestaurantCard = ({ restaurant, onOrderClick, user }) => {
                     <h3 className="text-xl font-bold text-gray-900">{restaurant.name}</h3>
                     <div className="flex items-center space-x-1">
                         <Star size={16} className="text-yellow-400 fill-current" />
-                        <span className="text-sm font-bold">{restaurant.rating}</span>
+                        <span className="text-sm font-bold">{restaurant.rating || '4.5'}</span>
                     </div>
                 </div>
                 
                 <div className="flex items-center text-gray-600 text-sm mb-3">
                     <MapPin size={14} className="mr-1 text-red-800" />
-                    <span>{restaurant.address}</span>
+                    <span>{restaurant.address || 'Location not specified'}</span>
                 </div>
 
                 <div className="flex justify-between items-center text-sm text-gray-500 mb-4">
-                    <span className="bg-gray-100 px-3 py-1 rounded">{restaurant.cuisine}</span>
+                    <span className="bg-gray-100 px-3 py-1 rounded">{restaurant.cuisine || 'Various'}</span>
                     <span className="text-green-600 font-semibold flex items-center">
                         <Clock size={14} className="mr-1" />
-                        {restaurant.deliveryTime}
+                        {restaurant.deliveryTime || '20-30 min'}
                     </span>
                 </div>
 
                 <div className="flex justify-between items-center">
-                    <span className="text-red-800 font-bold text-lg">₱{restaurant.deliveryFee} delivery</span>
+                    <span className="text-red-800 font-bold text-lg">₱{restaurant.deliveryFee || '35'} delivery</span>
                     <button
                         onClick={() => onOrderClick(restaurant)}
                         className="bg-red-800 text-white px-6 py-2 rounded hover:bg-red-900 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
@@ -278,6 +277,21 @@ const RestaurantCard = ({ restaurant, onOrderClick, user }) => {
     );
 };
 
+// Empty State Component
+const EmptyRestaurantsState = () => (
+    <div className="text-center py-12">
+        <AlertCircle size={48} className="mx-auto text-gray-400 mb-4" />
+        <h3 className="text-xl font-semibold text-gray-900 mb-2">No Restaurants Available</h3>
+        <p className="text-gray-600 mb-6">There are no restaurants in the database yet.</p>
+        <button 
+            onClick={() => window.location.reload()}
+            className="bg-red-800 text-white px-6 py-2 rounded hover:bg-red-900 transition-colors"
+        >
+            Refresh Page
+        </button>
+    </div>
+);
+
 // Main Customer Dashboard Component
 const CustomerDashboard = () => {
     const { user, login, register, logout, loading: authLoading } = useAuth();
@@ -286,23 +300,27 @@ const CustomerDashboard = () => {
     const [restaurants, setRestaurants] = useState([]);
     const [searchQuery, setSearchQuery] = useState('');
     const [loadingRestaurants, setLoadingRestaurants] = useState(true);
+    const [apiError, setApiError] = useState('');
 
-    // Fetch REAL restaurants from API
+    // Fetch REAL restaurants from API - NO SAMPLE DATA
     useEffect(() => {
         const fetchRestaurants = async () => {
             setLoadingRestaurants(true);
+            setApiError('');
             try {
                 const response = await fetch('https://food-ordering-app-production-35eb.up.railway.app/api/restaurants');
+                
                 if (response.ok) {
                     const data = await response.json();
-                    setRestaurants(data);
+                    setRestaurants(data || []);
                 } else {
-                    // Fallback to sample data if API fails
-                    setRestaurants(getSampleRestaurants());
+                    setApiError('Failed to load restaurants');
+                    setRestaurants([]);
                 }
             } catch (error) {
                 console.error('Error fetching restaurants:', error);
-                setRestaurants(getSampleRestaurants());
+                setApiError('Network error loading restaurants');
+                setRestaurants([]);
             } finally {
                 setLoadingRestaurants(false);
             }
@@ -310,28 +328,6 @@ const CustomerDashboard = () => {
 
         fetchRestaurants();
     }, []);
-
-    // Sample restaurants fallback
-    const getSampleRestaurants = () => [
-        {
-            id: 1,
-            name: "McDonald's",
-            address: "123 Main Street, City",
-            cuisine: "Fast Food",
-            deliveryTime: "20-30 min",
-            rating: 4.5,
-            deliveryFee: 35
-        },
-        {
-            id: 2,
-            name: "Jollibee",
-            address: "456 Oak Avenue, City",
-            cuisine: "Filipino",
-            deliveryTime: "25-35 min",
-            rating: 4.7,
-            deliveryFee: 35
-        }
-    ];
 
     const handleLogin = async (email, password) => {
         return await login(email, password);
@@ -348,12 +344,12 @@ const CustomerDashboard = () => {
             return;
         }
         alert(`Ordering from ${restaurant.name}`);
-        // Here you can navigate to restaurant menu page
     };
 
     const filteredRestaurants = restaurants.filter(restaurant =>
-        restaurant.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        (restaurant.cuisine && restaurant.cuisine.toLowerCase().includes(searchQuery.toLowerCase()))
+        restaurant.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        restaurant.cuisine?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        restaurant.address?.toLowerCase().includes(searchQuery.toLowerCase())
     );
 
     if (authLoading) {
@@ -502,11 +498,19 @@ const CustomerDashboard = () => {
                             <p className="text-gray-600">Loading restaurants...</p>
                         </div>
                     </div>
+                ) : apiError ? (
+                    <div className="text-center py-12">
+                        <AlertCircle size={48} className="mx-auto text-red-500 mb-4" />
+                        <h3 className="text-xl font-semibold text-gray-900 mb-2">Error Loading Restaurants</h3>
+                        <p className="text-gray-600 mb-6">{apiError}</p>
+                    </div>
+                ) : filteredRestaurants.length === 0 ? (
+                    <EmptyRestaurantsState />
                 ) : (
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                         {filteredRestaurants.map(restaurant => (
                             <RestaurantCard 
-                                key={restaurant.id}
+                                key={restaurant._id || restaurant.id}
                                 restaurant={restaurant}
                                 onOrderClick={handleOrderClick}
                                 user={user}
