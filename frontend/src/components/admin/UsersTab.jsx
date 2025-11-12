@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Users, RefreshCw, CheckCircle, XCircle, Edit, Trash2, Mail, Phone, MapPin, AlertCircle } from 'lucide-react';
+import { Users, RefreshCw, CheckCircle, XCircle, Edit, Trash2, Mail, Phone, AlertCircle } from 'lucide-react';
 
 const UsersTab = () => {
   const [users, setUsers] = useState([]);
