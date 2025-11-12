@@ -27,11 +27,13 @@ const AppContent = () => {
 
   // Get the appropriate dashboard based on user role
   const getDashboardByRole = () => {
+    // If no user is logged in, show customer dashboard (public view)
     if (!user) {
       return <CustomerDashboard />;
     }
 
     console.log('🔄 User role detected:', user.role);
+    console.log('👤 User data:', user);
     
     switch (user.role) {
       case 'admin':

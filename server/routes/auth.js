@@ -62,6 +62,49 @@ router.post('/register', async (req, res) => {
   }
 });
 
+// Add this route to auth.js - TOKEN VERIFICATION ROUTE
+router.get('/verify', async (req, res) => {
+  try {
+    const token = req.headers.authorization?.replace('Bearer ', '');
+    
+    if (!token) {
+      return res.status(401).json({ 
+        success: false,
+        message: 'No token provided' 
+      });
+    }
+
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'fallback-secret-key');
+    
+    // Find user in database
+    const user = await User.findById(decoded.userId);
+    if (!user) {
+      return res.status(401).json({ 
+        success: false,
+        message: 'User not found' 
+      });
+    }
+
+    res.json({
+      success: true,
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        isApproved: user.isApproved
+      }
+    });
+
+  } catch (error) {
+    console.error('❌ Token verification error:', error);
+    res.status(401).json({ 
+      success: false,
+      message: 'Invalid token' 
+    });
+  }
+});
+
 // LOGIN ROUTE - REAL AUTHENTICATION
 router.post('/login', async (req, res) => {
   try {

@@ -11,13 +11,36 @@ export const AuthProvider = ({ children }) => {
 
   // Check if user is logged in on app start
   useEffect(() => {
-    const token = localStorage.getItem('token');
-    const userData = localStorage.getItem('user');
-    
-    if (token && userData) {
-      setUser(JSON.parse(userData));
-    }
-    setLoading(false);
+    const checkAuthStatus = async () => {
+      const token = localStorage.getItem('token');
+      const userData = localStorage.getItem('user');
+      
+      if (token && userData) {
+        try {
+          // Verify token is still valid with backend
+          const response = await fetch(`${API_URL}/auth/verify`, {
+            headers: {
+              'Authorization': `Bearer ${token}`
+            }
+          });
+          
+          if (response.ok) {
+            setUser(JSON.parse(userData));
+          } else {
+            // Token is invalid, clear storage
+            localStorage.removeItem('token');
+            localStorage.removeItem('user');
+          }
+        } catch (error) {
+          console.error('Auth verification failed:', error);
+          localStorage.removeItem('token');
+          localStorage.removeItem('user');
+        }
+      }
+      setLoading(false);
+    };
+
+    checkAuthStatus();
   }, []);
 
   const login = async (email, password) => {
@@ -33,18 +56,39 @@ export const AuthProvider = ({ children }) => {
       });
 
       const data = await response.json();
+      console.log('🔐 Login response:', data);
 
-      if (response.ok) {
-        setUser(data.user);
+      if (response.ok && data.success) {
+        const userData = {
+          id: data.user.id,
+          name: data.user.name,
+          email: data.user.email,
+          role: data.user.role,
+          isApproved: data.user.isApproved
+        };
+        
+        setUser(userData);
         localStorage.setItem('token', data.token);
-        localStorage.setItem('user', JSON.stringify(data.user));
-        return { success: true, message: 'Login successful', user: data.user };
+        localStorage.setItem('user', JSON.stringify(userData));
+        
+        return { 
+          success: true, 
+          message: data.message || 'Login successful', 
+          user: userData 
+        };
       } else {
-        return { success: false, message: data.message || 'Login failed' };
+        return { 
+          success: false, 
+          message: data.message || 'Login failed' 
+        };
       }
       
     } catch (error) {
-      return { success: false, message: 'Network error: ' + error.message };
+      console.error('❌ Login error:', error);
+      return { 
+        success: false, 
+        message: 'Network error: ' + error.message 
+      };
     } finally {
       setLoading(false);
     }
@@ -63,17 +107,25 @@ export const AuthProvider = ({ children }) => {
       });
 
       const data = await response.json();
+      console.log('📝 Register response:', data);
 
-      if (response.ok) {
+      if (response.ok && data.success) {
         // Auto-login after successful registration
         const loginResult = await login(userData.email, userData.password);
         return loginResult;
       } else {
-        return { success: false, message: data.message || 'Registration failed' };
+        return { 
+          success: false, 
+          message: data.message || 'Registration failed' 
+        };
       }
       
     } catch (error) {
-      return { success: false, message: 'Network error: ' + error.message };
+      console.error('❌ Registration error:', error);
+      return { 
+        success: false, 
+        message: 'Network error: ' + error.message 
+      };
     } finally {
       setLoading(false);
     }
@@ -83,7 +135,7 @@ export const AuthProvider = ({ children }) => {
     setUser(null);
     localStorage.removeItem('token');
     localStorage.removeItem('user');
-    // Redirect to customer dashboard after logout
+    // Redirect to home page after logout
     window.location.href = '/';
   };
 
