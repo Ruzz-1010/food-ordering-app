@@ -9,28 +9,7 @@ import { useAuth } from '../../context/AuthContext';
 // Map Component for Location Pinning
 const LocationMap = ({ onLocationSelect, initialAddress = '' }) => {
     const [address, setAddress] = useState(initialAddress);
-    const [coordinates, setCoordinates] = useState({ lat: 9.7392, lng: 118.7353 }); // Puerto Princesa coordinates
-
-    const handleMapClick = (e) => {
-        const lat = e.latlng.lat;
-        const lng = e.latlng.lng;
-        setCoordinates({ lat, lng });
-        
-        // Reverse geocoding to get address
-        fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`)
-            .then(response => response.json())
-            .then(data => {
-                const selectedAddress = data.display_name || `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
-                setAddress(selectedAddress);
-                onLocationSelect(selectedAddress, lat, lng);
-            })
-            .catch(error => {
-                console.error('Error getting address:', error);
-                const selectedAddress = `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
-                setAddress(selectedAddress);
-                onLocationSelect(selectedAddress, lat, lng);
-            });
-    };
+    const [coordinates, setCoordinates] = useState({ lat: 9.7392, lng: 118.7353 });
 
     const handleSearch = () => {
         if (!address.trim()) return;
@@ -62,7 +41,7 @@ const LocationMap = ({ onLocationSelect, initialAddress = '' }) => {
                         value={address}
                         onChange={(e) => setAddress(e.target.value)}
                         className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-800"
-                        placeholder="Enter address or click on map"
+                        placeholder="Enter your address"
                     />
                     <button
                         type="button"
@@ -78,26 +57,20 @@ const LocationMap = ({ onLocationSelect, initialAddress = '' }) => {
                 <div className="absolute inset-0 bg-gray-100 flex items-center justify-center">
                     <div className="text-center">
                         <Navigation size={32} className="mx-auto text-gray-400 mb-2" />
-                        <p className="text-gray-600">Interactive Map</p>
-                        <p className="text-sm text-gray-500">Click anywhere on the map to set your location</p>
+                        <p className="text-gray-600">Location Map</p>
+                        <p className="text-sm text-gray-500">Enter your address above to set location</p>
                     </div>
                 </div>
                 
-                {/* Map coordinates display */}
                 <div className="absolute bottom-2 left-2 bg-white bg-opacity-90 px-3 py-1 rounded text-sm">
                     📍 {coordinates.lat.toFixed(6)}, {coordinates.lng.toFixed(6)}
-                </div>
-                
-                {/* Instructions */}
-                <div className="absolute top-2 left-2 bg-yellow-100 border border-yellow-300 px-3 py-1 rounded text-sm">
-                    💡 Click on the map to set location
                 </div>
             </div>
             
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
                 <p className="text-sm text-blue-800 flex items-center">
                     <MapPin size={16} className="mr-2" />
-                    <span>Selected Location: {address || 'Click on map to select'}</span>
+                    <span>Selected Location: {address || 'Enter your address above'}</span>
                 </p>
             </div>
         </div>
@@ -301,7 +274,6 @@ const CustomerRegisterForm = ({ onRegister, onSwitchToLogin, onSwitchToRestauran
                     />
                 </div>
 
-                {/* Map Location Picker */}
                 <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                         Delivery Location
@@ -505,7 +477,6 @@ const RestaurantRegisterForm = ({ onRegister, onSwitchToLogin, onSwitchToCustome
                     />
                 </div>
 
-                {/* Map Location Picker */}
                 <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                         Restaurant Location
@@ -705,7 +676,6 @@ const RiderRegisterForm = ({ onRegister, onSwitchToLogin, onSwitchToCustomer, on
                     />
                 </div>
 
-                {/* Map Location Picker */}
                 <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                         Home Location
@@ -814,13 +784,12 @@ const RestaurantCard = ({ restaurant, onOrderClick, user }) => {
 const CustomerDashboard = () => {
     const { user, login, register, logout, loading: authLoading } = useAuth();
     const [showAuthModal, setShowAuthModal] = useState(false);
-    const [authMode, setAuthMode] = useState('login'); // 'login', 'customer', 'restaurant', 'rider'
+    const [authMode, setAuthMode] = useState('login');
     const [restaurants, setRestaurants] = useState([]);
     const [searchQuery, setSearchQuery] = useState('');
     const [loadingRestaurants, setLoadingRestaurants] = useState(true);
     const [apiError, setApiError] = useState('');
 
-    // Fetch REAL restaurants from API - NO FAKE DATA
     useEffect(() => {
         const fetchRestaurants = async () => {
             setLoadingRestaurants(true);
@@ -832,7 +801,6 @@ const CustomerDashboard = () => {
                     const data = await response.json();
                     console.log('🔍 REAL Restaurants API response:', data);
                     
-                    // Handle different response formats safely
                     if (Array.isArray(data)) {
                         setRestaurants(data);
                     } else if (data && Array.isArray(data.restaurants)) {
@@ -894,7 +862,6 @@ const CustomerDashboard = () => {
 
     return (
         <div className="min-h-screen bg-gray-50">
-            {/* Header */}
             <header className="bg-white shadow-md sticky top-0 z-50">
                 <div className="bg-gray-800 text-white py-2">
                     <div className="max-w-7xl mx-auto px-4 text-center text-sm">
@@ -1019,7 +986,6 @@ const CustomerDashboard = () => {
                 </div>
             </header>
 
-            {/* Hero Banner */}
             <div className="bg-gradient-to-r from-red-800 to-red-900 text-white py-16">
                 <div className="max-w-7xl mx-auto px-4 text-center">
                     <h1 className="text-4xl md:text-5xl font-bold mb-6">
@@ -1042,7 +1008,6 @@ const CustomerDashboard = () => {
                 </div>
             </div>
 
-            {/* Featured Restaurants */}
             <div className="max-w-7xl mx-auto px-4 py-12">
                 <div className="flex justify-between items-center mb-8">
                     <h2 className="text-3xl font-bold text-gray-900">FEATURED RESTAURANTS</h2>
@@ -1089,12 +1054,10 @@ const CustomerDashboard = () => {
                 )}
             </div>
 
-            {/* Join Sections */}
             <div className="bg-gray-100 py-16">
                 <div className="max-w-7xl mx-auto px-4">
                     <h2 className="text-3xl font-bold text-center text-gray-900 mb-12">Join Our Community</h2>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                        {/* Customer Card */}
                         <div className="bg-white rounded-xl shadow-md p-6 text-center">
                             <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
                                 <span className="text-2xl">🍽️</span>
@@ -1109,7 +1072,6 @@ const CustomerDashboard = () => {
                             </button>
                         </div>
 
-                        {/* Restaurant Card */}
                         <div className="bg-white rounded-xl shadow-md p-6 text-center">
                             <div className="w-16 h-16 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-4">
                                 <Store className="text-orange-600" size={24} />
@@ -1124,7 +1086,6 @@ const CustomerDashboard = () => {
                             </button>
                         </div>
 
-                        {/* Rider Card */}
                         <div className="bg-white rounded-xl shadow-md p-6 text-center">
                             <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
                                 <Bike className="text-blue-600" size={24} />
@@ -1142,7 +1103,6 @@ const CustomerDashboard = () => {
                 </div>
             </div>
 
-            {/* Special Offer */}
             <div className="bg-red-800 text-white py-12">
                 <div className="max-w-7xl mx-auto px-4 text-center">
                     <h2 className="text-4xl font-bold mb-4">SPECIAL OFFER!</h2>
@@ -1156,7 +1116,6 @@ const CustomerDashboard = () => {
                 </div>
             </div>
 
-            {/* Footer */}
             <footer className="bg-gray-900 text-white">
                 <div className="max-w-7xl mx-auto px-4 py-12">
                     <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
@@ -1240,7 +1199,6 @@ const CustomerDashboard = () => {
                 </div>
             </footer>
 
-            {/* Auth Modal */}
             {showAuthModal && (
                 <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
                     {authMode === 'login' ? (
