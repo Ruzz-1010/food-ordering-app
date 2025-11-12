@@ -2,11 +2,12 @@ import React, { useState, useEffect } from 'react';
 import { 
     Users, Store, BarChart3, 
     Package, Settings, LogOut, Menu, X,
-    TrendingUp, DollarSign
+    TrendingUp, DollarSign, RefreshCw
 } from 'lucide-react';
+import { useAuth } from '../../context/AuthContext';
 
 // Admin Sidebar Component
-const AdminSidebar = ({ activeTab, setActiveTab, isOpen, setIsOpen }) => {
+const AdminSidebar = ({ activeTab, setActiveTab, isOpen, setIsOpen, onLogout }) => {
     const menuItems = [
         { id: 'dashboard', label: 'Dashboard', icon: BarChart3 },
         { id: 'users', label: 'Users', icon: Users },
@@ -74,7 +75,10 @@ const AdminSidebar = ({ activeTab, setActiveTab, isOpen, setIsOpen }) => {
                 </nav>
 
                 <div className="absolute bottom-4 left-4 right-4">
-                    <button className="w-full flex items-center space-x-3 px-3 py-3 text-gray-300 hover:bg-gray-800 hover:text-white rounded-lg transition-colors">
+                    <button 
+                        onClick={onLogout}
+                        className="w-full flex items-center space-x-3 px-3 py-3 text-gray-300 hover:bg-gray-800 hover:text-white rounded-lg transition-colors"
+                    >
                         <LogOut size={20} />
                         <span className="font-medium">Logout</span>
                     </button>
@@ -85,15 +89,21 @@ const AdminSidebar = ({ activeTab, setActiveTab, isOpen, setIsOpen }) => {
 };
 
 // Stats Cards Component
-const StatsCard = ({ title, value, icon: Icon, change, color }) => (
+const StatsCard = ({ title, value, icon: Icon, change, color, loading }) => (
     <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
         <div className="flex items-center justify-between">
             <div>
                 <p className="text-sm font-medium text-gray-600">{title}</p>
-                <p className="text-3xl font-bold text-gray-900 mt-2">{value}</p>
-                {change && (
-                    <p className={`text-sm mt-1 ${change > 0 ? 'text-green-600' : 'text-red-600'}`}>
-                        {change > 0 ? '↑' : '↓'} {Math.abs(change)}% from last month
+                <p className="text-3xl font-bold text-gray-900 mt-2">
+                    {loading ? (
+                        <div className="w-8 h-8 border-2 border-gray-300 border-t-blue-500 rounded-full animate-spin"></div>
+                    ) : (
+                        value
+                    )}
+                </p>
+                {change !== undefined && !loading && (
+                    <p className={`text-sm mt-1 ${change > 0 ? 'text-green-600' : change < 0 ? 'text-red-600' : 'text-gray-600'}`}>
+                        {change > 0 ? '↑' : change < 0 ? '↓' : '→'} {change !== 0 ? `${Math.abs(change)}%` : 'No change'} from last month
                     </p>
                 )}
             </div>
@@ -106,6 +116,7 @@ const StatsCard = ({ title, value, icon: Icon, change, color }) => (
 
 // Main Admin Dashboard Component
 const AdminDashboard = () => {
+    const { logout, user } = useAuth();
     const [activeTab, setActiveTab] = useState('dashboard');
     const [sidebarOpen, setSidebarOpen] = useState(false);
     const [stats, setStats] = useState({
@@ -114,41 +125,95 @@ const AdminDashboard = () => {
         totalOrders: 0,
         totalRevenue: 0
     });
+    const [users, setUsers] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [refreshing, setRefreshing] = useState(false);
+
+    const API_URL = 'https://food-ordering-app-production-35eb.up.railway.app/api';
 
     // Fetch real data from APIs
-    useEffect(() => {
-        const fetchStats = async () => {
-            try {
-                setLoading(true);
-                
-                // Fetch users count
-                const usersResponse = await fetch('https://food-ordering-app-production-35eb.up.railway.app/api/users');
-                const usersData = await usersResponse.json();
-                
-                // Fetch restaurants count
-                const restaurantsResponse = await fetch('https://food-ordering-app-production-35eb.up.railway.app/api/restaurants');
-                const restaurantsData = await restaurantsResponse.json();
-                
-                // Fetch orders count
-                const ordersResponse = await fetch('https://food-ordering-app-production-35eb.up.railway.app/api/orders');
-                const ordersData = await ordersResponse.json();
+    const fetchData = async () => {
+        try {
+            setRefreshing(true);
+            
+            // Fetch users data
+            const usersResponse = await fetch(`${API_URL}/auth/users`);
+            const usersData = await usersResponse.json();
+            
+            // Fetch restaurants data
+            const restaurantsResponse = await fetch(`${API_URL}/restaurants`);
+            const restaurantsData = await restaurantsResponse.json();
+            
+            // Fetch orders data
+            const ordersResponse = await fetch(`${API_URL}/orders`);
+            const ordersData = await ordersResponse.json();
 
-                setStats({
-                    totalUsers: Array.isArray(usersData) ? usersData.length : 0,
-                    totalRestaurants: Array.isArray(restaurantsData) ? restaurantsData.length : 0,
-                    totalOrders: Array.isArray(ordersData) ? ordersData.length : 0,
-                    totalRevenue: 12540 // This would come from orders calculation
-                });
-            } catch (error) {
-                console.error('Error fetching stats:', error);
-            } finally {
-                setLoading(false);
+            console.log('📊 Real Data:', {
+                users: usersData,
+                restaurants: restaurantsData,
+                orders: ordersData
+            });
+
+            // Calculate total revenue from orders
+            const totalRevenue = Array.isArray(ordersData) 
+                ? ordersData.reduce((sum, order) => sum + (order.totalAmount || 0), 0)
+                : 0;
+
+            setStats({
+                totalUsers: Array.isArray(usersData?.users) ? usersData.users.length : 
+                           Array.isArray(usersData) ? usersData.length : 0,
+                totalRestaurants: Array.isArray(restaurantsData?.restaurants) ? restaurantsData.restaurants.length :
+                                Array.isArray(restaurantsData) ? restaurantsData.length : 0,
+                totalOrders: Array.isArray(ordersData?.orders) ? ordersData.orders.length :
+                            Array.isArray(ordersData) ? ordersData.length : 0,
+                totalRevenue: totalRevenue
+            });
+
+            // Set users for user management tab
+            if (Array.isArray(usersData?.users)) {
+                setUsers(usersData.users);
+            } else if (Array.isArray(usersData)) {
+                setUsers(usersData);
             }
-        };
 
-        fetchStats();
+        } catch (error) {
+            console.error('❌ Error fetching data:', error);
+        } finally {
+            setLoading(false);
+            setRefreshing(false);
+        }
+    };
+
+    useEffect(() => {
+        fetchData();
     }, []);
+
+    const handleLogout = () => {
+        logout();
+    };
+
+    const handleRefresh = () => {
+        fetchData();
+    };
+
+    const handleApproveUser = async (userId) => {
+        try {
+            const response = await fetch(`${API_URL}/auth/users/${userId}/approve`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${localStorage.getItem('token')}`
+                }
+            });
+            
+            if (response.ok) {
+                fetchData(); // Refresh data
+                alert('User approved successfully!');
+            }
+        } catch (error) {
+            console.error('Error approving user:', error);
+        }
+    };
 
     // Render different components based on active tab
     const renderContent = () => {
@@ -156,52 +221,79 @@ const AdminDashboard = () => {
             case 'dashboard':
                 return (
                     <div className="space-y-6">
+                        {/* Header with Refresh Button */}
+                        <div className="flex justify-between items-center">
+                            <h2 className="text-2xl font-bold text-gray-900">Dashboard Overview</h2>
+                            <button
+                                onClick={handleRefresh}
+                                disabled={refreshing}
+                                className="flex items-center space-x-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
+                            >
+                                <RefreshCw size={16} className={refreshing ? 'animate-spin' : ''} />
+                                <span>{refreshing ? 'Refreshing...' : 'Refresh Data'}</span>
+                            </button>
+                        </div>
+
                         {/* Stats Grid */}
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                             <StatsCard
                                 title="Total Users"
-                                value={loading ? "..." : stats.totalUsers.toLocaleString()}
+                                value={stats.totalUsers.toLocaleString()}
                                 icon={Users}
                                 change={12}
                                 color="bg-blue-500"
+                                loading={loading}
                             />
                             <StatsCard
                                 title="Total Restaurants"
-                                value={loading ? "..." : stats.totalRestaurants.toLocaleString()}
+                                value={stats.totalRestaurants.toLocaleString()}
                                 icon={Store}
                                 change={8}
                                 color="bg-green-500"
+                                loading={loading}
                             />
                             <StatsCard
                                 title="Total Orders"
-                                value={loading ? "..." : stats.totalOrders.toLocaleString()}
+                                value={stats.totalOrders.toLocaleString()}
                                 icon={Package}
                                 change={15}
                                 color="bg-purple-500"
+                                loading={loading}
                             />
                             <StatsCard
                                 title="Total Revenue"
-                                value={loading ? "..." : `₱${stats.totalRevenue.toLocaleString()}`}
+                                value={`₱${stats.totalRevenue.toLocaleString()}`}
                                 icon={DollarSign}
                                 change={23}
                                 color="bg-orange-500"
+                                loading={loading}
                             />
                         </div>
 
                         {/* Recent Activity */}
                         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                            {/* Recent Orders */}
+                            {/* Recent Users */}
                             <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-                                <h3 className="text-lg font-semibold text-gray-900 mb-4">Recent Orders</h3>
+                                <h3 className="text-lg font-semibold text-gray-900 mb-4">Recent Users</h3>
                                 <div className="space-y-3">
-                                    {[1, 2, 3].map((item) => (
-                                        <div key={item} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                                    {loading ? (
+                                        <div className="text-center py-4">
+                                            <div className="w-6 h-6 border-2 border-gray-300 border-t-blue-500 rounded-full animate-spin mx-auto"></div>
+                                            <p className="text-gray-500 text-sm mt-2">Loading users...</p>
+                                        </div>
+                                    ) : users.slice(0, 5).map((user) => (
+                                        <div key={user._id || user.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                                             <div>
-                                                <p className="font-medium text-gray-900">Order #100{item}</p>
-                                                <p className="text-sm text-gray-500">2 items • ₱350</p>
+                                                <p className="font-medium text-gray-900">{user.name}</p>
+                                                <p className="text-sm text-gray-500">{user.email}</p>
                                             </div>
-                                            <span className="px-2 py-1 bg-green-100 text-green-800 text-xs font-medium rounded-full">
-                                                Delivered
+                                            <span className={`px-2 py-1 text-xs font-medium rounded-full ${
+                                                user.role === 'admin' ? 'bg-purple-100 text-purple-800' :
+                                                user.role === 'restaurant' ? 'bg-orange-100 text-orange-800' :
+                                                user.role === 'rider' ? 'bg-blue-100 text-blue-800' :
+                                                'bg-green-100 text-green-800'
+                                            }`}>
+                                                {user.role}
                                             </span>
                                         </div>
                                     ))}
@@ -225,9 +317,9 @@ const AdminDashboard = () => {
                                         </span>
                                     </div>
                                     <div className="flex items-center justify-between">
-                                        <span className="text-gray-600">Server Load</span>
+                                        <span className="text-gray-600">Total Data</span>
                                         <span className="px-2 py-1 bg-blue-100 text-blue-800 text-xs font-medium rounded-full">
-                                            Normal
+                                            {stats.totalUsers + stats.totalRestaurants + stats.totalOrders} Records
                                         </span>
                                     </div>
                                 </div>
@@ -239,37 +331,81 @@ const AdminDashboard = () => {
             case 'users':
                 return (
                     <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-                        <h2 className="text-2xl font-bold text-gray-900 mb-6">User Management</h2>
-                        <div className="overflow-x-auto">
-                            <table className="w-full">
-                                <thead>
-                                    <tr className="border-b border-gray-200">
-                                        <th className="text-left py-3 px-4 font-semibold text-gray-600">User</th>
-                                        <th className="text-left py-3 px-4 font-semibold text-gray-600">Email</th>
-                                        <th className="text-left py-3 px-4 font-semibold text-gray-600">Role</th>
-                                        <th className="text-left py-3 px-4 font-semibold text-gray-600">Status</th>
-                                        <th className="text-left py-3 px-4 font-semibold text-gray-600">Actions</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <tr className="border-b border-gray-100">
-                                        <td className="py-3 px-4">Juan Dela Cruz</td>
-                                        <td className="py-3 px-4">juan@test.com</td>
-                                        <td className="py-3 px-4">
-                                            <span className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">Customer</span>
-                                        </td>
-                                        <td className="py-3 px-4">
-                                            <span className="px-2 py-1 bg-green-100 text-green-800 text-xs rounded-full">Active</span>
-                                        </td>
-                                        <td className="py-3 px-4">
-                                            <button className="text-blue-600 hover:text-blue-800 text-sm font-medium">
-                                                Edit
-                                            </button>
-                                        </td>
-                                    </tr>
-                                </tbody>
-                            </table>
+                        <div className="flex justify-between items-center mb-6">
+                            <h2 className="text-2xl font-bold text-gray-900">User Management</h2>
+                            <button
+                                onClick={handleRefresh}
+                                disabled={refreshing}
+                                className="flex items-center space-x-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
+                            >
+                                <RefreshCw size={16} className={refreshing ? 'animate-spin' : ''} />
+                                <span>Refresh</span>
+                            </button>
                         </div>
+                        
+                        {loading ? (
+                            <div className="text-center py-8">
+                                <div className="w-8 h-8 border-2 border-gray-300 border-t-blue-500 rounded-full animate-spin mx-auto"></div>
+                                <p className="text-gray-500 mt-2">Loading users...</p>
+                            </div>
+                        ) : (
+                            <div className="overflow-x-auto">
+                                <table className="w-full">
+                                    <thead>
+                                        <tr className="border-b border-gray-200">
+                                            <th className="text-left py-3 px-4 font-semibold text-gray-600">User</th>
+                                            <th className="text-left py-3 px-4 font-semibold text-gray-600">Email</th>
+                                            <th className="text-left py-3 px-4 font-semibold text-gray-600">Role</th>
+                                            <th className="text-left py-3 px-4 font-semibold text-gray-600">Status</th>
+                                            <th className="text-left py-3 px-4 font-semibold text-gray-600">Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {users.map((user) => (
+                                            <tr key={user._id || user.id} className="border-b border-gray-100 hover:bg-gray-50">
+                                                <td className="py-3 px-4">
+                                                    <div>
+                                                        <p className="font-medium text-gray-900">{user.name}</p>
+                                                        <p className="text-xs text-gray-500">{user.phone}</p>
+                                                    </div>
+                                                </td>
+                                                <td className="py-3 px-4">{user.email}</td>
+                                                <td className="py-3 px-4">
+                                                    <span className={`px-2 py-1 text-xs rounded-full ${
+                                                        user.role === 'admin' ? 'bg-purple-100 text-purple-800' :
+                                                        user.role === 'restaurant' ? 'bg-orange-100 text-orange-800' :
+                                                        user.role === 'rider' ? 'bg-blue-100 text-blue-800' :
+                                                        'bg-green-100 text-green-800'
+                                                    }`}>
+                                                        {user.role}
+                                                    </span>
+                                                </td>
+                                                <td className="py-3 px-4">
+                                                    <span className={`px-2 py-1 text-xs rounded-full ${
+                                                        user.isApproved ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
+                                                    }`}>
+                                                        {user.isApproved ? 'Approved' : 'Pending'}
+                                                    </span>
+                                                </td>
+                                                <td className="py-3 px-4">
+                                                    {!user.isApproved && user.role !== 'customer' && (
+                                                        <button 
+                                                            onClick={() => handleApproveUser(user._id || user.id)}
+                                                            className="text-green-600 hover:text-green-800 text-sm font-medium mr-3"
+                                                        >
+                                                            Approve
+                                                        </button>
+                                                    )}
+                                                    <button className="text-blue-600 hover:text-blue-800 text-sm font-medium">
+                                                        Edit
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        )}
                     </div>
                 );
 
@@ -278,6 +414,11 @@ const AdminDashboard = () => {
                     <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
                         <h2 className="text-2xl font-bold text-gray-900 mb-6">Restaurant Management</h2>
                         <p className="text-gray-600">Restaurant management content will be here...</p>
+                        <div className="mt-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+                            <p className="text-yellow-800">
+                                <strong>Total Restaurants in Database:</strong> {stats.totalRestaurants}
+                            </p>
+                        </div>
                     </div>
                 );
 
@@ -286,6 +427,14 @@ const AdminDashboard = () => {
                     <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
                         <h2 className="text-2xl font-bold text-gray-900 mb-6">Order Management</h2>
                         <p className="text-gray-600">Order management content will be here...</p>
+                        <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                            <p className="text-blue-800">
+                                <strong>Total Orders in Database:</strong> {stats.totalOrders}
+                            </p>
+                            <p className="text-blue-800">
+                                <strong>Total Revenue:</strong> ₱{stats.totalRevenue.toLocaleString()}
+                            </p>
+                        </div>
                     </div>
                 );
 
@@ -318,6 +467,7 @@ const AdminDashboard = () => {
                 setActiveTab={setActiveTab}
                 isOpen={sidebarOpen}
                 setIsOpen={setSidebarOpen}
+                onLogout={handleLogout}
             />
 
             {/* Main Content */}
@@ -339,7 +489,13 @@ const AdminDashboard = () => {
                         </div>
 
                         <div className="flex items-center space-x-4">
-                            <div className="w-8 h-8 bg-gray-300 rounded-full"></div>
+                            <div className="text-right">
+                                <p className="text-sm font-medium text-gray-900">{user?.name}</p>
+                                <p className="text-xs text-gray-500">Administrator</p>
+                            </div>
+                            <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center text-white font-bold">
+                                {user?.name?.charAt(0) || 'A'}
+                            </div>
                         </div>
                     </div>
                 </header>

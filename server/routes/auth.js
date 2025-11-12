@@ -241,7 +241,7 @@ router.post('/login', async (req, res) => {
   }
 });
 
-// GET ALL USERS (For testing)
+// GET ALL USERS (For admin dashboard)
 router.get('/users', async (req, res) => {
   try {
     const users = await User.find({}, { password: 0 }); // Exclude passwords
@@ -254,6 +254,155 @@ router.get('/users', async (req, res) => {
     res.status(500).json({ 
       success: false,
       message: 'Failed to get users' 
+    });
+  }
+});
+
+// APPROVE USER ROUTE (For admin to approve restaurant/rider accounts)
+router.put('/users/:id/approve', async (req, res) => {
+  try {
+    const user = await User.findByIdAndUpdate(
+      req.params.id,
+      { isApproved: true },
+      { new: true }
+    );
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+
+    console.log('✅ User approved:', user.email, 'Role:', user.role);
+
+    res.json({
+      success: true,
+      message: 'User approved successfully!',
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        isApproved: user.isApproved
+      }
+    });
+
+  } catch (error) {
+    console.error('❌ User approval error:', error);
+    res.status(500).json({ 
+      success: false,
+      message: 'Failed to approve user: ' + error.message 
+    });
+  }
+});
+
+// DELETE USER ROUTE
+router.delete('/users/:id', async (req, res) => {
+  try {
+    const user = await User.findByIdAndDelete(req.params.id);
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+
+    console.log('🗑️ User deleted:', user.email);
+
+    res.json({
+      success: true,
+      message: 'User deleted successfully!'
+    });
+
+  } catch (error) {
+    console.error('❌ User deletion error:', error);
+    res.status(500).json({ 
+      success: false,
+      message: 'Failed to delete user: ' + error.message 
+    });
+  }
+});
+
+// UPDATE USER ROLE ROUTE
+router.put('/users/:id/role', async (req, res) => {
+  try {
+    const { role } = req.body;
+    
+    if (!['customer', 'restaurant', 'rider', 'admin'].includes(role)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid role'
+      });
+    }
+
+    const user = await User.findByIdAndUpdate(
+      req.params.id,
+      { role },
+      { new: true }
+    );
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+
+    console.log('🔄 User role updated:', user.email, 'New role:', role);
+
+    res.json({
+      success: true,
+      message: 'User role updated successfully!',
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        isApproved: user.isApproved
+      }
+    });
+
+  } catch (error) {
+    console.error('❌ User role update error:', error);
+    res.status(500).json({ 
+      success: false,
+      message: 'Failed to update user role: ' + error.message 
+    });
+  }
+});
+
+// GET USER STATISTICS
+router.get('/stats', async (req, res) => {
+  try {
+    const totalUsers = await User.countDocuments();
+    const totalCustomers = await User.countDocuments({ role: 'customer' });
+    const totalRestaurants = await User.countDocuments({ role: 'restaurant' });
+    const totalRiders = await User.countDocuments({ role: 'rider' });
+    const totalAdmins = await User.countDocuments({ role: 'admin' });
+    const pendingApprovals = await User.countDocuments({ 
+      isApproved: false, 
+      role: { $in: ['restaurant', 'rider'] } 
+    });
+
+    res.json({
+      success: true,
+      stats: {
+        totalUsers,
+        totalCustomers,
+        totalRestaurants,
+        totalRiders,
+        totalAdmins,
+        pendingApprovals
+      }
+    });
+
+  } catch (error) {
+    console.error('❌ Stats error:', error);
+    res.status(500).json({ 
+      success: false,
+      message: 'Failed to get statistics: ' + error.message 
     });
   }
 });
