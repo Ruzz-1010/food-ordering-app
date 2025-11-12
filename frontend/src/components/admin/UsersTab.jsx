@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Users, RefreshCw, CheckCircle, XCircle, Edit, Trash2, Mail, Phone, MapPin } from 'lucide-react';
+import { Users, RefreshCw, CheckCircle, XCircle, Edit, Trash2, Mail, Phone, MapPin, AlertCircle } from 'lucide-react';
 
 const UsersTab = () => {
   const [users, setUsers] = useState([]);
@@ -7,27 +7,44 @@ const UsersTab = () => {
   const [refreshing, setRefreshing] = useState(false);
   const [selectedUser, setSelectedUser] = useState(null);
   const [showUserModal, setShowUserModal] = useState(false);
+  const [error, setError] = useState('');
 
   const API_URL = 'https://food-ordering-app-production-35eb.up.railway.app/api';
 
-  // Fetch users data
+  // Fetch users data with better error handling
   const fetchUsers = async () => {
     try {
       setRefreshing(true);
+      setError('');
+      
+      console.log('🔄 Fetching users from:', `${API_URL}/auth/users`);
+      
       const response = await fetch(`${API_URL}/auth/users`);
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
       const data = await response.json();
       
-      console.log('👥 Users data:', data);
+      console.log('👥 Users API response:', data);
       
+      // Handle different response formats
       if (data.success && Array.isArray(data.users)) {
         setUsers(data.users);
       } else if (Array.isArray(data)) {
         setUsers(data);
+      } else if (data.users && Array.isArray(data.users)) {
+        setUsers(data.users);
       } else {
+        console.warn('⚠️ Unexpected response format:', data);
         setUsers([]);
+        setError('Unexpected data format from server');
       }
+      
     } catch (error) {
       console.error('❌ Error fetching users:', error);
+      setError(`Failed to load users: ${error.message}`);
       setUsers([]);
     } finally {
       setLoading(false);
@@ -39,8 +56,10 @@ const UsersTab = () => {
     fetchUsers();
   }, []);
 
-  const handleApproveUser = async (userId) => {
+  const handleApproveUser = async (userId, userName) => {
     try {
+      console.log('✅ Approving user:', userId);
+      
       const response = await fetch(`${API_URL}/auth/users/${userId}/approve`, {
         method: 'PUT',
         headers: {
@@ -49,22 +68,28 @@ const UsersTab = () => {
         }
       });
       
-      if (response.ok) {
-        fetchUsers(); // Refresh data
-        alert('User approved successfully!');
+      const result = await response.json();
+      
+      if (response.ok && result.success) {
+        await fetchUsers(); // Refresh data
+        alert(`User ${userName} approved successfully!`);
+      } else {
+        throw new Error(result.message || 'Failed to approve user');
       }
     } catch (error) {
       console.error('Error approving user:', error);
-      alert('Failed to approve user');
+      alert(`Failed to approve user: ${error.message}`);
     }
   };
 
   const handleDeleteUser = async (userId, userName) => {
-    if (!confirm(`Are you sure you want to delete ${userName}? This action cannot be undone.`)) {
+    if (!window.confirm(`Are you sure you want to delete ${userName}? This action cannot be undone.`)) {
       return;
     }
 
     try {
+      console.log('🗑️ Deleting user:', userId);
+      
       const response = await fetch(`${API_URL}/auth/users/${userId}`, {
         method: 'DELETE',
         headers: {
@@ -72,13 +97,17 @@ const UsersTab = () => {
         }
       });
       
-      if (response.ok) {
-        fetchUsers(); // Refresh data
-        alert('User deleted successfully!');
+      const result = await response.json();
+      
+      if (response.ok && result.success) {
+        await fetchUsers(); // Refresh data
+        alert(`User ${userName} deleted successfully!`);
+      } else {
+        throw new Error(result.message || 'Failed to delete user');
       }
     } catch (error) {
       console.error('Error deleting user:', error);
-      alert('Failed to delete user');
+      alert(`Failed to delete user: ${error.message}`);
     }
   };
 
@@ -145,7 +174,7 @@ const UsersTab = () => {
         </div>
         <div className="text-center py-8">
           <div className="w-8 h-8 border-2 border-gray-300 border-t-blue-500 rounded-full animate-spin mx-auto"></div>
-          <p className="text-gray-500 mt-2">Loading users...</p>
+          <p className="text-gray-500 mt-2">Loading users from database...</p>
         </div>
       </div>
     );
@@ -164,6 +193,20 @@ const UsersTab = () => {
           <span>{refreshing ? 'Refreshing...' : 'Refresh'}</span>
         </button>
       </div>
+
+      {/* Error Message */}
+      {error && (
+        <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-center space-x-3">
+          <AlertCircle size={20} className="text-red-600" />
+          <div>
+            <p className="text-red-800 font-medium">Failed to load users</p>
+            <p className="text-red-700 text-sm">{error}</p>
+            <p className="text-red-600 text-xs mt-1">
+              Check if the API endpoint is working: {API_URL}/auth/users
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Stats Summary */}
       <div className="grid grid-cols-2 md:grid-cols-6 gap-4 mb-6">
@@ -228,6 +271,15 @@ const UsersTab = () => {
         </div>
       </div>
 
+      {/* Debug Info */}
+      <div className="mb-4 p-3 bg-gray-50 rounded-lg">
+        <p className="text-xs text-gray-600">
+          <strong>API Endpoint:</strong> {API_URL}/auth/users | 
+          <strong> Users Found:</strong> {users.length} | 
+          <strong> Last Updated:</strong> {new Date().toLocaleTimeString()}
+        </p>
+      </div>
+
       {/* Users Table */}
       <div className="overflow-x-auto">
         <table className="w-full">
@@ -248,6 +300,9 @@ const UsersTab = () => {
                   <Users size={48} className="mx-auto mb-2 text-gray-300" />
                   <p>No users found in database</p>
                   <p className="text-sm">Users will appear here when they register</p>
+                  {error && (
+                    <p className="text-xs text-red-500 mt-2">{error}</p>
+                  )}
                 </td>
               </tr>
             ) : (
@@ -256,7 +311,7 @@ const UsersTab = () => {
                   <td className="py-3 px-4">
                     <div>
                       <p className="font-medium text-gray-900">{user.name}</p>
-                      <p className="text-xs text-gray-500">ID: {user._id || user.id}</p>
+                      <p className="text-xs text-gray-500">ID: {user._id ? user._id.substring(0, 8) + '...' : 'N/A'}</p>
                     </div>
                   </td>
                   <td className="py-3 px-4">
@@ -294,7 +349,7 @@ const UsersTab = () => {
                       
                       {!user.isApproved && user.role !== 'customer' && (
                         <button 
-                          onClick={() => handleApproveUser(user._id || user.id)}
+                          onClick={() => handleApproveUser(user._id || user.id, user.name)}
                           className="text-green-600 hover:text-green-800 text-sm font-medium"
                           title="Approve User"
                         >
@@ -371,6 +426,11 @@ const UsersTab = () => {
                   {selectedUser.createdAt ? new Date(selectedUser.createdAt).toLocaleDateString() : 'N/A'}
                 </p>
               </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">User ID</label>
+                <p className="text-gray-900 text-xs font-mono break-all">{selectedUser._id || selectedUser.id}</p>
+              </div>
             </div>
             
             <div className="flex justify-end space-x-3 mt-6">
@@ -383,7 +443,7 @@ const UsersTab = () => {
               {!selectedUser.isApproved && selectedUser.role !== 'customer' && (
                 <button
                   onClick={() => {
-                    handleApproveUser(selectedUser._id || selectedUser.id);
+                    handleApproveUser(selectedUser._id || selectedUser.id, selectedUser.name);
                     setShowUserModal(false);
                   }}
                   className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 font-medium"
