@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { 
-    Users, ShoppingBag, Store, BarChart3, 
+    Users, Store, BarChart3, 
     Package, Settings, LogOut, Menu, X,
-    TrendingUp, DollarSign, Clock, CheckCircle
+    TrendingUp, DollarSign
 } from 'lucide-react';
 
 // Admin Sidebar Component
