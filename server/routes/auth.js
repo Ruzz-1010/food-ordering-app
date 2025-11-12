@@ -3,13 +3,14 @@ const router = express.Router();
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
+const Restaurant = require('../models/Restaurant');
 
 // REGISTER ROUTE
 router.post('/register', async (req, res) => {
   try {
     console.log('📝 Register attempt:', req.body);
     
-    const { name, email, password, phone, address, role = 'customer' } = req.body;
+    const { name, email, password, phone, address, role = 'customer', restaurantName, cuisine } = req.body;
 
     // Check if user already exists
     const existingUser = await User.findOne({ email });
@@ -35,6 +36,30 @@ router.post('/register', async (req, res) => {
     });
 
     await newUser.save();
+
+    // AUTO-CREATE RESTAURANT IF ROLE IS RESTAURANT
+    if (role === 'restaurant') {
+      try {
+        const restaurantData = {
+          name: restaurantName || name + "'s Restaurant",
+          owner: newUser._id,
+          email: email,
+          phone: phone,
+          address: address,
+          cuisine: cuisine || 'Various',
+          isApproved: false // Wait for admin approval
+        };
+
+        const restaurant = new Restaurant(restaurantData);
+        await restaurant.save();
+        
+        console.log('🏪 Restaurant created for:', email);
+        
+      } catch (restaurantError) {
+        console.error('❌ Failed to create restaurant:', restaurantError);
+        // Don't fail the user registration if restaurant creation fails
+      }
+    }
 
     // Generate JWT token
     const token = jwt.sign(
