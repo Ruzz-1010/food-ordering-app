@@ -1,5 +1,6 @@
 // App.js
 import React from 'react';
+import { SpeedInsights } from "@vercel/speed-insights/react"
 import { AuthProvider, useAuth } from './context/AuthContext';
 import CustomerDashboard from './pages/dashboards/CustomerDashboard';
 import AdminDashboard from './pages/dashboards/AdminDashboard';
