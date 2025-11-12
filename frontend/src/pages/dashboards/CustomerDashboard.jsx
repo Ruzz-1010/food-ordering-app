@@ -1,10 +1,108 @@
 import React, { useState, useEffect } from 'react';
 import { 
     Search, MapPin, Clock, Star, 
-    ShoppingCart, Filter,
+    ShoppingCart, Filter, Store, Bike, Navigation,
     Facebook, Twitter, Instagram, Youtube
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
+
+// Map Component for Location Pinning
+const LocationMap = ({ onLocationSelect, initialAddress = '' }) => {
+    const [address, setAddress] = useState(initialAddress);
+    const [coordinates, setCoordinates] = useState({ lat: 9.7392, lng: 118.7353 }); // Puerto Princesa coordinates
+
+    const handleMapClick = (e) => {
+        const lat = e.latlng.lat;
+        const lng = e.latlng.lng;
+        setCoordinates({ lat, lng });
+        
+        // Reverse geocoding to get address
+        fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`)
+            .then(response => response.json())
+            .then(data => {
+                const selectedAddress = data.display_name || `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+                setAddress(selectedAddress);
+                onLocationSelect(selectedAddress, lat, lng);
+            })
+            .catch(error => {
+                console.error('Error getting address:', error);
+                const selectedAddress = `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+                setAddress(selectedAddress);
+                onLocationSelect(selectedAddress, lat, lng);
+            });
+    };
+
+    const handleSearch = () => {
+        if (!address.trim()) return;
+        
+        fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address)}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data && data[0]) {
+                    const lat = parseFloat(data[0].lat);
+                    const lng = parseFloat(data[0].lon);
+                    setCoordinates({ lat, lng });
+                    onLocationSelect(data[0].display_name, lat, lng);
+                }
+            })
+            .catch(error => {
+                console.error('Error searching location:', error);
+            });
+    };
+
+    return (
+        <div className="space-y-4">
+            <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Search Location
+                </label>
+                <div className="flex space-x-2">
+                    <input
+                        type="text"
+                        value={address}
+                        onChange={(e) => setAddress(e.target.value)}
+                        className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-800"
+                        placeholder="Enter address or click on map"
+                    />
+                    <button
+                        type="button"
+                        onClick={handleSearch}
+                        className="px-4 py-2 bg-red-800 text-white rounded-lg hover:bg-red-900"
+                    >
+                        <Search size={16} />
+                    </button>
+                </div>
+            </div>
+
+            <div className="border-2 border-gray-300 rounded-lg overflow-hidden h-64 relative">
+                <div className="absolute inset-0 bg-gray-100 flex items-center justify-center">
+                    <div className="text-center">
+                        <Navigation size={32} className="mx-auto text-gray-400 mb-2" />
+                        <p className="text-gray-600">Interactive Map</p>
+                        <p className="text-sm text-gray-500">Click anywhere on the map to set your location</p>
+                    </div>
+                </div>
+                
+                {/* Map coordinates display */}
+                <div className="absolute bottom-2 left-2 bg-white bg-opacity-90 px-3 py-1 rounded text-sm">
+                    📍 {coordinates.lat.toFixed(6)}, {coordinates.lng.toFixed(6)}
+                </div>
+                
+                {/* Instructions */}
+                <div className="absolute top-2 left-2 bg-yellow-100 border border-yellow-300 px-3 py-1 rounded text-sm">
+                    💡 Click on the map to set location
+                </div>
+            </div>
+            
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                <p className="text-sm text-blue-800 flex items-center">
+                    <MapPin size={16} className="mr-2" />
+                    <span>Selected Location: {address || 'Click on map to select'}</span>
+                </p>
+            </div>
+        </div>
+    );
+};
 
 // Login Form Component
 const LoginForm = ({ onLogin, onSwitchToRegister, onClose, loading }) => {
@@ -76,7 +174,7 @@ const LoginForm = ({ onLogin, onSwitchToRegister, onClose, loading }) => {
                     disabled={loading}
                     className="w-full bg-red-800 text-white py-3 rounded-lg font-semibold hover:bg-red-900 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                    {loading ? 'Signing in...' : 'SIGN IN TO ORDER'}
+                    {loading ? 'Signing in...' : 'SIGN IN'}
                 </button>
 
                 <div className="text-center">
@@ -94,14 +192,15 @@ const LoginForm = ({ onLogin, onSwitchToRegister, onClose, loading }) => {
     );
 };
 
-// Register Form Component
-const RegisterForm = ({ onRegister, onSwitchToLogin, onClose, loading }) => {
+// Customer Register Form Component
+const CustomerRegisterForm = ({ onRegister, onSwitchToLogin, onSwitchToRestaurant, onSwitchToRider, onClose, loading }) => {
     const [formData, setFormData] = useState({
         name: '',
         email: '',
         password: '',
         phone: '',
-        address: ''
+        address: '',
+        role: 'customer'
     });
     const [error, setError] = useState('');
 
@@ -121,14 +220,22 @@ const RegisterForm = ({ onRegister, onSwitchToLogin, onClose, loading }) => {
         setFormData({ ...formData, [e.target.name]: e.target.value });
     };
 
+    const handleLocationSelect = (address, lat, lng) => {
+        setFormData(prev => ({
+            ...prev,
+            address: address,
+            location: { lat, lng }
+        }));
+    };
+
     return (
-        <div className="bg-white rounded-lg shadow-xl p-8 max-w-md w-full mx-4">
+        <div className="bg-white rounded-lg shadow-xl p-8 max-w-md w-full mx-4 max-h-[90vh] overflow-y-auto">
             <div className="text-center mb-8">
                 <div className="mx-auto h-16 w-16 bg-red-800 rounded-lg flex items-center justify-center shadow-md mb-4">
                     <span className="text-white font-bold text-xl">FX</span>
                 </div>
-                <h2 className="text-2xl font-bold text-gray-900 mb-2">Join FoodExpress</h2>
-                <p className="text-gray-600">Create your account to start ordering</p>
+                <h2 className="text-2xl font-bold text-gray-900 mb-2">Join as Customer</h2>
+                <p className="text-gray-600">Create your account to start ordering food</p>
             </div>
 
             {error && (
@@ -194,17 +301,14 @@ const RegisterForm = ({ onRegister, onSwitchToLogin, onClose, loading }) => {
                     />
                 </div>
 
+                {/* Map Location Picker */}
                 <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Address</label>
-                    <textarea
-                        name="address"
-                        value={formData.address}
-                        onChange={handleChange}
-                        rows="3"
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-800 focus:border-red-800"
-                        placeholder="Enter your delivery address"
-                        required
-                        disabled={loading}
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Delivery Location
+                    </label>
+                    <LocationMap 
+                        onLocationSelect={handleLocationSelect}
+                        initialAddress={formData.address}
                     />
                 </div>
 
@@ -213,14 +317,444 @@ const RegisterForm = ({ onRegister, onSwitchToLogin, onClose, loading }) => {
                     disabled={loading}
                     className="w-full bg-red-800 text-white py-3 rounded-lg font-semibold hover:bg-red-900 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                    {loading ? 'Creating account...' : 'CREATE ACCOUNT & START ORDERING'}
+                    {loading ? 'Creating account...' : 'CREATE CUSTOMER ACCOUNT'}
                 </button>
 
-                <div className="text-center">
+                <div className="text-center space-y-2">
+                    <p className="text-gray-600 text-sm">Want to join as?</p>
+                    <div className="flex justify-center space-x-4">
+                        <button
+                            type="button"
+                            onClick={onSwitchToRestaurant}
+                            className="text-red-800 hover:text-red-900 font-medium text-sm"
+                            disabled={loading}
+                        >
+                            Restaurant Owner
+                        </button>
+                        <button
+                            type="button"
+                            onClick={onSwitchToRider}
+                            className="text-red-800 hover:text-red-900 font-medium text-sm"
+                            disabled={loading}
+                        >
+                            Delivery Rider
+                        </button>
+                    </div>
                     <button
                         type="button"
                         onClick={onSwitchToLogin}
-                        className="text-red-800 hover:text-red-900 font-medium"
+                        className="text-red-800 hover:text-red-900 font-medium text-sm"
+                        disabled={loading}
+                    >
+                        Already have an account? Sign in
+                    </button>
+                </div>
+            </form>
+        </div>
+    );
+};
+
+// Restaurant Register Form Component
+const RestaurantRegisterForm = ({ onRegister, onSwitchToLogin, onSwitchToCustomer, onSwitchToRider, onClose, loading }) => {
+    const [formData, setFormData] = useState({
+        name: '',
+        email: '',
+        password: '',
+        phone: '',
+        address: '',
+        role: 'restaurant',
+        restaurantName: '',
+        cuisine: ''
+    });
+    const [error, setError] = useState('');
+
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        setError('');
+        
+        const result = await onRegister(formData);
+        if (!result.success) {
+            setError(result.message);
+        } else {
+            onClose();
+        }
+    };
+
+    const handleChange = (e) => {
+        setFormData({ ...formData, [e.target.name]: e.target.value });
+    };
+
+    const handleLocationSelect = (address, lat, lng) => {
+        setFormData(prev => ({
+            ...prev,
+            address: address,
+            location: { lat, lng }
+        }));
+    };
+
+    return (
+        <div className="bg-white rounded-lg shadow-xl p-8 max-w-md w-full mx-4 max-h-[90vh] overflow-y-auto">
+            <div className="text-center mb-8">
+                <div className="mx-auto h-16 w-16 bg-orange-600 rounded-lg flex items-center justify-center shadow-md mb-4">
+                    <Store className="text-white" size={24} />
+                </div>
+                <h2 className="text-2xl font-bold text-gray-900 mb-2">Join as Restaurant</h2>
+                <p className="text-gray-600">Register your restaurant and start serving customers</p>
+            </div>
+
+            {error && (
+                <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+                    {error}
+                </div>
+            )}
+
+            <form onSubmit={handleSubmit} className="space-y-4">
+                <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Restaurant Name</label>
+                    <input
+                        type="text"
+                        name="restaurantName"
+                        value={formData.restaurantName}
+                        onChange={handleChange}
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-600 focus:border-orange-600"
+                        placeholder="Enter your restaurant name"
+                        required
+                        disabled={loading}
+                    />
+                </div>
+
+                <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Cuisine Type</label>
+                    <select
+                        name="cuisine"
+                        value={formData.cuisine}
+                        onChange={handleChange}
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-600 focus:border-orange-600"
+                        required
+                        disabled={loading}
+                    >
+                        <option value="">Select Cuisine</option>
+                        <option value="Filipino">Filipino</option>
+                        <option value="Chinese">Chinese</option>
+                        <option value="Japanese">Japanese</option>
+                        <option value="Korean">Korean</option>
+                        <option value="American">American</option>
+                        <option value="Italian">Italian</option>
+                        <option value="Mexican">Mexican</option>
+                        <option value="Fast Food">Fast Food</option>
+                        <option value="Vegetarian">Vegetarian</option>
+                        <option value="Seafood">Seafood</option>
+                        <option value="Barbecue">Barbecue</option>
+                        <option value="Desserts">Desserts</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Owner Name</label>
+                    <input
+                        type="text"
+                        name="name"
+                        value={formData.name}
+                        onChange={handleChange}
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-600 focus:border-orange-600"
+                        placeholder="Enter owner's full name"
+                        required
+                        disabled={loading}
+                    />
+                </div>
+
+                <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Email Address</label>
+                    <input
+                        type="email"
+                        name="email"
+                        value={formData.email}
+                        onChange={handleChange}
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-600 focus:border-orange-600"
+                        placeholder="Enter business email"
+                        required
+                        disabled={loading}
+                    />
+                </div>
+
+                <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Password</label>
+                    <input
+                        type="password"
+                        name="password"
+                        value={formData.password}
+                        onChange={handleChange}
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-600 focus:border-orange-600"
+                        placeholder="Create a password"
+                        required
+                        disabled={loading}
+                    />
+                </div>
+
+                <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Phone Number</label>
+                    <input
+                        type="tel"
+                        name="phone"
+                        value={formData.phone}
+                        onChange={handleChange}
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-600 focus:border-orange-600"
+                        placeholder="09XXXXXXXXX"
+                        required
+                        disabled={loading}
+                    />
+                </div>
+
+                {/* Map Location Picker */}
+                <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Restaurant Location
+                    </label>
+                    <LocationMap 
+                        onLocationSelect={handleLocationSelect}
+                        initialAddress={formData.address}
+                    />
+                </div>
+
+                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                    <p className="text-sm text-yellow-800">
+                        <strong>Note:</strong> Restaurant accounts require admin approval before you can start accepting orders.
+                        This usually takes 24-48 hours.
+                    </p>
+                </div>
+
+                <button
+                    type="submit"
+                    disabled={loading}
+                    className="w-full bg-orange-600 text-white py-3 rounded-lg font-semibold hover:bg-orange-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                    {loading ? 'Creating account...' : 'REGISTER RESTAURANT'}
+                </button>
+
+                <div className="text-center space-y-2">
+                    <p className="text-gray-600 text-sm">Want to join as?</p>
+                    <div className="flex justify-center space-x-4">
+                        <button
+                            type="button"
+                            onClick={onSwitchToCustomer}
+                            className="text-orange-600 hover:text-orange-700 font-medium text-sm"
+                            disabled={loading}
+                        >
+                            Customer
+                        </button>
+                        <button
+                            type="button"
+                            onClick={onSwitchToRider}
+                            className="text-orange-600 hover:text-orange-700 font-medium text-sm"
+                            disabled={loading}
+                        >
+                            Delivery Rider
+                        </button>
+                    </div>
+                    <button
+                        type="button"
+                        onClick={onSwitchToLogin}
+                        className="text-orange-600 hover:text-orange-700 font-medium text-sm"
+                        disabled={loading}
+                    >
+                        Already have an account? Sign in
+                    </button>
+                </div>
+            </form>
+        </div>
+    );
+};
+
+// Rider Register Form Component
+const RiderRegisterForm = ({ onRegister, onSwitchToLogin, onSwitchToCustomer, onSwitchToRestaurant, onClose, loading }) => {
+    const [formData, setFormData] = useState({
+        name: '',
+        email: '',
+        password: '',
+        phone: '',
+        address: '',
+        role: 'rider',
+        vehicleType: 'motorcycle',
+        licenseNumber: ''
+    });
+    const [error, setError] = useState('');
+
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        setError('');
+        
+        const result = await onRegister(formData);
+        if (!result.success) {
+            setError(result.message);
+        } else {
+            onClose();
+        }
+    };
+
+    const handleChange = (e) => {
+        setFormData({ ...formData, [e.target.name]: e.target.value });
+    };
+
+    const handleLocationSelect = (address, lat, lng) => {
+        setFormData(prev => ({
+            ...prev,
+            address: address,
+            location: { lat, lng }
+        }));
+    };
+
+    return (
+        <div className="bg-white rounded-lg shadow-xl p-8 max-w-md w-full mx-4 max-h-[90vh] overflow-y-auto">
+            <div className="text-center mb-8">
+                <div className="mx-auto h-16 w-16 bg-blue-600 rounded-lg flex items-center justify-center shadow-md mb-4">
+                    <Bike className="text-white" size={24} />
+                </div>
+                <h2 className="text-2xl font-bold text-gray-900 mb-2">Join as Rider</h2>
+                <p className="text-gray-600">Become a delivery rider and start earning</p>
+            </div>
+
+            {error && (
+                <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+                    {error}
+                </div>
+            )}
+
+            <form onSubmit={handleSubmit} className="space-y-4">
+                <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Full Name</label>
+                    <input
+                        type="text"
+                        name="name"
+                        value={formData.name}
+                        onChange={handleChange}
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600"
+                        placeholder="Enter your full name"
+                        required
+                        disabled={loading}
+                    />
+                </div>
+
+                <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Email Address</label>
+                    <input
+                        type="email"
+                        name="email"
+                        value={formData.email}
+                        onChange={handleChange}
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600"
+                        placeholder="Enter your email"
+                        required
+                        disabled={loading}
+                    />
+                </div>
+
+                <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Password</label>
+                    <input
+                        type="password"
+                        name="password"
+                        value={formData.password}
+                        onChange={handleChange}
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600"
+                        placeholder="Create a password"
+                        required
+                        disabled={loading}
+                    />
+                </div>
+
+                <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Phone Number</label>
+                    <input
+                        type="tel"
+                        name="phone"
+                        value={formData.phone}
+                        onChange={handleChange}
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600"
+                        placeholder="09XXXXXXXXX"
+                        required
+                        disabled={loading}
+                    />
+                </div>
+
+                <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Vehicle Type</label>
+                    <select
+                        name="vehicleType"
+                        value={formData.vehicleType}
+                        onChange={handleChange}
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600"
+                        required
+                        disabled={loading}
+                    >
+                        <option value="motorcycle">Motorcycle</option>
+                        <option value="bicycle">Bicycle</option>
+                        <option value="car">Car</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">License Number (Optional)</label>
+                    <input
+                        type="text"
+                        name="licenseNumber"
+                        value={formData.licenseNumber}
+                        onChange={handleChange}
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600"
+                        placeholder="Enter license number if applicable"
+                        disabled={loading}
+                    />
+                </div>
+
+                {/* Map Location Picker */}
+                <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Home Location
+                    </label>
+                    <LocationMap 
+                        onLocationSelect={handleLocationSelect}
+                        initialAddress={formData.address}
+                    />
+                </div>
+
+                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                    <p className="text-sm text-yellow-800">
+                        <strong>Note:</strong> Rider accounts require admin approval before you can start accepting delivery requests.
+                        This usually takes 24-48 hours.
+                    </p>
+                </div>
+
+                <button
+                    type="submit"
+                    disabled={loading}
+                    className="w-full bg-blue-600 text-white py-3 rounded-lg font-semibold hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                    {loading ? 'Creating account...' : 'REGISTER AS RIDER'}
+                </button>
+
+                <div className="text-center space-y-2">
+                    <p className="text-gray-600 text-sm">Want to join as?</p>
+                    <div className="flex justify-center space-x-4">
+                        <button
+                            type="button"
+                            onClick={onSwitchToCustomer}
+                            className="text-blue-600 hover:text-blue-700 font-medium text-sm"
+                            disabled={loading}
+                        >
+                            Customer
+                        </button>
+                        <button
+                            type="button"
+                            onClick={onSwitchToRestaurant}
+                            className="text-blue-600 hover:text-blue-700 font-medium text-sm"
+                            disabled={loading}
+                        >
+                            Restaurant Owner
+                        </button>
+                    </div>
+                    <button
+                        type="button"
+                        onClick={onSwitchToLogin}
+                        className="text-blue-600 hover:text-blue-700 font-medium text-sm"
                         disabled={loading}
                     >
                         Already have an account? Sign in
@@ -280,7 +814,7 @@ const RestaurantCard = ({ restaurant, onOrderClick, user }) => {
 const CustomerDashboard = () => {
     const { user, login, register, logout, loading: authLoading } = useAuth();
     const [showAuthModal, setShowAuthModal] = useState(false);
-    const [authMode, setAuthMode] = useState('login');
+    const [authMode, setAuthMode] = useState('login'); // 'login', 'customer', 'restaurant', 'rider'
     const [restaurants, setRestaurants] = useState([]);
     const [searchQuery, setSearchQuery] = useState('');
     const [loadingRestaurants, setLoadingRestaurants] = useState(true);
@@ -393,6 +927,16 @@ const CustomerDashboard = () => {
                                 <>
                                     <div className="flex items-center space-x-2">
                                         <span className="text-gray-700">Welcome, {user.name}!</span>
+                                        {user.role === 'restaurant' && (
+                                            <span className="bg-orange-100 text-orange-800 px-2 py-1 rounded-full text-xs font-medium">
+                                                Restaurant
+                                            </span>
+                                        )}
+                                        {user.role === 'rider' && (
+                                            <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs font-medium">
+                                                Rider
+                                            </span>
+                                        )}
                                     </div>
                                     <button className="relative flex items-center space-x-2 text-gray-700 hover:text-red-800">
                                         <ShoppingCart size={24} />
@@ -414,12 +958,33 @@ const CustomerDashboard = () => {
                                     >
                                         LOGIN
                                     </button>
-                                    <button 
-                                        onClick={() => { setShowAuthModal(true); setAuthMode('register'); }}
-                                        className="bg-red-800 text-white px-4 py-2 rounded hover:bg-red-900 transition-colors shadow-md"
-                                    >
-                                        SIGN UP
-                                    </button>
+                                    <div className="relative group">
+                                        <button 
+                                            className="bg-red-800 text-white px-4 py-2 rounded hover:bg-red-900 transition-colors shadow-md"
+                                        >
+                                            SIGN UP
+                                        </button>
+                                        <div className="absolute top-full left-0 mt-2 w-48 bg-white shadow-lg rounded-lg py-2 hidden group-hover:block z-50">
+                                            <button 
+                                                onClick={() => { setShowAuthModal(true); setAuthMode('customer'); }}
+                                                className="w-full text-left px-4 py-2 hover:bg-gray-100 text-gray-700"
+                                            >
+                                                🍽️ As Customer
+                                            </button>
+                                            <button 
+                                                onClick={() => { setShowAuthModal(true); setAuthMode('restaurant'); }}
+                                                className="w-full text-left px-4 py-2 hover:bg-gray-100 text-gray-700"
+                                            >
+                                                🏪 As Restaurant
+                                            </button>
+                                            <button 
+                                                onClick={() => { setShowAuthModal(true); setAuthMode('rider'); }}
+                                                className="w-full text-left px-4 py-2 hover:bg-gray-100 text-gray-700"
+                                            >
+                                                🚴 As Rider
+                                            </button>
+                                        </div>
+                                    </div>
                                 </div>
                             )}
                         </div>
@@ -522,6 +1087,59 @@ const CustomerDashboard = () => {
                         ))}
                     </div>
                 )}
+            </div>
+
+            {/* Join Sections */}
+            <div className="bg-gray-100 py-16">
+                <div className="max-w-7xl mx-auto px-4">
+                    <h2 className="text-3xl font-bold text-center text-gray-900 mb-12">Join Our Community</h2>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                        {/* Customer Card */}
+                        <div className="bg-white rounded-xl shadow-md p-6 text-center">
+                            <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                                <span className="text-2xl">🍽️</span>
+                            </div>
+                            <h3 className="text-xl font-bold text-gray-900 mb-3">Food Lover</h3>
+                            <p className="text-gray-600 mb-4">Order from your favorite restaurants and enjoy delicious meals delivered to your door.</p>
+                            <button 
+                                onClick={() => { setShowAuthModal(true); setAuthMode('customer'); }}
+                                className="bg-red-800 text-white px-6 py-2 rounded hover:bg-red-900 transition-colors"
+                            >
+                                Join as Customer
+                            </button>
+                        </div>
+
+                        {/* Restaurant Card */}
+                        <div className="bg-white rounded-xl shadow-md p-6 text-center">
+                            <div className="w-16 h-16 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                                <Store className="text-orange-600" size={24} />
+                            </div>
+                            <h3 className="text-xl font-bold text-gray-900 mb-3">Restaurant Owner</h3>
+                            <p className="text-gray-600 mb-4">Reach more customers and grow your business with our delivery platform.</p>
+                            <button 
+                                onClick={() => { setShowAuthModal(true); setAuthMode('restaurant'); }}
+                                className="bg-orange-600 text-white px-6 py-2 rounded hover:bg-orange-700 transition-colors"
+                            >
+                                Join as Restaurant
+                            </button>
+                        </div>
+
+                        {/* Rider Card */}
+                        <div className="bg-white rounded-xl shadow-md p-6 text-center">
+                            <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                                <Bike className="text-blue-600" size={24} />
+                            </div>
+                            <h3 className="text-xl font-bold text-gray-900 mb-3">Delivery Rider</h3>
+                            <p className="text-gray-600 mb-4">Earn money by delivering food to customers in your area. Flexible hours available.</p>
+                            <button 
+                                onClick={() => { setShowAuthModal(true); setAuthMode('rider'); }}
+                                className="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700 transition-colors"
+                            >
+                                Join as Rider
+                            </button>
+                        </div>
+                    </div>
+                </div>
             </div>
 
             {/* Special Offer */}
@@ -628,14 +1246,34 @@ const CustomerDashboard = () => {
                     {authMode === 'login' ? (
                         <LoginForm 
                             onLogin={handleLogin}
-                            onSwitchToRegister={() => setAuthMode('register')}
+                            onSwitchToRegister={() => setAuthMode('customer')}
+                            onClose={() => setShowAuthModal(false)}
+                            loading={authLoading}
+                        />
+                    ) : authMode === 'customer' ? (
+                        <CustomerRegisterForm 
+                            onRegister={handleRegister}
+                            onSwitchToLogin={() => setAuthMode('login')}
+                            onSwitchToRestaurant={() => setAuthMode('restaurant')}
+                            onSwitchToRider={() => setAuthMode('rider')}
+                            onClose={() => setShowAuthModal(false)}
+                            loading={authLoading}
+                        />
+                    ) : authMode === 'restaurant' ? (
+                        <RestaurantRegisterForm 
+                            onRegister={handleRegister}
+                            onSwitchToLogin={() => setAuthMode('login')}
+                            onSwitchToCustomer={() => setAuthMode('customer')}
+                            onSwitchToRider={() => setAuthMode('rider')}
                             onClose={() => setShowAuthModal(false)}
                             loading={authLoading}
                         />
                     ) : (
-                        <RegisterForm 
+                        <RiderRegisterForm 
                             onRegister={handleRegister}
                             onSwitchToLogin={() => setAuthMode('login')}
+                            onSwitchToCustomer={() => setAuthMode('customer')}
+                            onSwitchToRestaurant={() => setAuthMode('restaurant')}
                             onClose={() => setShowAuthModal(false)}
                             loading={authLoading}
                         />
