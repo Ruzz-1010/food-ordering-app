@@ -1,6 +1,5 @@
 // App.js
 import React from 'react';
-
 import { AuthProvider, useAuth } from './context/AuthContext';
 import CustomerDashboard from './pages/dashboards/CustomerDashboard';
 import AdminDashboard from './pages/dashboards/AdminDashboard';
@@ -32,6 +31,8 @@ const AppContent = () => {
       return <CustomerDashboard />;
     }
 
+    console.log('🔄 User role detected:', user.role);
+    
     switch (user.role) {
       case 'admin':
         return <AdminDashboard />;
