@@ -536,7 +536,7 @@ const RestaurantRegisterForm = ({ onRegister, onSwitchToLogin, onSwitchToCustome
     );
 };
 
-// Rider Register Form Component
+// Rider Register Form Component - FIXED VERSION
 const RiderRegisterForm = ({ onRegister, onSwitchToLogin, onSwitchToCustomer, onSwitchToRestaurant, onClose, loading }) => {
     const [formData, setFormData] = useState({
         name: '',
@@ -553,6 +553,8 @@ const RiderRegisterForm = ({ onRegister, onSwitchToLogin, onSwitchToCustomer, on
     const handleSubmit = async (e) => {
         e.preventDefault();
         setError('');
+        
+        console.log('🚴 RIDER REGISTRATION DATA:', formData); // ADD THIS LINE FOR DEBUGGING
         
         const result = await onRegister(formData);
         if (!result.success) {
