@@ -98,8 +98,8 @@ export const AuthProvider = ({ children }) => {
     setLoading(true);
     
     try {
-      console.log('📝 REGISTERING USER:', formData); // ADD THIS
-      
+      console.log('📝 REGISTERING USER:', userData);
+
       const response = await fetch(`${API_URL}/auth/register`, {
         method: 'POST',
         headers: {
