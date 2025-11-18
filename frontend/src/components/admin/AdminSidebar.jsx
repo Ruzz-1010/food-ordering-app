@@ -11,6 +11,7 @@ const AdminSidebar = ({ activeTab, setActiveTab, isOpen, setIsOpen, onLogout }) 
         { id: 'dashboard', label: 'Dashboard', icon: BarChart3 },
         { id: 'users', label: 'Users', icon: Users },
         { id: 'restaurants', label: 'Restaurants', icon: Store },
+        { id: 'riders', label: 'Riders', icon: Bike },
         { id: 'orders', label: 'Orders', icon: Package },
         { id: 'analytics', label: 'Analytics', icon: TrendingUp },
         { id: 'settings', label: 'Settings', icon: Settings },

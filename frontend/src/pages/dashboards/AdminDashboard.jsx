@@ -11,7 +11,7 @@ import RestaurantsTab from '../../components/admin/RestaurantsTab';
 import OrdersTab from '../../components/admin/OrdersTab';
 import AnalyticsTab from '../../components/admin/AnalyticsTab';
 import SettingsTab from '../../components/admin/SettingsTab';
-
+import RiderTab from '../../components/admin/RiderTab';
 
 // Main Admin Dashboard Component
 const AdminDashboard = () => {
@@ -40,6 +40,9 @@ case 'analytics':
 
 case 'settings':
   return <SettingsTab />;
+
+  case 'riders':
+  return <RiderTab />;
       
       default:
         return <DashboardTab />;
