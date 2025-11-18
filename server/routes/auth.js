@@ -5,12 +5,12 @@ const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 const Restaurant = require('../models/Restaurant');
 
-// REGISTER ROUTE
+// REGISTER ROUTE - COMPLETE VERSION
 router.post('/register', async (req, res) => {
   try {
     console.log('📝 Register attempt:', req.body);
     
-    const { name, email, password, phone, address, role = 'customer', restaurantName, cuisine } = req.body;
+    const { name, email, password, phone, address, role = 'customer', restaurantName, cuisine, vehicleType, licenseNumber } = req.body;
 
     // Check if user already exists
     const existingUser = await User.findOne({ email });
@@ -21,11 +21,11 @@ router.post('/register', async (req, res) => {
       });
     }
 
-    // FIX: Auto-approve admin users during registration
+    // Auto-approve customers and admins, require approval for restaurant/rider
     const isApproved = role === 'customer' || role === 'admin';
 
-    // Create new user
-    const newUser = new User({
+    // Create user data with conditional fields
+    const userData = {
       name,
       email,
       password,
@@ -33,8 +33,16 @@ router.post('/register', async (req, res) => {
       address,
       role,
       isApproved
-    });
+    };
 
+    // Add rider-specific fields
+    if (role === 'rider') {
+      userData.vehicleType = vehicleType || 'motorcycle';
+      userData.licenseNumber = licenseNumber || '';
+      console.log('🚴 Rider registration:', { vehicleType, licenseNumber });
+    }
+
+    const newUser = new User(userData);
     await newUser.save();
 
     // AUTO-CREATE RESTAURANT IF ROLE IS RESTAURANT
@@ -57,7 +65,7 @@ router.post('/register', async (req, res) => {
         
       } catch (restaurantError) {
         console.error('❌ Failed to create restaurant:', restaurantError);
-        // Don't fail the user registration if restaurant creation fails
+        // Don't fail user registration if restaurant creation fails
       }
     }
 
@@ -68,7 +76,7 @@ router.post('/register', async (req, res) => {
       { expiresIn: '7d' }
     );
 
-    console.log('✅ User registered with role:', role, 'Approved:', isApproved);
+    console.log('✅ User registered:', { role, email, isApproved });
 
     res.status(201).json({
       success: true,
@@ -79,7 +87,9 @@ router.post('/register', async (req, res) => {
         name: newUser.name,
         email: newUser.email,
         role: newUser.role,
-        isApproved: newUser.isApproved
+        isApproved: newUser.isApproved,
+        vehicleType: newUser.vehicleType,
+        licenseNumber: newUser.licenseNumber
       }
     });
 
@@ -92,114 +102,59 @@ router.post('/register', async (req, res) => {
   }
 });
 
-// TEMPORARY ADMIN CREATION ROUTE (Remove after creating admin)
-router.post('/register-admin', async (req, res) => {
+// EMERGENCY ADMIN CREATION
+router.post('/create-admin', async (req, res) => {
   try {
-    console.log('👑 Admin creation attempt:', req.body);
-    
-    const { name, email, password, phone, address } = req.body;
+    const { name = 'Admin', email = 'admin@foodexpress.com', password = 'admin123' } = req.body;
 
-    // Check if user already exists
-    const existingUser = await User.findOne({ email });
-    if (existingUser) {
-      return res.status(400).json({ 
-        success: false,
-        message: 'User already exists with this email' 
+    // Check if admin exists
+    const existingAdmin = await User.findOne({ role: 'admin' });
+    if (existingAdmin) {
+      return res.json({
+        success: true,
+        message: 'Admin already exists',
+        admin: existingAdmin
       });
     }
 
-    // Create admin user
     const adminUser = new User({
-      name: name || 'System Administrator',
+      name,
       email,
-      password: password || 'admin123',
-      phone: phone || '09123456789',
-      address: address || 'Admin Office',
+      password,
+      phone: '09123456789',
+      address: 'Admin Office',
       role: 'admin',
       isApproved: true
     });
 
     await adminUser.save();
 
-    console.log('✅ Admin user created successfully:', adminUser.email);
+    console.log('✅ Emergency admin created:', adminUser.email);
 
-    res.status(201).json({
+    res.json({
       success: true,
-      message: 'Admin user created successfully! You can now login.',
-      user: {
-        id: adminUser._id,
-        name: adminUser.name,
-        email: adminUser.email,
-        role: adminUser.role
-      }
+      message: 'Emergency admin created!',
+      credentials: { email, password },
+      user: adminUser
     });
 
   } catch (error) {
     console.error('❌ Admin creation error:', error);
     res.status(500).json({ 
       success: false,
-      message: 'Admin creation failed: ' + error.message 
+      message: 'Failed to create admin: ' + error.message 
     });
   }
 });
 
-// TOKEN VERIFICATION ROUTE
-router.get('/verify', async (req, res) => {
-  try {
-    const token = req.headers.authorization?.replace('Bearer ', '');
-    
-    if (!token) {
-      return res.status(401).json({ 
-        success: false,
-        message: 'No token provided' 
-      });
-    }
-
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'fallback-secret-key');
-    
-    // Find user in database
-    const user = await User.findById(decoded.userId);
-    if (!user) {
-      return res.status(401).json({ 
-        success: false,
-        message: 'User not found' 
-      });
-    }
-
-    res.json({
-      success: true,
-      user: {
-        id: user._id,
-        name: user.name,
-        email: user.email,
-        role: user.role,
-        isApproved: user.isApproved
-      }
-    });
-
-  } catch (error) {
-    console.error('❌ Token verification error:', error);
-    res.status(401).json({ 
-      success: false,
-      message: 'Invalid token' 
-    });
-  }
-});
-
-// LOGIN ROUTE - REAL AUTHENTICATION
+// LOGIN ROUTE
 router.post('/login', async (req, res) => {
   try {
     console.log('🔐 Login attempt:', req.body);
     
     const { email, password } = req.body;
 
-    // Find user in REAL MongoDB
     const user = await User.findOne({ email });
-    console.log('👤 User found:', {
-      email: user?.email,
-      role: user?.role,
-      isApproved: user?.isApproved
-    });
     
     if (!user) {
       return res.status(400).json({ 
@@ -208,9 +163,7 @@ router.post('/login', async (req, res) => {
       });
     }
 
-    // Check password
     const isPasswordValid = await user.comparePassword(password);
-    console.log('🔑 Password valid:', isPasswordValid);
     
     if (!isPasswordValid) {
       return res.status(400).json({ 
@@ -219,30 +172,28 @@ router.post('/login', async (req, res) => {
       });
     }
 
-    // FIX: Auto-approve admin users and check approval status
-    if (user.role === 'admin') {
-      // Auto-approve admin if not already approved
-      if (!user.isApproved) {
-        user.isApproved = true;
-        await user.save();
-        console.log('✅ Auto-approved admin user');
-      }
-    } else if (!user.isApproved && user.role !== 'customer') {
-      // Block restaurant/rider if not approved
+    // Auto-approve admin users on login
+    if (user.role === 'admin' && !user.isApproved) {
+      user.isApproved = true;
+      await user.save();
+      console.log('✅ Auto-approved admin user');
+    }
+
+    // Block restaurant/rider if not approved
+    if (!user.isApproved && (user.role === 'restaurant' || user.role === 'rider')) {
       return res.status(400).json({ 
         success: false,
-        message: 'Account pending approval' 
+        message: 'Account pending admin approval' 
       });
     }
 
-    // Generate JWT token
     const token = jwt.sign(
       { userId: user._id, email: user.email, role: user.role }, 
       process.env.JWT_SECRET || 'fallback-secret-key',
       { expiresIn: '7d' }
     );
 
-    console.log('✅ Login successful for role:', user.role);
+    console.log('✅ Login successful:', user.role);
 
     res.json({
       success: true,
@@ -253,7 +204,9 @@ router.post('/login', async (req, res) => {
         name: user.name,
         email: user.email,
         role: user.role,
-        isApproved: user.isApproved
+        isApproved: user.isApproved,
+        vehicleType: user.vehicleType,
+        licenseNumber: user.licenseNumber
       }
     });
 
@@ -266,10 +219,12 @@ router.post('/login', async (req, res) => {
   }
 });
 
-// GET ALL USERS (For admin dashboard)
+// GET ALL USERS
 router.get('/users', async (req, res) => {
   try {
-    const users = await User.find({}, { password: 0 }); // Exclude passwords
+    const users = await User.find({}, { password: 0 });
+    console.log(`📊 Returning ${users.length} users`);
+    
     res.json({
       success: true,
       users
@@ -283,7 +238,7 @@ router.get('/users', async (req, res) => {
   }
 });
 
-// APPROVE USER ROUTE (For admin to approve restaurant/rider accounts)
+// APPROVE USER
 router.put('/users/:id/approve', async (req, res) => {
   try {
     const user = await User.findByIdAndUpdate(
@@ -299,18 +254,12 @@ router.put('/users/:id/approve', async (req, res) => {
       });
     }
 
-    console.log('✅ User approved:', user.email, 'Role:', user.role);
+    console.log('✅ User approved:', user.email, user.role);
 
     res.json({
       success: true,
       message: 'User approved successfully!',
-      user: {
-        id: user._id,
-        name: user.name,
-        email: user.email,
-        role: user.role,
-        isApproved: user.isApproved
-      }
+      user
     });
 
   } catch (error) {
@@ -322,7 +271,39 @@ router.put('/users/:id/approve', async (req, res) => {
   }
 });
 
-// DELETE USER ROUTE
+// TOGGLE USER ACTIVE STATUS
+router.put('/users/:id/toggle-active', async (req, res) => {
+  try {
+    const user = await User.findById(req.params.id);
+    
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+
+    user.isActive = !user.isActive;
+    await user.save();
+
+    console.log('🔄 User active status:', user.email, user.isActive);
+
+    res.json({
+      success: true,
+      message: `User ${user.isActive ? 'activated' : 'deactivated'} successfully!`,
+      user
+    });
+
+  } catch (error) {
+    console.error('❌ Toggle active error:', error);
+    res.status(500).json({ 
+      success: false,
+      message: 'Failed to update user status' 
+    });
+  }
+});
+
+// DELETE USER
 router.delete('/users/:id', async (req, res) => {
   try {
     const user = await User.findByIdAndDelete(req.params.id);
@@ -346,54 +327,6 @@ router.delete('/users/:id', async (req, res) => {
     res.status(500).json({ 
       success: false,
       message: 'Failed to delete user: ' + error.message 
-    });
-  }
-});
-
-// UPDATE USER ROLE ROUTE
-router.put('/users/:id/role', async (req, res) => {
-  try {
-    const { role } = req.body;
-    
-    if (!['customer', 'restaurant', 'rider', 'admin'].includes(role)) {
-      return res.status(400).json({
-        success: false,
-        message: 'Invalid role'
-      });
-    }
-
-    const user = await User.findByIdAndUpdate(
-      req.params.id,
-      { role },
-      { new: true }
-    );
-
-    if (!user) {
-      return res.status(404).json({
-        success: false,
-        message: 'User not found'
-      });
-    }
-
-    console.log('🔄 User role updated:', user.email, 'New role:', role);
-
-    res.json({
-      success: true,
-      message: 'User role updated successfully!',
-      user: {
-        id: user._id,
-        name: user.name,
-        email: user.email,
-        role: user.role,
-        isApproved: user.isApproved
-      }
-    });
-
-  } catch (error) {
-    console.error('❌ User role update error:', error);
-    res.status(500).json({ 
-      success: false,
-      message: 'Failed to update user role: ' + error.message 
     });
   }
 });
@@ -427,14 +360,53 @@ router.get('/stats', async (req, res) => {
     console.error('❌ Stats error:', error);
     res.status(500).json({ 
       success: false,
-      message: 'Failed to get statistics: ' + error.message 
+      message: 'Failed to get statistics' 
+    });
+  }
+});
+
+// DEBUG: GET ALL DATA
+router.get('/debug/all', async (req, res) => {
+  try {
+    const users = await User.find({}, { password: 0 });
+    const restaurants = await Restaurant.find({});
+    
+    res.json({
+      success: true,
+      users: {
+        total: users.length,
+        byRole: {
+          customer: users.filter(u => u.role === 'customer').length,
+          restaurant: users.filter(u => u.role === 'restaurant').length,
+          rider: users.filter(u => u.role === 'rider').length,
+          admin: users.filter(u => u.role === 'admin').length
+        },
+        list: users
+      },
+      restaurants: {
+        total: restaurants.length,
+        approved: restaurants.filter(r => r.isApproved).length,
+        pending: restaurants.filter(r => !r.isApproved).length,
+        list: restaurants
+      }
+    });
+
+  } catch (error) {
+    console.error('❌ Debug error:', error);
+    res.status(500).json({ 
+      success: false,
+      error: error.message 
     });
   }
 });
 
 // TEST ROUTE
 router.get('/test', (req, res) => {
-  res.json({ message: 'Auth route is WORKING! ✅' });
+  res.json({ 
+    success: true,
+    message: 'Auth API is working! ✅',
+    timestamp: new Date().toISOString()
+  });
 });
 
 module.exports = router;

@@ -1,4 +1,3 @@
-// 📁 models/User.js - FIXED VERSION
 const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
 
@@ -31,10 +30,7 @@ const userSchema = new mongoose.Schema({
   },
   isApproved: { 
     type: Boolean, 
-    default: function() {
-      // Auto-approve customers, require approval for restaurant/rider
-      return this.role === 'customer' || this.role === 'admin';
-    }
+    default: false 
   },
   isActive: { 
     type: Boolean, 
@@ -68,5 +64,4 @@ userSchema.methods.comparePassword = async function(candidatePassword) {
   return await bcrypt.compare(candidatePassword, this.password);
 };
 
-// FIX: Export userSchema, not User
 module.exports = mongoose.model('User', userSchema);

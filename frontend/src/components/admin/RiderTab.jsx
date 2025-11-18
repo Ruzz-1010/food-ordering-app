@@ -1,4 +1,3 @@
-// RiderTab.jsx - COMPLETE VERSION
 import React, { useState, useEffect } from 'react';
 import { Bike, RefreshCw, CheckCircle, XCircle, Edit, Trash2, MapPin, Phone, Mail, User, AlertCircle } from 'lucide-react';
 
@@ -27,18 +26,10 @@ const RiderTab = () => {
       
       const data = await response.json();
       
-      // Filter only riders and handle missing fields
+      // Filter only riders
       let ridersArray = [];
       if (data.success && Array.isArray(data.users)) {
-        ridersArray = data.users
-          .filter(user => user.role === 'rider')
-          .map(rider => ({
-            ...rider,
-            // Add default values for missing fields
-            isActive: rider.isActive !== undefined ? rider.isActive : true,
-            vehicleType: rider.vehicleType || 'motorcycle',
-            licenseNumber: rider.licenseNumber || ''
-          }));
+        ridersArray = data.users.filter(user => user.role === 'rider');
       }
       
       setRiders(ridersArray);
@@ -81,13 +72,11 @@ const RiderTab = () => {
   const handleToggleActive = async (riderId, currentStatus, riderName) => {
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch(`${API_URL}/auth/users/${riderId}/status`, {
+      const response = await fetch(`${API_URL}/auth/users/${riderId}/toggle-active`, {
         method: 'PUT',
         headers: {
-          'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({ isActive: !currentStatus })
+        }
       });
       
       if (response.ok) {
@@ -151,21 +140,6 @@ const RiderTab = () => {
     approved: riders.filter(r => r.isApproved).length,
     pending: riders.filter(r => !r.isApproved).length,
     active: riders.filter(r => r.isActive).length
-  };
-
-  const getVehicleBadge = (vehicleType) => {
-    const vehicleConfig = {
-      motorcycle: { color: 'bg-blue-100 text-blue-800', label: '🏍️ Motorcycle' },
-      bicycle: { color: 'bg-green-100 text-green-800', label: '🚲 Bicycle' },
-      car: { color: 'bg-purple-100 text-purple-800', label: '🚗 Car' }
-    };
-    
-    const config = vehicleConfig[vehicleType] || vehicleConfig.motorcycle;
-    return (
-      <span className={`px-2 py-1 text-xs rounded-full ${config.color}`}>
-        {config.label}
-      </span>
-    );
   };
 
   if (loading) {
@@ -302,7 +276,14 @@ const RiderTab = () => {
                     </div>
                   </td>
                   <td className="py-3 px-4">
-                    {getVehicleBadge(rider.vehicleType)}
+                    <span className={`px-2 py-1 text-xs rounded-full ${
+                      rider.vehicleType === 'motorcycle' ? 'bg-blue-100 text-blue-800' :
+                      rider.vehicleType === 'bicycle' ? 'bg-green-100 text-green-800' :
+                      'bg-purple-100 text-purple-800'
+                    }`}>
+                      {rider.vehicleType === 'motorcycle' ? '🏍️ Motorcycle' :
+                       rider.vehicleType === 'bicycle' ? '🚲 Bicycle' : '🚗 Car'}
+                    </span>
                     {rider.licenseNumber && (
                       <p className="text-xs text-gray-500 mt-1">License: {rider.licenseNumber}</p>
                     )}
