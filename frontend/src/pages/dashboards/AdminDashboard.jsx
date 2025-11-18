@@ -9,6 +9,9 @@ import DashboardTab from '../../components/admin/DashboardTab';
 import UsersTab from '../../components/admin/UsersTab';
 import RestaurantsTab from '../../components/admin/RestaurantsTab';
 import OrdersTab from '../../components/admin/OrdersTab';
+import AnalyticsTab from '../../components/admin/AnalyticsTab';
+import SettingsTab from '../../components/admin/SettingsTab';
+
 
 // Main Admin Dashboard Component
 const AdminDashboard = () => {
@@ -31,29 +34,12 @@ const AdminDashboard = () => {
       case 'orders':
         return <OrdersTab />;
       
-      case 'analytics':
-        return (
-          <div className="bg-white rounded-xl shadow-sm border border-orange-200 p-6">
-            <h2 className="text-2xl font-bold text-gray-900 mb-6">📊 Analytics & Reports</h2>
-            <div className="text-center py-12">
-              <Utensils size={48} className="mx-auto mb-4 text-orange-400" />
-              <p className="text-gray-600 text-lg">Advanced analytics coming soon!</p>
-              <p className="text-gray-500">Sales reports, customer insights, and performance metrics</p>
-            </div>
-          </div>
-        );
-      
-      case 'settings':
-        return (
-          <div className="bg-white rounded-xl shadow-sm border border-orange-200 p-6">
-            <h2 className="text-2xl font-bold text-gray-900 mb-6">⚙️ System Settings</h2>
-            <div className="text-center py-12">
-              <Utensils size={48} className="mx-auto mb-4 text-orange-400" />
-              <p className="text-gray-600 text-lg">System configuration panel</p>
-              <p className="text-gray-500">Platform settings, notifications, and preferences</p>
-            </div>
-          </div>
-        );
+     // In the renderContent function:
+case 'analytics':
+  return <AnalyticsTab />;
+
+case 'settings':
+  return <SettingsTab />;
       
       default:
         return <DashboardTab />;
