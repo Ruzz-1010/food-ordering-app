@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Store, Plus, Package, DollarSign, Clock, Star, Eye, X, Save, LogOut, RefreshCw } from 'lucide-react';
+import { Store, Plus, Package, DollarSign, Clock, Star, Eye, X, Save, LogOut, RefreshCw, Image } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 
 const RestaurantDashboard = () => {
@@ -17,7 +17,8 @@ const RestaurantDashboard = () => {
     name: '',
     price: '',
     description: '',
-    category: 'main course'
+    category: 'main course',
+    image: ''
   });
 
   // Fetch data
@@ -26,14 +27,14 @@ const RestaurantDashboard = () => {
     try {
       const token = localStorage.getItem('token');
       
-      // Fetch menu
-      const menuResponse = await fetch(`${API_URL}/restaurants/menu/${user.id}`, {
+      // Fetch products
+      const productsResponse = await fetch(`${API_URL}/products/restaurant/${user.id}`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       
-      if (menuResponse.ok) {
-        const menuData = await menuResponse.json();
-        setMenuItems(menuData.menuItems || menuData || []);
+      if (productsResponse.ok) {
+        const productsData = await productsResponse.json();
+        setMenuItems(productsData.products || productsData || []);
       }
 
       // Fetch orders
@@ -59,7 +60,7 @@ const RestaurantDashboard = () => {
     }
   }, [user]);
 
-  // Simple add product
+  // Add product with image
   const handleAddProduct = async (e) => {
     e.preventDefault();
     
@@ -75,10 +76,13 @@ const RestaurantDashboard = () => {
         price: parseFloat(newProduct.price),
         description: newProduct.description,
         category: newProduct.category,
+        image: newProduct.image, // Include image URL
         restaurantId: user.id
       };
 
-      const response = await fetch(`${API_URL}/restaurants/menu`, {
+      console.log('📦 Sending product:', productData);
+
+      const response = await fetch(`${API_URL}/products`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -88,12 +92,19 @@ const RestaurantDashboard = () => {
       });
 
       const data = await response.json();
+      console.log('📨 Response:', data);
 
       if (response.ok) {
         alert('✅ Product added successfully!');
         setShowAddProduct(false);
-        setNewProduct({ name: '', price: '', description: '', category: 'main course' });
-        fetchData(); // Refresh data
+        setNewProduct({ 
+          name: '', 
+          price: '', 
+          description: '', 
+          category: 'main course',
+          image: '' 
+        });
+        fetchData();
       } else {
         alert(`❌ Failed: ${data.message || 'Please check backend'}`);
       }
@@ -101,6 +112,16 @@ const RestaurantDashboard = () => {
       console.error('Error:', error);
       alert('❌ Network error - check console');
     }
+  };
+
+  // Test image URL
+  const testImage = (url) => {
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.onload = () => resolve(true);
+      img.onerror = () => resolve(false);
+      img.src = url;
+    });
   };
 
   // Format currency
@@ -237,6 +258,25 @@ const RestaurantDashboard = () => {
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     {menuItems.map((item) => (
                       <div key={item._id || item.id} className="border rounded-lg p-4 hover:shadow-md transition-shadow">
+                        {/* Product Image */}
+                        <div className="mb-3">
+                          {item.image ? (
+                            <img 
+                              src={item.image} 
+                              alt={item.name}
+                              className="w-full h-32 object-cover rounded-lg"
+                              onError={(e) => {
+                                e.target.style.display = 'none';
+                                e.target.nextSibling.style.display = 'flex';
+                              }}
+                            />
+                          ) : (
+                            <div className="w-full h-32 bg-gray-200 rounded-lg flex items-center justify-center">
+                              <Image size={32} className="text-gray-400" />
+                            </div>
+                          )}
+                        </div>
+                        
                         <div className="flex justify-between items-start mb-2">
                           <h3 className="font-semibold text-gray-900">{item.name}</h3>
                           <span className="text-sm bg-gray-100 text-gray-600 px-2 py-1 rounded">
@@ -245,7 +285,7 @@ const RestaurantDashboard = () => {
                         </div>
                         
                         {item.description && (
-                          <p className="text-sm text-gray-600 mb-3">{item.description}</p>
+                          <p className="text-sm text-gray-600 mb-3 line-clamp-2">{item.description}</p>
                         )}
                         
                         <div className="flex justify-between items-center">
@@ -320,10 +360,10 @@ const RestaurantDashboard = () => {
         </div>
       </div>
 
-      {/* Add Product Modal */}
+      {/* Add Product Modal with Image */}
       {showAddProduct && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg shadow-lg max-w-md w-full">
+          <div className="bg-white rounded-lg shadow-lg max-w-md w-full max-h-[90vh] overflow-y-auto">
             <div className="p-6">
               <div className="flex justify-between items-center mb-4">
                 <h3 className="text-lg font-bold text-gray-900">Add Menu Item</h3>
@@ -336,6 +376,40 @@ const RestaurantDashboard = () => {
               </div>
 
               <form onSubmit={handleAddProduct} className="space-y-4">
+                {/* Image URL Input */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Product Image URL
+                  </label>
+                  <input
+                    type="url"
+                    value={newProduct.image}
+                    onChange={(e) => setNewProduct({...newProduct, image: e.target.value})}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+                    placeholder="https://example.com/burger-image.jpg"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    💡 Tip: Use food images from Unsplash or Google Images
+                  </p>
+                  
+                  {/* Image Preview */}
+                  {newProduct.image && (
+                    <div className="mt-2">
+                      <p className="text-xs text-gray-600 mb-1">Preview:</p>
+                      <div className="w-20 h-20 border rounded-lg overflow-hidden">
+                        <img 
+                          src={newProduct.image} 
+                          alt="Preview" 
+                          className="w-full h-full object-cover"
+                          onError={(e) => {
+                            e.target.style.display = 'none';
+                          }}
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
+
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Product Name *

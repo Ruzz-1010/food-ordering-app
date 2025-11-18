@@ -3,25 +3,44 @@ const mongoose = require('mongoose');
 const productSchema = new mongoose.Schema({
   name: {
     type: String,
-    required: true
+    required: [true, 'Product name is required'],
+    trim: true
   },
-  description: String,
   price: {
     type: Number,
-    required: true
+    required: [true, 'Product price is required'],
+    min: [0, 'Price cannot be negative']
   },
-  restaurant: {
+  description: {
+    type: String,
+    default: ''
+  },
+  category: {
+    type: String,
+    default: 'main course',
+    enum: ['appetizer', 'main course', 'dessert', 'beverage', 'side dish', 'combo meal']
+  },
+  restaurantId: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: 'Restaurant',
+    ref: 'User',
     required: true
   },
-  category: String,
-  image: String,
   isAvailable: {
     type: Boolean,
     default: true
   },
-  preparationTime: Number
+  preparationTime: {
+    type: Number, // in minutes
+    default: 15
+  },
+  ingredients: {
+    type: String,
+    default: ''
+  },
+  image: {
+    type: String,
+    default: ''
+  }
 }, {
   timestamps: true
 });
