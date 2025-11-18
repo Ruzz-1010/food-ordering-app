@@ -1,4 +1,4 @@
-// RiderTab.jsx - NEW FILE
+// RiderTab.jsx - COMPLETE VERSION
 import React, { useState, useEffect } from 'react';
 import { Bike, RefreshCw, CheckCircle, XCircle, Edit, Trash2, MapPin, Phone, Mail, User, AlertCircle } from 'lucide-react';
 
@@ -27,15 +27,20 @@ const RiderTab = () => {
       
       const data = await response.json();
       
-      // Filter only riders from all users
+      // Filter only riders and handle missing fields
       let ridersArray = [];
       if (data.success && Array.isArray(data.users)) {
-        ridersArray = data.users.filter(user => user.role === 'rider');
-      } else if (Array.isArray(data)) {
-        ridersArray = data.filter(user => user.role === 'rider');
+        ridersArray = data.users
+          .filter(user => user.role === 'rider')
+          .map(rider => ({
+            ...rider,
+            // Add default values for missing fields
+            isActive: rider.isActive !== undefined ? rider.isActive : true,
+            vehicleType: rider.vehicleType || 'motorcycle',
+            licenseNumber: rider.licenseNumber || ''
+          }));
       }
       
-      console.log('🚴 Found riders:', ridersArray);
       setRiders(ridersArray);
       
     } catch (error) {

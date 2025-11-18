@@ -1,4 +1,4 @@
-// models/User.js
+// 📁 models/User.js - UPDATED VERSION
 const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
 
@@ -29,9 +29,27 @@ const userSchema = new mongoose.Schema({
     enum: ['customer', 'restaurant', 'rider', 'admin'], 
     default: 'customer' 
   },
+  // IMPORTANT: ADD THESE FIELDS
   isApproved: { 
     type: Boolean, 
-    default: false 
+    default: function() {
+      // Auto-approve customers, require approval for restaurant/rider
+      return this.role === 'customer' || this.role === 'admin';
+    }
+  },
+  isActive: { 
+    type: Boolean, 
+    default: true 
+  },
+  // Rider-specific fields
+  vehicleType: { 
+    type: String, 
+    enum: ['motorcycle', 'bicycle', 'car'],
+    default: 'motorcycle' 
+  },
+  licenseNumber: { 
+    type: String, 
+    default: '' 
   },
   createdAt: { 
     type: Date, 
@@ -51,4 +69,4 @@ userSchema.methods.comparePassword = async function(candidatePassword) {
   return await bcrypt.compare(candidatePassword, this.password);
 };
 
-module.exports = mongoose.model('User', userSchema);
+module.exports = mongoose.model('User', User);
