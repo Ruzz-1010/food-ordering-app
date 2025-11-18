@@ -1,6 +1,6 @@
 // AnalyticsTab.jsx 
 import React, { useState, useEffect } from 'react';
-import { TrendingUp, Users, Store, Package, DollarSign, Calendar, ChefHat, Utensils, RefreshCw } from 'lucide-react';
+import { TrendingUp, Users, Store, Package, DollarSign, Calendar, ChefHat, Utensils, RefreshCw, Clock } from 'lucide-react';
 
 const AnalyticsTab = () => {
   const [analytics, setAnalytics] = useState({
