@@ -556,12 +556,6 @@ const RiderRegisterForm = ({ onRegister, onSwitchToLogin, onSwitchToCustomer, on
         
         console.log('🚴 RIDER REGISTRATION DATA:', formData);
         
-        // Validate required fields
-        if (!formData.name || !formData.email || !formData.password || !formData.phone || !formData.address) {
-            setError('Please fill in all required fields');
-            return;
-        }
-        
         try {
             const result = await onRegister(formData);
             console.log('🚴 REGISTRATION RESULT:', result);
@@ -569,9 +563,15 @@ const RiderRegisterForm = ({ onRegister, onSwitchToLogin, onSwitchToCustomer, on
             if (!result.success) {
                 setError(result.message || 'Registration failed. Please try again.');
             } else {
-                console.log('✅ Rider registration successful!');
-                alert('🎉 Rider account created successfully! Please wait for admin approval.');
-                onClose();
+                if (result.needsApproval) {
+                    // Rider needs approval - show message and close modal
+                    alert('✅ Registration successful! Your rider account is pending admin approval. You will be notified once approved.');
+                    onClose();
+                } else {
+                    // Auto-logged in (shouldn't happen for riders)
+                    console.log('✅ Rider registration successful and auto-logged in!');
+                    onClose();
+                }
             }
         } catch (error) {
             console.error('🚴 Registration error:', error);

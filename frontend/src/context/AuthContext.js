@@ -25,7 +25,15 @@ export const AuthProvider = ({ children }) => {
           });
           
           if (response.ok) {
-            setUser(JSON.parse(userData));
+            const userObj = JSON.parse(userData);
+            // Check if rider/restaurant is approved before setting user
+            if ((userObj.role === 'rider' || userObj.role === 'restaurant') && !userObj.isApproved) {
+              console.log('🚫 User not approved, logging out');
+              localStorage.removeItem('token');
+              localStorage.removeItem('user');
+            } else {
+              setUser(userObj);
+            }
           } else {
             // Token is invalid, clear storage
             localStorage.removeItem('token');
@@ -72,6 +80,15 @@ export const AuthProvider = ({ children }) => {
         };
         
         console.log('✅ Login successful, user:', userData);
+        
+        // CRITICAL FIX: Check if rider/restaurant is approved
+        if ((userData.role === 'rider' || userData.role === 'restaurant') && !userData.isApproved) {
+          console.log('🚫 Rider/Restaurant not approved, blocking login');
+          return { 
+            success: false, 
+            message: 'Your account is pending admin approval. Please wait for approval before logging in.' 
+          };
+        }
         
         setUser(userData);
         localStorage.setItem('token', data.token);
@@ -124,7 +141,6 @@ export const AuthProvider = ({ children }) => {
       if (response.ok && data.success) {
         console.log('✅ Registration successful! User data:', data.user);
         
-        // Store user data immediately after successful registration
         const userInfo = {
           id: data.user.id,
           name: data.user.name,
@@ -135,7 +151,18 @@ export const AuthProvider = ({ children }) => {
           licenseNumber: data.user.licenseNumber
         };
         
-        console.log('💾 Storing user in context and localStorage:', userInfo);
+        // CRITICAL FIX: Don't auto-login if rider/restaurant needs approval
+        if ((userInfo.role === 'rider' || userInfo.role === 'restaurant') && !userInfo.isApproved) {
+          console.log('🚫 Rider/Restaurant registered but needs approval - not auto-logging in');
+          return { 
+            success: true, 
+            message: 'Registration successful! Your account is pending admin approval. You will be notified once approved.', 
+            user: userInfo,
+            needsApproval: true
+          };
+        }
+        
+        console.log('💾 Auto-logging in approved user:', userInfo);
         
         setUser(userInfo);
         localStorage.setItem('token', data.token);
