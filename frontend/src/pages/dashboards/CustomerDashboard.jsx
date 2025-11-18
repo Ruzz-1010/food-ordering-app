@@ -554,13 +554,28 @@ const RiderRegisterForm = ({ onRegister, onSwitchToLogin, onSwitchToCustomer, on
         e.preventDefault();
         setError('');
         
-        console.log('🚴 RIDER REGISTRATION DATA:', formData); // ADD THIS LINE FOR DEBUGGING
+        console.log('🚴 RIDER REGISTRATION DATA:', formData);
         
-        const result = await onRegister(formData);
-        if (!result.success) {
-            setError(result.message);
-        } else {
-            onClose();
+        // Validate required fields
+        if (!formData.name || !formData.email || !formData.password || !formData.phone || !formData.address) {
+            setError('Please fill in all required fields');
+            return;
+        }
+        
+        try {
+            const result = await onRegister(formData);
+            console.log('🚴 REGISTRATION RESULT:', result);
+            
+            if (!result.success) {
+                setError(result.message || 'Registration failed. Please try again.');
+            } else {
+                console.log('✅ Rider registration successful!');
+                alert('🎉 Rider account created successfully! Please wait for admin approval.');
+                onClose();
+            }
+        } catch (error) {
+            console.error('🚴 Registration error:', error);
+            setError('Registration failed. Please try again.');
         }
     };
 
@@ -594,7 +609,7 @@ const RiderRegisterForm = ({ onRegister, onSwitchToLogin, onSwitchToCustomer, on
 
             <form onSubmit={handleSubmit} className="space-y-4">
                 <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Full Name</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Full Name *</label>
                     <input
                         type="text"
                         name="name"
@@ -608,7 +623,7 @@ const RiderRegisterForm = ({ onRegister, onSwitchToLogin, onSwitchToCustomer, on
                 </div>
 
                 <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Email Address</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Email Address *</label>
                     <input
                         type="email"
                         name="email"
@@ -622,7 +637,7 @@ const RiderRegisterForm = ({ onRegister, onSwitchToLogin, onSwitchToCustomer, on
                 </div>
 
                 <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Password</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Password *</label>
                     <input
                         type="password"
                         name="password"
@@ -636,7 +651,7 @@ const RiderRegisterForm = ({ onRegister, onSwitchToLogin, onSwitchToCustomer, on
                 </div>
 
                 <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Phone Number</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Phone Number *</label>
                     <input
                         type="tel"
                         name="phone"
@@ -650,7 +665,7 @@ const RiderRegisterForm = ({ onRegister, onSwitchToLogin, onSwitchToCustomer, on
                 </div>
 
                 <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Vehicle Type</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Vehicle Type *</label>
                     <select
                         name="vehicleType"
                         value={formData.vehicleType}
@@ -680,7 +695,7 @@ const RiderRegisterForm = ({ onRegister, onSwitchToLogin, onSwitchToCustomer, on
 
                 <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Home Location
+                        Home Location *
                     </label>
                     <LocationMap 
                         onLocationSelect={handleLocationSelect}
