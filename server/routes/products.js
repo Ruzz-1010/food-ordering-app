@@ -2,20 +2,16 @@ const express = require('express');
 const router = express.Router();
 const Product = require('../models/Product');
 
-// GET PRODUCTS FOR RESTAURANT - FIXED VERSION
+// GET PRODUCTS FOR RESTAURANT
 router.get('/restaurant/:restaurantId', async (req, res) => {
   try {
     const { restaurantId } = req.params;
     console.log('📋 Fetching products for restaurant:', restaurantId);
     
-    // ✅ FIXED: Changed from { restaurantId } to { restaurant: restaurantId }
-    const products = await Product.find({ 
-      restaurant: restaurantId,  // ✅ CORRECT: Using 'restaurant' field name
-      isAvailable: true 
-    })
-    .sort({ createdAt: -1 });
+    const products = await Product.find({ restaurant: restaurantId })
+      .sort({ createdAt: -1 });
 
-    console.log(`✅ Found ${products.length} products for restaurant ${restaurantId}`);
+    console.log(`✅ Found ${products.length} products`);
     
     res.json({
       success: true,
@@ -26,12 +22,12 @@ router.get('/restaurant/:restaurantId', async (req, res) => {
     console.error('❌ Get products error:', error);
     res.status(500).json({ 
       success: false,
-      message: 'Failed to get products: ' + error.message 
+      message: 'Failed to get products' 
     });
   }
 });
 
-// ADD PRODUCT - FIXED VERSION
+// ADD PRODUCT
 router.post('/', async (req, res) => {
   try {
     console.log('📝 Adding product:', req.body);
@@ -51,7 +47,6 @@ router.post('/', async (req, res) => {
       price: parseFloat(price),
       description: description || '',
       category: category || 'main course',
-      // ✅ FIXED: Using 'restaurant' field instead of 'restaurantId'
       restaurant: restaurantId,
       preparationTime: preparationTime || 15,
       ingredients: ingredients || '',
@@ -104,7 +99,7 @@ router.put('/:id', async (req, res) => {
     console.error('❌ Update product error:', error);
     res.status(500).json({ 
       success: false,
-      message: 'Failed to update product: ' + error.message 
+      message: 'Failed to update product' 
     });
   }
 });
@@ -132,34 +127,127 @@ router.delete('/:id', async (req, res) => {
     console.error('❌ Delete product error:', error);
     res.status(500).json({ 
       success: false,
-      message: 'Failed to delete product: ' + error.message 
+      message: 'Failed to delete product' 
     });
   }
 });
 
-// ✅ ADDITIONAL: Get single product by ID
-router.get('/:id', async (req, res) => {
+// QUICK FIX - ADD SAMPLE PRODUCTS
+router.get('/quick-fix/:restaurantId', async (req, res) => {
   try {
-    const product = await Product.findById(req.params.id)
-      .populate('restaurant', 'name cuisine');
+    const { restaurantId } = req.params;
+    
+    console.log('🚀 QUICK FIX: Adding sample products for restaurant:', restaurantId);
 
-    if (!product) {
-      return res.status(404).json({
-        success: false,
-        message: 'Product not found'
-      });
+    // Sample products
+    const products = [
+      {
+        name: "Chicken Burger",
+        price: 120,
+        description: "Juicy chicken burger with cheese and lettuce",
+        category: "main course",
+        restaurant: restaurantId,
+        preparationTime: 15,
+        ingredients: "Chicken patty, cheese, lettuce, tomato, bun",
+        image: "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=400",
+        isAvailable: true
+      },
+      {
+        name: "French Fries", 
+        price: 60,
+        description: "Crispy golden fries with ketchup",
+        category: "side dish",
+        restaurant: restaurantId,
+        preparationTime: 10,
+        ingredients: "Potatoes, salt, cooking oil",
+        image: "https://images.unsplash.com/photo-1573080496219-bb080dd4f877?w=400",
+        isAvailable: true
+      },
+      {
+        name: "Coke",
+        price: 45,
+        description: "Cold refreshing Coca-Cola",
+        category: "beverage", 
+        restaurant: restaurantId,
+        preparationTime: 2,
+        ingredients: "Carbonated water, sugar, caramel color",
+        image: "https://images.unsplash.com/photo-1544145945-f90425340c7e?w=400",
+        isAvailable: true
+      },
+      {
+        name: "Cheese Pizza",
+        price: 180,
+        description: "Classic cheese pizza with tomato sauce",
+        category: "main course",
+        restaurant: restaurantId,
+        preparationTime: 20,
+        ingredients: "Pizza dough, cheese, tomato sauce, herbs",
+        image: "https://images.unsplash.com/photo-1565299624946-b28f40a0ca4b?w=400",
+        isAvailable: true
+      },
+      {
+        name: "Ice Cream",
+        price: 80,
+        description: "Vanilla ice cream with chocolate syrup",
+        category: "dessert",
+        restaurant: restaurantId,
+        preparationTime: 5,
+        ingredients: "Milk, cream, sugar, vanilla",
+        image: "https://images.unsplash.com/photo-1563805042-7684c019e1cb?w=400",
+        isAvailable: true
+      }
+    ];
+
+    // Save to database
+    const createdProducts = [];
+    for (let productData of products) {
+      const product = new Product(productData);
+      await product.save();
+      createdProducts.push(product.name);
+      console.log('✅ Created:', product.name);
     }
 
-    res.json({
-      success: true,
-      product
+    res.json({ 
+      success: true, 
+      message: "5 sample products added successfully!",
+      products: createdProducts
     });
 
   } catch (error) {
-    console.error('❌ Get product error:', error);
+    console.error('❌ Quick fix error:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: error.message 
+    });
+  }
+});
+
+// DEBUG: GET ALL PRODUCTS
+router.get('/debug/all', async (req, res) => {
+  try {
+    const products = await Product.find()
+      .populate('restaurant', 'name')
+      .sort({ createdAt: -1 });
+
+    console.log('🔍 ALL PRODUCTS IN DATABASE:', products.length);
+    
+    res.json({
+      success: true,
+      count: products.length,
+      products: products.map(p => ({
+        id: p._id,
+        name: p.name,
+        price: p.price,
+        restaurant: p.restaurant?.name || p.restaurant,
+        isAvailable: p.isAvailable
+      }))
+    });
+
+  } catch (error) {
+    console.error('❌ Debug error:', error);
     res.status(500).json({ 
       success: false,
-      message: 'Failed to get product: ' + error.message 
+      message: 'Debug failed: ' + error.message 
     });
   }
 });
