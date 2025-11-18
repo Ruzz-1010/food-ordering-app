@@ -119,7 +119,7 @@ const SettingsTab = () => {
     return (
       <div className="bg-white rounded-2xl shadow-lg border border-orange-200 p-6">
         <div className="flex justify-between items-center mb-6">
-          <h2 className="text-2xl font-bold text-gray-900">⚙️ System Settings</h2>
+          <h2 className="text-2xl font-bold text-gray-900"> System Settings</h2>
         </div>
         <div className="text-center py-12">
           <div className="w-12 h-12 border-4 border-orange-200 border-t-orange-500 rounded-full animate-spin mx-auto"></div>

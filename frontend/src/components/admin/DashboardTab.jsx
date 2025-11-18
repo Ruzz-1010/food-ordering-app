@@ -65,7 +65,7 @@ const DashboardTab = () => {
       {/* Header with Refresh Button */}
       <div className="flex justify-between items-center">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900">🍽️ Dashboard Overview</h2>
+          <h2 className="text-2xl font-bold text-gray-900"> Dashboard Overview</h2>
           <p className="text-gray-600 mt-1">Welcome to FoodExpress Admin Panel</p>
         </div>
         <button
