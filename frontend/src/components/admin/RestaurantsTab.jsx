@@ -1,13 +1,13 @@
-// RestaurantsTab.jsx - FIXED VERSION
+// RestaurantsTab.jsx - ULTIMATE DEBUG VERSION
 import React, { useState, useEffect } from 'react';
-import { Store, RefreshCw, CheckCircle, XCircle, Edit, Trash2, Utensils, MapPin, Phone, Mail, AlertCircle, User } from 'lucide-react';
+import { Store, RefreshCw, CheckCircle, XCircle, Trash2, Utensils, MapPin, Phone, Mail, AlertCircle, User } from 'lucide-react';
 
 const RestaurantsTab = () => {
   const [restaurants, setRestaurants] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState('');
-  const [deleteConfirm, setDeleteConfirm] = useState({ show: false, restaurant: null });
+  const [debugInfo, setDebugInfo] = useState('');
 
   const API_URL = 'https://food-ordering-app-production-35eb.up.railway.app/api';
 
@@ -17,7 +17,9 @@ const RestaurantsTab = () => {
       setError('');
       const token = localStorage.getItem('token');
       
-      console.log('🔄 FETCHING RESTAURANTS FROM DATABASE...');
+      console.log('🔄 ========== DEBUG: FETCHING RESTAURANTS ==========');
+      console.log('🔑 Token exists:', !!token);
+      console.log('🌐 API URL:', `${API_URL}/restaurants`);
       
       const response = await fetch(`${API_URL}/restaurants`, {
         headers: {
@@ -25,37 +27,60 @@ const RestaurantsTab = () => {
         }
       });
       
+      console.log('📡 Response status:', response.status);
+      console.log('📡 Response ok:', response.ok);
+      
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        const errorText = await response.text();
+        console.error('❌ Response not OK. Error:', errorText);
+        throw new Error(`HTTP ${response.status}: ${errorText}`);
       }
       
       const data = await response.json();
-      console.log('🏪 DATABASE RESPONSE:', data);
+      console.log('🏪 FULL API RESPONSE DATA:', data);
       
-      // Handle different response formats
+      // Detailed debug analysis
+      const analysis = {
+        responseType: typeof data,
+        isArray: Array.isArray(data),
+        hasSuccess: data.hasOwnProperty('success'),
+        successValue: data.success,
+        hasRestaurants: data.hasOwnProperty('restaurants'),
+        restaurantsIsArray: Array.isArray(data.restaurants),
+        restaurantsLength: data.restaurants ? data.restaurants.length : 'N/A',
+        directArrayLength: Array.isArray(data) ? data.length : 'N/A'
+      };
+      
+      console.log('🔍 RESPONSE ANALYSIS:', analysis);
+      
+      setDebugInfo(JSON.stringify(analysis, null, 2));
+      
       let restaurantsArray = [];
       
       if (data.success && Array.isArray(data.restaurants)) {
+        console.log('✅ USING: data.restaurants array');
         restaurantsArray = data.restaurants;
       } else if (Array.isArray(data)) {
+        console.log('✅ USING: Direct array');
         restaurantsArray = data;
-      } else if (data.data && Array.isArray(data.data)) {
-        restaurantsArray = data.data;
+      } else if (data && typeof data === 'object') {
+        console.log('⚠️  Unexpected object format, trying to extract restaurants');
+        restaurantsArray = Object.values(data).find(Array.isArray) || [];
       } else {
-        console.warn('Unexpected response format:', data);
+        console.log('❌ No restaurants data found in response');
         restaurantsArray = [];
       }
       
-      console.log(`📊 FOUND ${restaurantsArray.length} RESTAURANTS IN DATABASE:`);
+      console.log(`📊 FINAL RESTAURANTS ARRAY: ${restaurantsArray.length} items`);
       restaurantsArray.forEach((rest, index) => {
-        console.log(`   ${index + 1}. ${rest.name} - Approved: ${rest.isApproved} - Active: ${rest.isActive}`);
+        console.log(`   ${index + 1}. ${rest.name} | Approved: ${rest.isApproved} | Active: ${rest.isActive}`);
       });
       
       setRestaurants(restaurantsArray);
       
     } catch (error) {
-      console.error('❌ Error fetching restaurants:', error);
-      setError(`Failed to load restaurants: ${error.message}`);
+      console.error('❌ CRITICAL ERROR fetching restaurants:', error);
+      setError(`Database Error: ${error.message}`);
       setRestaurants([]);
     } finally {
       setLoading(false);
@@ -67,10 +92,10 @@ const RestaurantsTab = () => {
     fetchRestaurants();
   }, []);
 
-  const handleApproveRestaurant = async (restaurantId) => {
+  const handleApproveRestaurant = async (restaurantId, restaurantName) => {
     try {
       const token = localStorage.getItem('token');
-      console.log('✅ APPROVING RESTAURANT:', restaurantId);
+      console.log('✅ APPROVING RESTAURANT:', restaurantId, restaurantName);
       
       const response = await fetch(`${API_URL}/restaurants/${restaurantId}/approve`, {
         method: 'PUT',
@@ -79,82 +104,26 @@ const RestaurantsTab = () => {
         }
       });
       
+      console.log('📡 Approval response status:', response.status);
+      
       if (response.ok) {
+        const result = await response.json();
+        console.log('✅ Approval successful:', result);
         await fetchRestaurants();
-        alert('✅ Restaurant approved successfully!');
+        alert(`✅ "${restaurantName}" approved successfully!`);
       } else {
-        throw new Error('Failed to approve restaurant');
+        const errorText = await response.text();
+        console.error('❌ Approval failed:', errorText);
+        throw new Error(`Approval failed: ${errorText}`);
       }
     } catch (error) {
       console.error('Error approving restaurant:', error);
-      alert('❌ Failed to approve restaurant');
-    }
-  };
-
-  const handleToggleActive = async (restaurantId, currentStatus) => {
-    try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`${API_URL}/restaurants/${restaurantId}/toggle-active`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({ isActive: !currentStatus })
-      });
-      
-      if (response.ok) {
-        await fetchRestaurants();
-        alert(`✅ Restaurant ${!currentStatus ? 'activated' : 'deactivated'} successfully!`);
-      } else {
-        throw new Error('Failed to update restaurant status');
-      }
-    } catch (error) {
-      console.error('Error toggling restaurant status:', error);
-      alert('❌ Failed to update restaurant status');
-    }
-  };
-
-  const showDeleteConfirm = (restaurantId, restaurantName) => {
-    setDeleteConfirm({
-      show: true,
-      restaurant: { id: restaurantId, name: restaurantName }
-    });
-  };
-
-  const hideDeleteConfirm = () => {
-    setDeleteConfirm({ show: false, restaurant: null });
-  };
-
-  const handleDeleteRestaurant = async () => {
-    if (!deleteConfirm.restaurant) return;
-
-    const { id: restaurantId, name: restaurantName } = deleteConfirm.restaurant;
-
-    try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`${API_URL}/restaurants/${restaurantId}`, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-      
-      if (response.ok) {
-        await fetchRestaurants();
-        alert('✅ Restaurant deleted successfully!');
-      } else {
-        throw new Error('Failed to delete restaurant');
-      }
-    } catch (error) {
-      console.error('Error deleting restaurant:', error);
-      alert('❌ Failed to delete restaurant');
-    } finally {
-      hideDeleteConfirm();
+      alert(`❌ Failed to approve restaurant: ${error.message}`);
     }
   };
 
   const handleRefresh = () => {
+    console.log('🔄 Manual refresh triggered');
     fetchRestaurants();
   };
 
@@ -176,6 +145,7 @@ const RestaurantsTab = () => {
         <div className="text-center py-12">
           <div className="w-12 h-12 border-4 border-orange-200 border-t-orange-500 rounded-full animate-spin mx-auto"></div>
           <p className="text-gray-500 mt-4 text-lg">Loading restaurants from database...</p>
+          <p className="text-gray-400 text-sm mt-2">Checking API connection...</p>
         </div>
       </div>
     );
@@ -186,8 +156,8 @@ const RestaurantsTab = () => {
       {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900">Restaurant Management</h2>
-          <p className="text-gray-600 mt-1">Manage restaurant registrations and approvals</p>
+          <h2 className="text-2xl font-bold text-gray-900"> Restaurant Management</h2>
+          <p className="text-gray-600 mt-1">DEBUG MODE - Real-time database monitoring</p>
         </div>
         <button
           onClick={handleRefresh}
@@ -195,35 +165,46 @@ const RestaurantsTab = () => {
           className="flex items-center space-x-2 bg-orange-500 text-white px-4 py-2 rounded-lg hover:bg-orange-600 transition-colors disabled:opacity-50 shadow-md"
         >
           <RefreshCw size={18} className={refreshing ? 'animate-spin' : ''} />
-          <span>{refreshing ? 'Refreshing...' : 'Refresh'}</span>
+          <span>{refreshing ? 'Refreshing...' : 'Refresh Data'}</span>
         </button>
       </div>
 
-      {/* Database Status */}
+      {/* Debug Status Panel */}
       <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
         <div className="flex items-center justify-between">
           <div>
-            <p className="font-semibold text-blue-800">Database Status</p>
+            <p className="font-semibold text-blue-800">🔍 DEBUG STATUS</p>
             <p className="text-sm text-blue-700">
-              Connected to: {API_URL}/restaurants
+              API: {API_URL}/restaurants | 
+              Found: {restaurants.length} restaurants | 
+              Last Check: {new Date().toLocaleTimeString()}
             </p>
           </div>
           <div className="text-right">
             <p className="text-sm font-medium text-blue-800">
-              {restaurants.length} restaurants in database
+              Token: {localStorage.getItem('token') ? '✅ Present' : '❌ Missing'}
             </p>
             <p className="text-xs text-blue-600">
-              Last updated: {new Date().toLocaleTimeString()}
+              Open browser console for detailed logs
             </p>
           </div>
         </div>
+        
+        {/* Debug Info */}
+        {debugInfo && (
+          <div className="mt-3 p-3 bg-gray-100 rounded border">
+            <p className="text-xs font-mono text-gray-700 whitespace-pre-wrap">
+              {debugInfo}
+            </p>
+          </div>
+        )}
       </div>
 
       {error && (
         <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-center space-x-3">
           <AlertCircle size={20} className="text-red-600" />
           <div>
-            <p className="text-red-800 font-medium">Database Error</p>
+            <p className="text-red-800 font-medium">Database Connection Error</p>
             <p className="text-red-700 text-sm">{error}</p>
           </div>
         </div>
@@ -300,8 +281,16 @@ const RestaurantsTab = () => {
               <tr>
                 <td colSpan="6" className="py-12 text-center text-gray-500">
                   <Store size={64} className="mx-auto mb-4 text-gray-300" />
-                  <p className="text-xl font-semibold">No restaurants in database</p>
-                  <p className="text-gray-600 mt-2">Restaurants will appear here when owners register</p>
+                  <p className="text-xl font-semibold">No restaurants found in database</p>
+                  <p className="text-gray-600 mt-2">
+                    This could mean:
+                  </p>
+                  <ul className="text-sm text-gray-500 mt-2 text-left max-w-md mx-auto">
+                    <li>• No restaurant owners have registered yet</li>
+                    <li>• Database connection issue</li>
+                    <li>• API endpoint not working</li>
+                    <li>• Check browser console for detailed error logs</li>
+                  </ul>
                 </td>
               </tr>
             ) : (
@@ -318,13 +307,13 @@ const RestaurantsTab = () => {
                         <Utensils size={20} className="text-orange-600" />
                       </div>
                       <div className="min-w-0">
-                        <p className="font-bold text-gray-900 text-lg truncate">{restaurant.name}</p>
+                        <p className="font-bold text-gray-900 text-lg">{restaurant.name}</p>
                         <div className="flex items-center space-x-1 mt-1">
                           <MapPin size={14} className="text-gray-400 flex-shrink-0" />
-                          <p className="text-sm text-gray-600 truncate">{restaurant.address || 'No address provided'}</p>
+                          <p className="text-sm text-gray-600 truncate">{restaurant.address || 'No address'}</p>
                         </div>
                         <p className="text-xs text-gray-500 mt-1">
-                          Created: {restaurant.createdAt ? new Date(restaurant.createdAt).toLocaleDateString() : 'N/A'}
+                          ID: {restaurant._id ? restaurant._id.substring(0, 8) + '...' : 'N/A'}
                         </p>
                       </div>
                     </div>
@@ -333,7 +322,7 @@ const RestaurantsTab = () => {
                     <div className="space-y-2">
                       <div className="flex items-center space-x-2">
                         <User size={14} className="text-gray-400 flex-shrink-0" />
-                        <span className="text-sm text-gray-700">{restaurant.owner?.name || 'Owner not specified'}</span>
+                        <span className="text-sm text-gray-700">{restaurant.owner?.name || 'Owner N/A'}</span>
                       </div>
                       <div className="flex items-center space-x-2">
                         <Mail size={14} className="text-gray-400 flex-shrink-0" />
@@ -347,7 +336,7 @@ const RestaurantsTab = () => {
                   </td>
                   <td className="py-4 px-4">
                     <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-orange-100 text-orange-800 border border-orange-200">
-                      {restaurant.cuisineType || restaurant.cuisine || 'Various'}
+                      {restaurant.cuisine || 'Various'}
                     </span>
                   </td>
                   <td className="py-4 px-4">
@@ -372,7 +361,7 @@ const RestaurantsTab = () => {
                     <div className="flex flex-col space-y-2">
                       {!restaurant.isApproved && (
                         <button 
-                          onClick={() => handleApproveRestaurant(restaurant._id || restaurant.id)}
+                          onClick={() => handleApproveRestaurant(restaurant._id || restaurant.id, restaurant.name)}
                           className="flex items-center justify-center space-x-1 bg-green-500 text-white px-3 py-2 rounded-lg hover:bg-green-600 transition-colors text-sm font-medium shadow-sm"
                           title="Approve Restaurant"
                         >
@@ -380,26 +369,6 @@ const RestaurantsTab = () => {
                           <span>Approve</span>
                         </button>
                       )}
-                      <button 
-                        onClick={() => handleToggleActive(restaurant._id || restaurant.id, restaurant.isActive)}
-                        className={`flex items-center justify-center space-x-1 px-3 py-2 rounded-lg transition-colors text-sm font-medium shadow-sm ${
-                          restaurant.isActive 
-                            ? 'bg-red-500 text-white hover:bg-red-600' 
-                            : 'bg-green-500 text-white hover:bg-green-600'
-                        }`}
-                        title={restaurant.isActive ? 'Deactivate' : 'Activate'}
-                      >
-                        {restaurant.isActive ? <XCircle size={16} /> : <CheckCircle size={16} />}
-                        <span>{restaurant.isActive ? 'Deactivate' : 'Activate'}</span>
-                      </button>
-                      <button 
-                        onClick={() => showDeleteConfirm(restaurant._id || restaurant.id, restaurant.name)}
-                        className="flex items-center justify-center space-x-1 bg-red-500 text-white px-3 py-2 rounded-lg hover:bg-red-600 transition-colors text-sm font-medium shadow-sm"
-                        title="Delete Restaurant"
-                      >
-                        <Trash2 size={16} />
-                        <span>Delete</span>
-                      </button>
                     </div>
                   </td>
                 </tr>
@@ -409,43 +378,16 @@ const RestaurantsTab = () => {
         </table>
       </div>
 
-      {/* Delete Confirmation Modal */}
-      {deleteConfirm.show && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-lg p-6 max-w-md w-full">
-            <div className="text-center">
-              <AlertCircle size={48} className="text-red-500 mx-auto mb-4" />
-              <h3 className="text-xl font-bold text-gray-900 mb-2">Delete Restaurant</h3>
-              <p className="text-gray-600 mb-6">
-                Are you sure you want to delete <strong>"{deleteConfirm.restaurant?.name}"</strong>? 
-                This action cannot be undone.
-              </p>
-              <div className="flex space-x-4 justify-center">
-                <button
-                  onClick={hideDeleteConfirm}
-                  className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleDeleteRestaurant}
-                  className="px-6 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
-                >
-                  Delete Restaurant
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Debug Info */}
-      <div className="mt-6 p-4 bg-gray-50 rounded-lg border">
-        <p className="text-sm text-gray-600">
-          <strong>Debug Info:</strong> These restaurants are from actual user registrations. 
-          When someone registers as a restaurant owner, a restaurant entry is automatically created in your database.
-          You need to manually approve them before they can accept orders.
-        </p>
+      {/* Test Instructions */}
+      <div className="mt-6 p-4 bg-green-50 border border-green-200 rounded-lg">
+        <h3 className="font-semibold text-green-800 mb-2">🧪 TEST INSTRUCTIONS:</h3>
+        <ol className="text-sm text-green-700 list-decimal list-inside space-y-1">
+          <li>Open browser Developer Console (F12)</li>
+          <li>Register a new restaurant owner account</li>
+          <li>Check console logs for API responses</li>
+          <li>Refresh this page to see if restaurant appears</li>
+          <li>Look for any red error messages in console</li>
+        </ol>
       </div>
     </div>
   );
