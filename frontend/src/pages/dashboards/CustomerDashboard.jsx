@@ -536,7 +536,7 @@ const RestaurantRegisterForm = ({ onRegister, onSwitchToLogin, onSwitchToCustome
     );
 };
 
-// Rider Register Form Component - FIXED VERSION
+// Rider Register Form Component
 const RiderRegisterForm = ({ onRegister, onSwitchToLogin, onSwitchToCustomer, onSwitchToRestaurant, onClose, loading }) => {
     const [formData, setFormData] = useState({
         name: '',
@@ -564,11 +564,9 @@ const RiderRegisterForm = ({ onRegister, onSwitchToLogin, onSwitchToCustomer, on
                 setError(result.message || 'Registration failed. Please try again.');
             } else {
                 if (result.needsApproval) {
-                    // Rider needs approval - show message and close modal
                     alert('✅ Registration successful! Your rider account is pending admin approval. You will be notified once approved.');
                     onClose();
                 } else {
-                    // Auto-logged in (shouldn't happen for riders)
                     console.log('✅ Rider registration successful and auto-logged in!');
                     onClose();
                 }
@@ -752,95 +750,114 @@ const RiderRegisterForm = ({ onRegister, onSwitchToLogin, onSwitchToCustomer, on
     );
 };
 
-// Fixed Restaurant Card Component with Debugging
+// Fixed Restaurant Card Component
 const RestaurantCard = ({ restaurant, onOrderClick, user }) => {
     const [showProducts, setShowProducts] = useState(false);
     const [products, setProducts] = useState([]);
     const [loadingProducts, setLoadingProducts] = useState(false);
+    const [error, setError] = useState('');
+// In your RestaurantCard component, update the fetchProducts function:
 
-    const fetchProducts = async () => {
-        if (showProducts) {
-            setShowProducts(false);
+const fetchProducts = async () => {
+    if (showProducts) {
+        setShowProducts(false);
+        setProducts([]);
+        return;
+    }
+    
+    setLoadingProducts(true);
+    setError('');
+    
+    try {
+        console.log('🔍 Fetching products for restaurant:', restaurant);
+        
+        const restaurantId = restaurant._id || restaurant.id;
+        
+        if (!restaurantId) {
+            setError('Restaurant ID not available');
             return;
         }
-        
-        setLoadingProducts(true);
-        try {
-            console.log('🔍 Restaurant data:', restaurant);
-            
-            // Get the correct restaurant ID - try different possible fields
-            const restaurantId = restaurant._id || restaurant.id || restaurant.owner?._id || restaurant.owner;
-            
-            console.log('🆔 Using restaurant ID:', restaurantId);
-            
-            if (!restaurantId) {
-                console.log('❌ No restaurant ID found');
-                // Use sample data for demo
-                setProducts([
-                    { _id: 1, name: "Chicken Burger", price: 120, image: "https://images.unsplash.com/photo-1568901346375-23c9450c58cd" },
-                    { _id: 2, name: "French Fries", price: 60, image: "https://images.unsplash.com/photo-1573080496219-bb080dd4f877" },
-                    { _id: 3, name: "Coke", price: 45, image: "https://images.unsplash.com/photo-1544145945-f90425340c7e" }
-                ]);
-                setShowProducts(true);
-                return;
-            }
 
-            const endpoint = `https://food-ordering-app-production-35eb.up.railway.app/api/products/restaurant/${restaurantId}`;
-            console.log('🔗 Calling endpoint:', endpoint);
+        const endpoint = `https://food-ordering-app-production-35eb.up.railway.app/api/products/restaurant/${restaurantId}`;
+        console.log('🔗 Calling endpoint:', endpoint);
+        
+        const response = await fetch(endpoint);
+        console.log('📡 Response status:', response.status);
+        
+        if (response.ok) {
+            const data = await response.json();
+            console.log('✅ Products API response:', data);
             
-            const response = await fetch(endpoint);
-            console.log('📡 Response status:', response.status);
-            
-            if (response.ok) {
-                const data = await response.json();
-                console.log('✅ Products data:', data);
-                
-                const productsData = data.products || data || [];
-                setProducts(productsData);
+            // ✅ FIXED: Now data.products should contain the products array
+            if (data.success && data.products) {
+                setProducts(data.products);
                 setShowProducts(true);
             } else {
-                console.log('❌ API failed, using sample data');
-                // Use sample data if API fails
-                setProducts([
-                    { _id: 1, name: "Special Burger", price: 150, image: "https://images.unsplash.com/photo-1568901346375-23c9450c58cd" },
-                    { _id: 2, name: "Crispy Fries", price: 80, image: "https://images.unsplash.com/photo-1573080496219-bb080dd4f877" },
-                    { _id: 3, name: "Iced Tea", price: 50, image: "https://images.unsplash.com/photo-1544145945-f90425340c7e" }
-                ]);
-                setShowProducts(true);
+                setError('No menu items available');
             }
-
-        } catch (error) {
-            console.error('💥 Error fetching products:', error);
-            // Use sample data on error
-            setProducts([
-                { _id: 1, name: "Demo Pizza", price: 200, image: "https://images.unsplash.com/photo-1565299624946-b28f40a0ca4b" },
-                { _id: 2, name: "Garlic Bread", price: 90, image: "https://images.unsplash.com/photo-1573140247632-f8fd74997d5c" },
-                { _id: 3, name: "Lemonade", price: 55, image: "https://images.unsplash.com/photo-1523371683702-309cffa2f6c3" }
-            ]);
-            setShowProducts(true);
-        } finally {
-            setLoadingProducts(false);
+        } else {
+            setError('Failed to load menu');
         }
+
+    } catch (error) {
+        console.error('💥 Error fetching products:', error);
+        setError('Network error loading menu');
+    } finally {
+        setLoadingProducts(false);
+    }
+};
+
+    // Sample fallback products for demo
+    const getSampleProducts = () => {
+        return [
+            { 
+                _id: '1', 
+                name: "Special Burger", 
+                price: 150, 
+                description: "Juicy beef burger with cheese",
+                image: "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=100"
+            },
+            { 
+                _id: '2', 
+                name: "Crispy Fries", 
+                price: 80, 
+                description: "Golden crispy potato fries",
+                image: "https://images.unsplash.com/photo-1573080496219-bb080dd4f877?w=100"
+            },
+            { 
+                _id: '3', 
+                name: "Iced Tea", 
+                price: 50, 
+                description: "Refreshing iced tea",
+                image: "https://images.unsplash.com/photo-1544145945-f90425340c7e?w=100"
+            }
+        ];
     };
 
     return (
         <div className="bg-white rounded-lg shadow-md hover:shadow-lg transition-all duration-300 overflow-hidden border border-gray-200">
+            {/* Restaurant Header */}
             <div className="h-48 bg-gradient-to-br from-red-700 to-red-900 flex items-center justify-center relative">
                 {restaurant.image ? (
                     <img 
                         src={restaurant.image} 
                         alt={restaurant.name}
                         className="w-full h-full object-cover"
+                        onError={(e) => {
+                            e.target.style.display = 'none';
+                        }}
                     />
-                ) : (
+                ) : null}
+                <div className="absolute inset-0 flex items-center justify-center">
                     <span className="text-white text-4xl">🍕</span>
-                )}
+                </div>
                 <div className="absolute bottom-2 right-2 bg-black bg-opacity-50 text-white px-2 py-1 rounded text-xs">
                     {restaurant.cuisine || 'Food'}
                 </div>
             </div>
             
             <div className="p-4">
+                {/* Restaurant Info */}
                 <div className="flex justify-between items-start mb-3">
                     <h3 className="text-xl font-bold text-gray-900">{restaurant.name || 'Restaurant Name'}</h3>
                     <div className="flex items-center space-x-1">
@@ -851,7 +868,7 @@ const RestaurantCard = ({ restaurant, onOrderClick, user }) => {
                 
                 <div className="flex items-center text-gray-600 text-sm mb-3">
                     <MapPin size={14} className="mr-1 text-red-800" />
-                    <span className="text-xs">{restaurant.address || 'Puerto Princesa City'}</span>
+                    <span className="text-xs line-clamp-1">{restaurant.address || 'Puerto Princesa City'}</span>
                 </div>
 
                 <div className="flex justify-between items-center text-sm text-gray-500 mb-4">
@@ -880,54 +897,75 @@ const RestaurantCard = ({ restaurant, onOrderClick, user }) => {
                     )}
                 </button>
 
+                {/* Error Message */}
+                {error && (
+                    <div className="bg-red-50 border border-red-200 rounded-lg p-3 mb-3">
+                        <p className="text-red-700 text-sm text-center">{error}</p>
+                        <button
+                            onClick={() => {
+                                setProducts(getSampleProducts());
+                                setShowProducts(true);
+                                setError('');
+                            }}
+                            className="text-blue-600 text-sm hover:text-blue-700 mt-2"
+                        >
+                            View Sample Menu Instead
+                        </button>
+                    </div>
+                )}
+
                 {/* Products List */}
                 {showProducts && (
                     <div className="border-t pt-3 mt-3">
                         <h4 className="font-semibold text-gray-900 mb-3 text-center text-sm">📋 MENU ITEMS</h4>
-                        <div className="space-y-3 max-h-60 overflow-y-auto">
-                            {products.length === 0 ? (
-                                <p className="text-sm text-gray-500 text-center py-4">No menu items available</p>
-                            ) : (
-                                products.map((product) => (
-                                    <div key={product._id} className="flex items-center justify-between p-2 bg-gray-50 rounded-lg border hover:bg-gray-100 transition-colors">
-                                        <div className="flex items-center space-x-2 flex-1 min-w-0">
-                                            {product.image ? (
-                                                <img 
-                                                    src={product.image} 
-                                                    alt={product.name}
-                                                    className="w-10 h-10 object-cover rounded-lg flex-shrink-0"
-                                                    onError={(e) => {
-                                                        e.target.style.display = 'none';
-                                                    }}
-                                                />
-                                            ) : (
-                                                <div className="w-10 h-10 bg-gray-200 rounded-lg flex items-center justify-center flex-shrink-0">
-                                                    <span className="text-gray-400 text-xs">🍽️</span>
-                                                </div>
-                                            )}
-                                            <div className="min-w-0 flex-1">
-                                                <p className="font-medium text-sm text-gray-900 truncate">{product.name}</p>
-                                                {product.description && (
-                                                    <p className="text-xs text-gray-500 truncate">{product.description}</p>
-                                                )}
-                                            </div>
-                                        </div>
-                                        <span className="text-sm font-bold text-green-600 whitespace-nowrap ml-2">
-                                            ₱{product.price}
-                                        </span>
-                                    </div>
-                                ))
-                            )}
-                        </div>
                         
-                        {products.length > 0 && (
-                            <p className="text-xs text-gray-500 text-center mt-2">
-                                {products.length} item{products.length !== 1 ? 's' : ''} available
-                            </p>
+                        {products.length === 0 ? (
+                            <div className="text-center py-4">
+                                <p className="text-sm text-gray-500 mb-2">No menu items available</p>
+                            </div>
+                        ) : (
+                            <>
+                                <div className="space-y-3 max-h-60 overflow-y-auto">
+                                    {products.map((product) => (
+                                        <div key={product._id} className="flex items-center justify-between p-2 bg-gray-50 rounded-lg border hover:bg-gray-100 transition-colors">
+                                            <div className="flex items-center space-x-2 flex-1 min-w-0">
+                                                {product.image ? (
+                                                    <img 
+                                                        src={product.image} 
+                                                        alt={product.name}
+                                                        className="w-10 h-10 object-cover rounded-lg flex-shrink-0"
+                                                        onError={(e) => {
+                                                            e.target.style.display = 'none';
+                                                        }}
+                                                    />
+                                                ) : (
+                                                    <div className="w-10 h-10 bg-gray-200 rounded-lg flex items-center justify-center flex-shrink-0">
+                                                        <span className="text-gray-400 text-xs">🍽️</span>
+                                                    </div>
+                                                )}
+                                                <div className="min-w-0 flex-1">
+                                                    <p className="font-medium text-sm text-gray-900 truncate">{product.name}</p>
+                                                    {product.description && (
+                                                        <p className="text-xs text-gray-500 truncate">{product.description}</p>
+                                                    )}
+                                                </div>
+                                            </div>
+                                            <span className="text-sm font-bold text-green-600 whitespace-nowrap ml-2">
+                                                ₱{product.price || '0'}
+                                            </span>
+                                        </div>
+                                    ))}
+                                </div>
+                                
+                                <p className="text-xs text-gray-500 text-center mt-2">
+                                    {products.length} item{products.length !== 1 ? 's' : ''} available
+                                </p>
+                            </>
                         )}
                     </div>
                 )}
 
+                {/* Order Button */}
                 <div className="flex justify-between items-center mt-3 pt-3 border-t">
                     <span className="text-red-800 font-bold text-sm">₱{restaurant.deliveryFee || '35'} delivery</span>
                     <button
@@ -942,6 +980,7 @@ const RestaurantCard = ({ restaurant, onOrderClick, user }) => {
         </div>
     );
 };
+
 // Main Customer Dashboard Component
 const CustomerDashboard = () => {
     const { user, login, register, logout, loading: authLoading } = useAuth();
@@ -961,7 +1000,7 @@ const CustomerDashboard = () => {
                 
                 if (response.ok) {
                     const data = await response.json();
-                    console.log(' REAL Restaurants API response:', data);
+                    console.log('🏪 REAL Restaurants API response:', data);
                     
                     if (Array.isArray(data)) {
                         setRestaurants(data);

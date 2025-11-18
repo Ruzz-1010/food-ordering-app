@@ -2,16 +2,20 @@ const express = require('express');
 const router = express.Router();
 const Product = require('../models/Product');
 
-// GET PRODUCTS FOR RESTAURANT
+// GET PRODUCTS FOR RESTAURANT - FIXED VERSION
 router.get('/restaurant/:restaurantId', async (req, res) => {
   try {
     const { restaurantId } = req.params;
     console.log('📋 Fetching products for restaurant:', restaurantId);
     
-    const products = await Product.find({ restaurantId })
-      .sort({ createdAt: -1 });
+    // ✅ FIXED: Changed from { restaurantId } to { restaurant: restaurantId }
+    const products = await Product.find({ 
+      restaurant: restaurantId,  // ✅ CORRECT: Using 'restaurant' field name
+      isAvailable: true 
+    })
+    .sort({ createdAt: -1 });
 
-    console.log(`✅ Found ${products.length} products`);
+    console.log(`✅ Found ${products.length} products for restaurant ${restaurantId}`);
     
     res.json({
       success: true,
@@ -22,12 +26,12 @@ router.get('/restaurant/:restaurantId', async (req, res) => {
     console.error('❌ Get products error:', error);
     res.status(500).json({ 
       success: false,
-      message: 'Failed to get products' 
+      message: 'Failed to get products: ' + error.message 
     });
   }
 });
 
-// ADD PRODUCT
+// ADD PRODUCT - FIXED VERSION
 router.post('/', async (req, res) => {
   try {
     console.log('📝 Adding product:', req.body);
@@ -47,7 +51,8 @@ router.post('/', async (req, res) => {
       price: parseFloat(price),
       description: description || '',
       category: category || 'main course',
-      restaurantId,
+      // ✅ FIXED: Using 'restaurant' field instead of 'restaurantId'
+      restaurant: restaurantId,
       preparationTime: preparationTime || 15,
       ingredients: ingredients || '',
       image: image || '',
@@ -99,7 +104,7 @@ router.put('/:id', async (req, res) => {
     console.error('❌ Update product error:', error);
     res.status(500).json({ 
       success: false,
-      message: 'Failed to update product' 
+      message: 'Failed to update product: ' + error.message 
     });
   }
 });
@@ -127,7 +132,34 @@ router.delete('/:id', async (req, res) => {
     console.error('❌ Delete product error:', error);
     res.status(500).json({ 
       success: false,
-      message: 'Failed to delete product' 
+      message: 'Failed to delete product: ' + error.message 
+    });
+  }
+});
+
+// ✅ ADDITIONAL: Get single product by ID
+router.get('/:id', async (req, res) => {
+  try {
+    const product = await Product.findById(req.params.id)
+      .populate('restaurant', 'name cuisine');
+
+    if (!product) {
+      return res.status(404).json({
+        success: false,
+        message: 'Product not found'
+      });
+    }
+
+    res.json({
+      success: true,
+      product
+    });
+
+  } catch (error) {
+    console.error('❌ Get product error:', error);
+    res.status(500).json({ 
+      success: false,
+      message: 'Failed to get product: ' + error.message 
     });
   }
 });

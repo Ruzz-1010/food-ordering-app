@@ -20,9 +20,10 @@ const productSchema = new mongoose.Schema({
     default: 'main course',
     enum: ['appetizer', 'main course', 'dessert', 'beverage', 'side dish', 'combo meal']
   },
-  restaurantId: {
+  // ✅ FIXED: Changed from restaurantId to restaurant and fixed reference
+  restaurant: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: 'User',
+    ref: 'Restaurant',  // ✅ CORRECT: Reference to Restaurant model
     required: true
   },
   isAvailable: {
@@ -44,5 +45,8 @@ const productSchema = new mongoose.Schema({
 }, {
   timestamps: true
 });
+
+// ✅ Add index for better performance
+productSchema.index({ restaurant: 1, isAvailable: 1 });
 
 module.exports = mongoose.model('Product', productSchema);
