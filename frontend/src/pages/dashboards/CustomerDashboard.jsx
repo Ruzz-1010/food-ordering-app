@@ -752,12 +752,46 @@ const RiderRegisterForm = ({ onRegister, onSwitchToLogin, onSwitchToCustomer, on
     );
 };
 
-// Restaurant Card Component
+// Updated Restaurant Card Component with Products
 const RestaurantCard = ({ restaurant, onOrderClick, user }) => {
+    const [showProducts, setShowProducts] = useState(false);
+    const [products, setProducts] = useState([]);
+    const [loadingProducts, setLoadingProducts] = useState(false);
+
+    const fetchProducts = async () => {
+        if (showProducts) {
+            setShowProducts(false);
+            return;
+        }
+        
+        setLoadingProducts(true);
+        try {
+            const response = await fetch(`https://food-ordering-app-production-35eb.up.railway.app/api/products/restaurant/${restaurant.owner?._id || restaurant.owner}`);
+            
+            if (response.ok) {
+                const data = await response.json();
+                setProducts(data.products || data || []);
+                setShowProducts(true);
+            }
+        } catch (error) {
+            console.error('Error fetching products:', error);
+        } finally {
+            setLoadingProducts(false);
+        }
+    };
+
     return (
         <div className="bg-white rounded-lg shadow-md hover:shadow-lg transition-all duration-300 overflow-hidden border border-gray-200">
             <div className="h-48 bg-gradient-to-br from-red-700 to-red-900 flex items-center justify-center">
-                <span className="text-white text-4xl">🍕</span>
+                {restaurant.image ? (
+                    <img 
+                        src={restaurant.image} 
+                        alt={restaurant.name}
+                        className="w-full h-full object-cover"
+                    />
+                ) : (
+                    <span className="text-white text-4xl">🍕</span>
+                )}
             </div>
             
             <div className="p-4">
@@ -782,7 +816,44 @@ const RestaurantCard = ({ restaurant, onOrderClick, user }) => {
                     </span>
                 </div>
 
-                <div className="flex justify-between items-center">
+                {/* View Products Button */}
+                <button
+                    onClick={fetchProducts}
+                    disabled={loadingProducts}
+                    className="w-full bg-blue-600 text-white py-2 rounded mb-3 hover:bg-blue-700 transition-colors disabled:opacity-50"
+                >
+                    {loadingProducts ? 'Loading...' : (showProducts ? 'Hide Menu' : 'View Menu')}
+                </button>
+
+                {/* Products List */}
+                {showProducts && (
+                    <div className="border-t pt-3 mt-3">
+                        <h4 className="font-semibold text-gray-900 mb-2">Menu Items:</h4>
+                        <div className="space-y-2 max-h-40 overflow-y-auto">
+                            {products.length === 0 ? (
+                                <p className="text-sm text-gray-500 text-center py-2">No menu items available</p>
+                            ) : (
+                                products.map((product) => (
+                                    <div key={product._id} className="flex items-center justify-between p-2 bg-gray-50 rounded">
+                                        <div className="flex items-center space-x-2">
+                                            {product.image && (
+                                                <img 
+                                                    src={product.image} 
+                                                    alt={product.name}
+                                                    className="w-8 h-8 object-cover rounded"
+                                                />
+                                            )}
+                                            <span className="text-sm font-medium">{product.name}</span>
+                                        </div>
+                                        <span className="text-sm font-bold text-green-600">₱{product.price}</span>
+                                    </div>
+                                ))
+                            )}
+                        </div>
+                    </div>
+                )}
+
+                <div className="flex justify-between items-center mt-3">
                     <span className="text-red-800 font-bold text-lg">₱{restaurant.deliveryFee || '35'} delivery</span>
                     <button
                         onClick={() => onOrderClick(restaurant)}
