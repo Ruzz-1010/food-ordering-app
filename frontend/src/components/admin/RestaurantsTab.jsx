@@ -1,4 +1,4 @@
-// RestaurantsTab.jsx - UPDATED VERSION
+// RestaurantsTab.jsx - FIXED VERSION
 import React, { useState, useEffect } from 'react';
 import { Store, RefreshCw, CheckCircle, XCircle, Edit, Trash2, Utensils, MapPin, Phone, Mail, AlertCircle, User } from 'lucide-react';
 
@@ -7,6 +7,7 @@ const RestaurantsTab = () => {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState('');
+  const [deleteConfirm, setDeleteConfirm] = useState({ show: false, restaurant: null });
 
   const API_URL = 'https://food-ordering-app-production-35eb.up.railway.app/api';
 
@@ -114,10 +115,21 @@ const RestaurantsTab = () => {
     }
   };
 
-  const handleDeleteRestaurant = async (restaurantId, restaurantName) => {
-    if (!confirm(`Are you sure you want to delete "${restaurantName}"? This action cannot be undone.`)) {
-      return;
-    }
+  const showDeleteConfirm = (restaurantId, restaurantName) => {
+    setDeleteConfirm({
+      show: true,
+      restaurant: { id: restaurantId, name: restaurantName }
+    });
+  };
+
+  const hideDeleteConfirm = () => {
+    setDeleteConfirm({ show: false, restaurant: null });
+  };
+
+  const handleDeleteRestaurant = async () => {
+    if (!deleteConfirm.restaurant) return;
+
+    const { id: restaurantId, name: restaurantName } = deleteConfirm.restaurant;
 
     try {
       const token = localStorage.getItem('token');
@@ -137,6 +149,8 @@ const RestaurantsTab = () => {
     } catch (error) {
       console.error('Error deleting restaurant:', error);
       alert('❌ Failed to delete restaurant');
+    } finally {
+      hideDeleteConfirm();
     }
   };
 
@@ -172,7 +186,7 @@ const RestaurantsTab = () => {
       {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900"> Restaurant Management</h2>
+          <h2 className="text-2xl font-bold text-gray-900">Restaurant Management</h2>
           <p className="text-gray-600 mt-1">Manage restaurant registrations and approvals</p>
         </div>
         <button
@@ -379,7 +393,7 @@ const RestaurantsTab = () => {
                         <span>{restaurant.isActive ? 'Deactivate' : 'Activate'}</span>
                       </button>
                       <button 
-                        onClick={() => handleDeleteRestaurant(restaurant._id || restaurant.id, restaurant.name)}
+                        onClick={() => showDeleteConfirm(restaurant._id || restaurant.id, restaurant.name)}
                         className="flex items-center justify-center space-x-1 bg-red-500 text-white px-3 py-2 rounded-lg hover:bg-red-600 transition-colors text-sm font-medium shadow-sm"
                         title="Delete Restaurant"
                       >
@@ -394,6 +408,36 @@ const RestaurantsTab = () => {
           </tbody>
         </table>
       </div>
+
+      {/* Delete Confirmation Modal */}
+      {deleteConfirm.show && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-lg p-6 max-w-md w-full">
+            <div className="text-center">
+              <AlertCircle size={48} className="text-red-500 mx-auto mb-4" />
+              <h3 className="text-xl font-bold text-gray-900 mb-2">Delete Restaurant</h3>
+              <p className="text-gray-600 mb-6">
+                Are you sure you want to delete <strong>"{deleteConfirm.restaurant?.name}"</strong>? 
+                This action cannot be undone.
+              </p>
+              <div className="flex space-x-4 justify-center">
+                <button
+                  onClick={hideDeleteConfirm}
+                  className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleDeleteRestaurant}
+                  className="px-6 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
+                >
+                  Delete Restaurant
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Debug Info */}
       <div className="mt-6 p-4 bg-gray-50 rounded-lg border">
