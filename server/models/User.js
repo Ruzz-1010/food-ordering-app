@@ -1,4 +1,4 @@
-// 📁 models/User.js - UPDATED VERSION
+// 📁 models/User.js - FIXED VERSION
 const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
 
@@ -29,7 +29,6 @@ const userSchema = new mongoose.Schema({
     enum: ['customer', 'restaurant', 'rider', 'admin'], 
     default: 'customer' 
   },
-  // IMPORTANT: ADD THESE FIELDS
   isApproved: { 
     type: Boolean, 
     default: function() {
@@ -69,4 +68,5 @@ userSchema.methods.comparePassword = async function(candidatePassword) {
   return await bcrypt.compare(candidatePassword, this.password);
 };
 
-module.exports = mongoose.model('User', User);
+// FIX: Export userSchema, not User
+module.exports = mongoose.model('User', userSchema);
