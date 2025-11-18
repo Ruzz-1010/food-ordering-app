@@ -444,7 +444,7 @@ const RiderDashboard = () => {
                 </button>
                 <button
                   onClick={() => setActiveTab('earnings')}
-                  className={`flex-1 py-4 px-6 text-center font-medium ${
+                  className={`flex-1 py-4 px-6 text-center font-medium ₱{
                     activeTab === 'earnings'
                       ? 'text-blue-600 border-b-2 border-blue-600'
                       : 'text-gray-600 hover:text-gray-900'
