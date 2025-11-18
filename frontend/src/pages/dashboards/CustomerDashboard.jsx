@@ -799,7 +799,7 @@ const CustomerDashboard = () => {
                 
                 if (response.ok) {
                     const data = await response.json();
-                    console.log('🔍 REAL Restaurants API response:', data);
+                    console.log(' REAL Restaurants API response:', data);
                     
                     if (Array.isArray(data)) {
                         setRestaurants(data);
@@ -936,19 +936,19 @@ const CustomerDashboard = () => {
                                                 onClick={() => { setShowAuthModal(true); setAuthMode('customer'); }}
                                                 className="w-full text-left px-4 py-2 hover:bg-gray-100 text-gray-700"
                                             >
-                                                🍽️ As Customer
+                                                 As Customer
                                             </button>
                                             <button 
                                                 onClick={() => { setShowAuthModal(true); setAuthMode('restaurant'); }}
                                                 className="w-full text-left px-4 py-2 hover:bg-gray-100 text-gray-700"
                                             >
-                                                🏪 As Restaurant
+                                                 As Restaurant
                                             </button>
                                             <button 
                                                 onClick={() => { setShowAuthModal(true); setAuthMode('rider'); }}
                                                 className="w-full text-left px-4 py-2 hover:bg-gray-100 text-gray-700"
                                             >
-                                                🚴 As Rider
+                                                 As Rider
                                             </button>
                                         </div>
                                     </div>
@@ -1026,7 +1026,7 @@ const CustomerDashboard = () => {
                 ) : apiError ? (
                     <div className="text-center py-12">
                         <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6 max-w-md mx-auto">
-                            <p className="text-yellow-800 font-semibold mb-2">📡 API Connection</p>
+                            <p className="text-yellow-800 font-semibold mb-2"> API Connection</p>
                             <p className="text-yellow-700 text-sm">{apiError}</p>
                             <p className="text-yellow-600 text-xs mt-2">Using real-time data from your database</p>
                         </div>
@@ -1034,7 +1034,7 @@ const CustomerDashboard = () => {
                 ) : filteredRestaurants.length === 0 ? (
                     <div className="text-center py-12">
                         <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 max-w-md mx-auto">
-                            <p className="text-blue-800 font-semibold">🏪 No Restaurants Yet</p>
+                            <p className="text-blue-800 font-semibold"> No Restaurants Yet</p>
                             <p className="text-blue-700 text-sm mt-2">
                                 No restaurants found in your database. Add restaurants via admin panel.
                             </p>

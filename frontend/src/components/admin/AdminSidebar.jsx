@@ -1,8 +1,9 @@
+// AdminSidebar.jsx - Updated with restaurant theme
 import React from 'react';
 import { 
     Users, Store, BarChart3, 
     Package, Settings, LogOut, X,
-    TrendingUp
+    TrendingUp, Utensils, ChefHat
 } from 'lucide-react';
 
 const AdminSidebar = ({ activeTab, setActiveTab, isOpen, setIsOpen, onLogout }) => {
@@ -28,28 +29,29 @@ const AdminSidebar = ({ activeTab, setActiveTab, isOpen, setIsOpen, onLogout }) 
             {/* Sidebar */}
             <div className={`
                 fixed lg:static inset-y-0 left-0 z-50
-                w-64 bg-gray-900 text-white transform transition-transform
+                w-64 bg-gradient-to-b from-orange-700 to-orange-800 text-white transform transition-transform
                 ${isOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0
+                flex flex-col
             `}>
-                <div className="flex items-center justify-between p-4 border-b border-gray-700">
+                <div className="flex items-center justify-between p-4 border-b border-orange-600">
                     <div className="flex items-center space-x-3">
-                        <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center">
-                            <span className="font-bold text-white">A</span>
+                        <div className="w-10 h-10 bg-white rounded-lg flex items-center justify-center">
+                            <Utensils size={20} className="text-orange-600" />
                         </div>
                         <div>
-                            <h1 className="text-lg font-bold">Admin Panel</h1>
-                            <p className="text-xs text-gray-400">FoodExpress</p>
+                            <h1 className="text-lg font-bold">FoodExpress</h1>
+                            <p className="text-xs text-orange-200">Admin Panel</p>
                         </div>
                     </div>
                     <button 
                         onClick={() => setIsOpen(false)}
-                        className="lg:hidden p-1 hover:bg-gray-800 rounded"
+                        className="lg:hidden p-1 hover:bg-orange-600 rounded"
                     >
                         <X size={20} />
                     </button>
                 </div>
 
-                <nav className="p-4 space-y-2">
+                <nav className="p-4 space-y-2 flex-1">
                     {menuItems.map((item) => {
                         const Icon = item.icon;
                         return (
@@ -59,10 +61,10 @@ const AdminSidebar = ({ activeTab, setActiveTab, isOpen, setIsOpen, onLogout }) 
                                     setActiveTab(item.id);
                                     setIsOpen(false);
                                 }}
-                                className={`w-full flex items-center space-x-3 px-3 py-3 rounded-lg transition-colors ${
+                                className={`w-full flex items-center space-x-3 px-3 py-3 rounded-lg transition-all ${
                                     activeTab === item.id 
-                                        ? 'bg-blue-600 text-white' 
-                                        : 'text-gray-300 hover:bg-gray-800 hover:text-white'
+                                        ? 'bg-white text-orange-700 shadow-sm' 
+                                        : 'text-orange-100 hover:bg-orange-600 hover:text-white'
                                 }`}
                             >
                                 <Icon size={20} />
@@ -72,10 +74,18 @@ const AdminSidebar = ({ activeTab, setActiveTab, isOpen, setIsOpen, onLogout }) 
                     })}
                 </nav>
 
-                <div className="absolute bottom-4 left-4 right-4">
+                <div className="p-4 border-t border-orange-600">
+                    <div className="flex items-center space-x-3 mb-4 p-3 bg-orange-600 rounded-lg">
+                        <ChefHat size={20} className="text-orange-200" />
+                        <div>
+                            <p className="text-sm font-medium">FoodExpress</p>
+                            <p className="text-xs text-orange-200">Delivery System</p>
+                        </div>
+                    </div>
+                    
                     <button 
                         onClick={onLogout}
-                        className="w-full flex items-center space-x-3 px-3 py-3 text-gray-300 hover:bg-gray-800 hover:text-white rounded-lg transition-colors"
+                        className="w-full flex items-center space-x-3 px-3 py-3 text-orange-200 hover:bg-orange-600 hover:text-white rounded-lg transition-colors"
                     >
                         <LogOut size={20} />
                         <span className="font-medium">Logout</span>
