@@ -750,88 +750,54 @@ const RiderRegisterForm = ({ onRegister, onSwitchToLogin, onSwitchToCustomer, on
     );
 };
 
-// Fixed Restaurant Card Component
+// Fixed RestaurantCard Component with Better Menu Display
 const RestaurantCard = ({ restaurant, onOrderClick, user }) => {
     const [showProducts, setShowProducts] = useState(false);
     const [products, setProducts] = useState([]);
     const [loadingProducts, setLoadingProducts] = useState(false);
     const [error, setError] = useState('');
-// In your RestaurantCard component, update the fetchProducts function:
 
-const fetchProducts = async () => {
-    if (showProducts) {
-        setShowProducts(false);
-        setProducts([]);
-        return;
-    }
-    
-    setLoadingProducts(true);
-    setError('');
-    
-    try {
-        console.log('🔍 Fetching products for restaurant:', restaurant);
-        
-        const restaurantId = restaurant._id || restaurant.id;
-        
-        if (!restaurantId) {
-            setError('Restaurant ID not available');
+    const fetchProducts = async () => {
+        if (showProducts) {
+            setShowProducts(false);
+            setProducts([]);
             return;
         }
-
-        const endpoint = `https://food-ordering-app-production-35eb.up.railway.app/api/products/restaurant/${restaurantId}`;
-        console.log('🔗 Calling endpoint:', endpoint);
         
-        const response = await fetch(endpoint);
-        console.log('📡 Response status:', response.status);
+        setLoadingProducts(true);
+        setError('');
         
-        if (response.ok) {
-            const data = await response.json();
-            console.log('✅ Products API response:', data);
+        try {
+            const restaurantId = restaurant._id || restaurant.id;
             
-            // ✅ FIXED: Now data.products should contain the products array
-            if (data.success && data.products) {
-                setProducts(data.products);
-                setShowProducts(true);
+            if (!restaurantId) {
+                setError('Restaurant ID not available');
+                return;
+            }
+
+            const endpoint = `https://food-ordering-app-production-35eb.up.railway.app/api/products/restaurant/${restaurantId}`;
+            
+            const response = await fetch(endpoint);
+            
+            if (response.ok) {
+                const data = await response.json();
+                
+                if (data.success && data.products) {
+                    setProducts(data.products);
+                    setShowProducts(true);
+                } else {
+                    setError('No menu items available');
+                }
             } else {
-                setError('No menu items available');
+                setError('Failed to load menu');
             }
-        } else {
-            setError('Failed to load menu');
+
+        } catch (error) {
+            console.error('Error fetching products:', error);
+            setError('Network error loading menu');
+        } finally {
+            setLoadingProducts(false);
         }
-
-    } catch (error) {
-        console.error('💥 Error fetching products:', error);
-        setError('Network error loading menu');
-    } finally {
-        setLoadingProducts(false);
-    }
-};
-
-    // Sample fallback products for demo
-    const getSampleProducts = () => {
-        return [
-            { 
-                _id: '1', 
-                name: "Special Burger", 
-                price: 150, 
-                description: "Juicy beef burger with cheese",
-                image: "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=100"
-            },
-            { 
-                _id: '2', 
-                name: "Crispy Fries", 
-                price: 80, 
-                description: "Golden crispy potato fries",
-                image: "https://images.unsplash.com/photo-1573080496219-bb080dd4f877?w=100"
-            },
-            { 
-                _id: '3', 
-                name: "Iced Tea", 
-                price: 50, 
-                description: "Refreshing iced tea",
-                image: "https://images.unsplash.com/photo-1544145945-f90425340c7e?w=100"
-            }
-        ];
     };
 
     return (
@@ -843,14 +809,10 @@ const fetchProducts = async () => {
                         src={restaurant.image} 
                         alt={restaurant.name}
                         className="w-full h-full object-cover"
-                        onError={(e) => {
-                            e.target.style.display = 'none';
-                        }}
                     />
-                ) : null}
-                <div className="absolute inset-0 flex items-center justify-center">
+                ) : (
                     <span className="text-white text-4xl">🍕</span>
-                </div>
+                )}
                 <div className="absolute bottom-2 right-2 bg-black bg-opacity-50 text-white px-2 py-1 rounded text-xs">
                     {restaurant.cuisine || 'Food'}
                 </div>
@@ -883,7 +845,7 @@ const fetchProducts = async () => {
                 <button
                     onClick={fetchProducts}
                     disabled={loadingProducts}
-                    className="w-full bg-blue-600 text-white py-2 rounded mb-3 hover:bg-blue-700 transition-colors disabled:opacity-50 flex items-center justify-center space-x-2"
+                    className="w-full bg-red-800 text-white py-3 rounded-lg mb-3 hover:bg-red-900 transition-colors disabled:opacity-50 flex items-center justify-center space-x-2 font-semibold"
                 >
                     {loadingProducts ? (
                         <>
@@ -899,81 +861,107 @@ const fetchProducts = async () => {
 
                 {/* Error Message */}
                 {error && (
-                    <div className="bg-red-50 border border-red-200 rounded-lg p-3 mb-3">
-                        <p className="text-red-700 text-sm text-center">{error}</p>
-                        <button
-                            onClick={() => {
-                                setProducts(getSampleProducts());
-                                setShowProducts(true);
-                                setError('');
-                            }}
-                            className="text-blue-600 text-sm hover:text-blue-700 mt-2"
-                        >
-                            View Sample Menu Instead
-                        </button>
+                    <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mb-3">
+                        <p className="text-yellow-700 text-sm text-center">{error}</p>
                     </div>
                 )}
 
-                {/* Products List */}
+                {/* Products List - IMPROVED DESIGN */}
                 {showProducts && (
-                    <div className="border-t pt-3 mt-3">
-                        <h4 className="font-semibold text-gray-900 mb-3 text-center text-sm">📋 MENU ITEMS</h4>
+                    <div className="border-t pt-4 mt-4">
+                        <h4 className="font-bold text-gray-900 mb-4 text-center text-lg border-b pb-2">
+                            🍽️ MENU ITEMS
+                        </h4>
                         
                         {products.length === 0 ? (
-                            <div className="text-center py-4">
-                                <p className="text-sm text-gray-500 mb-2">No menu items available</p>
+                            <div className="text-center py-6">
+                                <p className="text-gray-500 text-sm">No menu items available</p>
                             </div>
                         ) : (
-                            <>
-                                <div className="space-y-3 max-h-60 overflow-y-auto">
-                                    {products.map((product) => (
-                                        <div key={product._id} className="flex items-center justify-between p-2 bg-gray-50 rounded-lg border hover:bg-gray-100 transition-colors">
-                                            <div className="flex items-center space-x-2 flex-1 min-w-0">
-                                                {product.image ? (
-                                                    <img 
-                                                        src={product.image} 
-                                                        alt={product.name}
-                                                        className="w-10 h-10 object-cover rounded-lg flex-shrink-0"
-                                                        onError={(e) => {
-                                                            e.target.style.display = 'none';
-                                                        }}
-                                                    />
-                                                ) : (
-                                                    <div className="w-10 h-10 bg-gray-200 rounded-lg flex items-center justify-center flex-shrink-0">
-                                                        <span className="text-gray-400 text-xs">🍽️</span>
-                                                    </div>
-                                                )}
-                                                <div className="min-w-0 flex-1">
-                                                    <p className="font-medium text-sm text-gray-900 truncate">{product.name}</p>
-                                                    {product.description && (
-                                                        <p className="text-xs text-gray-500 truncate">{product.description}</p>
-                                                    )}
-                                                </div>
+                            <div className="space-y-4 max-h-80 overflow-y-auto">
+                                {products.map((product) => (
+                                    <div 
+                                        key={product._id} 
+                                        className="flex items-start space-x-3 p-3 bg-white border border-gray-200 rounded-lg hover:border-red-300 hover:shadow-md transition-all duration-200"
+                                    >
+                                        {/* Product Image */}
+                                        <div className="flex-shrink-0">
+                                            {product.image ? (
+                                                <img 
+                                                    src={product.image} 
+                                                    alt={product.name}
+                                                    className="w-16 h-16 object-cover rounded-lg"
+                                                    onError={(e) => {
+                                                        e.target.style.display = 'none';
+                                                        e.target.nextElementSibling.style.display = 'flex';
+                                                    }}
+                                                />
+                                            ) : null}
+                                            <div className={`w-16 h-16 bg-gray-100 rounded-lg flex items-center justify-center ${product.image ? 'hidden' : 'flex'}`}>
+                                                <span className="text-gray-400 text-2xl">🍽️</span>
                                             </div>
-                                            <span className="text-sm font-bold text-green-600 whitespace-nowrap ml-2">
-                                                ₱{product.price || '0'}
-                                            </span>
                                         </div>
-                                    ))}
-                                </div>
-                                
-                                <p className="text-xs text-gray-500 text-center mt-2">
-                                    {products.length} item{products.length !== 1 ? 's' : ''} available
+                                        
+                                        {/* Product Info */}
+                                        <div className="flex-1 min-w-0">
+                                            <div className="flex justify-between items-start mb-1">
+                                                <h5 className="font-semibold text-gray-900 text-base truncate">
+                                                    {product.name}
+                                                </h5>
+                                                <span className="text-green-600 font-bold text-lg ml-2 whitespace-nowrap">
+                                                    ₱{product.price}
+                                                </span>
+                                            </div>
+                                            
+                                            {product.description && (
+                                                <p className="text-gray-600 text-sm mb-2 line-clamp-2">
+                                                    {product.description}
+                                                </p>
+                                            )}
+                                            
+                                            {product.ingredients && (
+                                                <p className="text-gray-500 text-xs">
+                                                    <span className="font-medium">Ingredients:</span> {product.ingredients}
+                                                </p>
+                                            )}
+                                            
+                                            <div className="flex justify-between items-center mt-2">
+                                                <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">
+                                                    {product.category}
+                                                </span>
+                                                <span className="text-xs text-blue-600">
+                                                    ⏱️ {product.preparationTime || 15} min
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                        
+                        {/* Products Count */}
+                        {products.length > 0 && (
+                            <div className="mt-4 pt-3 border-t">
+                                <p className="text-center text-sm text-gray-600">
+                                    🎉 <strong>{products.length}</strong> item{products.length !== 1 ? 's' : ''} available
                                 </p>
-                            </>
+                            </div>
                         )}
                     </div>
                 )}
 
                 {/* Order Button */}
-                <div className="flex justify-between items-center mt-3 pt-3 border-t">
-                    <span className="text-red-800 font-bold text-sm">₱{restaurant.deliveryFee || '35'} delivery</span>
+                <div className="flex justify-between items-center mt-4 pt-4 border-t">
+                    <div className="text-left">
+                        <span className="text-red-800 font-bold text-sm block">Delivery Fee</span>
+                        <span className="text-green-600 font-bold">₱{restaurant.deliveryFee || '35'}</span>
+                    </div>
                     <button
                         onClick={() => onOrderClick(restaurant)}
-                        className="bg-red-800 text-white px-4 py-2 rounded text-sm hover:bg-red-900 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="bg-red-800 text-white px-6 py-3 rounded-lg font-semibold hover:bg-red-900 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm"
                         disabled={!user}
                     >
-                        {user ? 'ORDER NOW' : 'LOGIN TO ORDER'}
+                        {user ? 'ORDER NOW 🛒' : 'LOGIN TO ORDER'}
                     </button>
                 </div>
             </div>

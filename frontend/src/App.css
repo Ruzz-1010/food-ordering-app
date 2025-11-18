@@ -73,3 +73,27 @@ code {
 ::-webkit-scrollbar-thumb:hover {
   background: #9b2c2c;
 }
+
+/* Smooth scrolling for menu */
+.menu-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: #e5e7eb #f9fafb;
+}
+
+.menu-scroll::-webkit-scrollbar {
+  width: 6px;
+}
+
+.menu-scroll::-webkit-scrollbar-track {
+  background: #f9fafb;
+  border-radius: 3px;
+}
+
+.menu-scroll::-webkit-scrollbar-thumb {
+  background: #e5e7eb;
+  border-radius: 3px;
+}
+
+.menu-scroll::-webkit-scrollbar-thumb:hover {
+  background: #d1d5db;
+}
