@@ -37,14 +37,9 @@ const RestaurantDashboard = () => {
         coordinates: { lat: 9.7392, lng: 118.7353 }
     });
 
-    // Profile State
+    // Profile State - REMOVED the 4 fixed fields
     const [profileData, setProfileData] = useState({
-        name: '',
-        cuisine: '',
         description: '',
-        phone: '',
-        email: '',
-        address: '',
         openingHours: {
             open: '08:00',
             close: '22:00'
@@ -85,17 +80,14 @@ const RestaurantDashboard = () => {
             });
             if (restaurantResponse.ok) {
                 const restaurantData = await restaurantResponse.json();
-                setRestaurant(restaurantData.restaurant || restaurantData || {});
+                console.log('🏪 Restaurant data:', restaurantData);
                 
-                // Set profile data from restaurant
                 if (restaurantData.restaurant) {
+                    setRestaurant(restaurantData.restaurant);
+                    
+                    // Set profile data from restaurant (only updatable fields)
                     setProfileData({
-                        name: restaurantData.restaurant.name || '',
-                        cuisine: restaurantData.restaurant.cuisine || '',
                         description: restaurantData.restaurant.description || '',
-                        phone: restaurantData.restaurant.phone || '',
-                        email: restaurantData.restaurant.email || '',
-                        address: restaurantData.restaurant.address || '',
                         openingHours: restaurantData.restaurant.openingHours || { open: '08:00', close: '22:00' },
                         deliveryTime: restaurantData.restaurant.deliveryTime || '25-35 min',
                         deliveryFee: restaurantData.restaurant.deliveryFee || 35,
@@ -168,33 +160,42 @@ const RestaurantDashboard = () => {
         }
     };
 
-    // Update Profile
+    // Update Profile - FIXED VERSION
     const handleUpdateProfile = async (e) => {
         e.preventDefault();
         
         try {
-            const token = localStorage.getItem('token');
+            console.log('🔄 Starting profile update...');
+            console.log('🏪 Restaurant ID:', restaurant._id);
+            console.log('📦 Profile data to update:', profileData);
+
+            // Check if we have a restaurant ID
+            if (!restaurant._id) {
+                alert('❌ No restaurant found. Please refresh the page.');
+                return;
+            }
+
             const response = await fetch(`${API_URL}/restaurants/${restaurant._id}`, {
                 method: 'PUT',
                 headers: {
-                    'Authorization': `Bearer ${token}`,
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify(profileData)
             });
 
             const data = await response.json();
+            console.log('📡 Update response:', data);
 
-            if (response.ok) {
+            if (response.ok && data.success) {
                 alert('✅ Profile updated successfully!');
                 setShowProfile(false);
                 fetchData(); // Refresh data
             } else {
-                alert(`❌ Failed to update profile: ${data.message}`);
+                alert(`❌ Failed to update profile: ${data.message || 'Unknown error'}`);
             }
         } catch (error) {
             console.error('Error updating profile:', error);
-            alert('❌ Network error');
+            alert('❌ Network error: ' + error.message);
         }
     };
 
@@ -403,6 +404,7 @@ const RestaurantDashboard = () => {
                                 </p>
                                 <p><strong>Address:</strong> {restaurant.address || 'Not set'}</p>
                                 <p><strong>Phone:</strong> {restaurant.phone || 'Not set'}</p>
+                                <p><strong>Email:</strong> {restaurant.email || 'Not set'}</p>
                             </div>
                         </div>
 
@@ -804,7 +806,7 @@ const RestaurantDashboard = () => {
                 </div>
             )}
 
-            {/* Profile Modal */}
+            {/* Profile Modal - UPDATED (Removed the 4 fixed fields) */}
             {showProfile && (
                 <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
                     <div className="bg-white rounded-lg shadow-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
@@ -814,6 +816,25 @@ const RestaurantDashboard = () => {
                                 <button onClick={() => setShowProfile(false)} className="text-gray-500 hover:text-gray-700">
                                     <X size={24} />
                                 </button>
+                            </div>
+
+                            {/* Restaurant Basic Info (Read-only) */}
+                            <div className="bg-gray-50 rounded-lg p-4 mb-6">
+                                <h4 className="font-semibold text-gray-900 mb-3">📋 Basic Information</h4>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                                    <div>
+                                        <p><strong>Restaurant Name:</strong> {restaurant.name}</p>
+                                        <p><strong>Cuisine:</strong> {restaurant.cuisine}</p>
+                                    </div>
+                                    <div>
+                                        <p><strong>Phone:</strong> {restaurant.phone}</p>
+                                        <p><strong>Email:</strong> {restaurant.email}</p>
+                                    </div>
+                                    <div className="md:col-span-2">
+                                        <p><strong>Address:</strong> {restaurant.address}</p>
+                                    </div>
+                                </div>
+                                <p className="text-xs text-gray-500 mt-2">* These details are set during registration and cannot be changed</p>
                             </div>
 
                             <form onSubmit={handleUpdateProfile} className="space-y-6">
@@ -842,82 +863,6 @@ const RestaurantDashboard = () => {
                                             placeholder="https://example.com/banner.jpg"
                                         />
                                     </div>
-                                </div>
-
-                                {/* Basic Information */}
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-2">Restaurant Name *</label>
-                                        <input
-                                            type="text"
-                                            required
-                                            value={profileData.name}
-                                            onChange={(e) => setProfileData({...profileData, name: e.target.value})}
-                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
-                                            placeholder="Your Restaurant Name"
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-2">Cuisine Type *</label>
-                                        <select
-                                            value={profileData.cuisine}
-                                            onChange={(e) => setProfileData({...profileData, cuisine: e.target.value})}
-                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
-                                        >
-                                            <option value="">Select Cuisine</option>
-                                            <option value="Filipino">Filipino</option>
-                                            <option value="Chinese">Chinese</option>
-                                            <option value="Japanese">Japanese</option>
-                                            <option value="Korean">Korean</option>
-                                            <option value="American">American</option>
-                                            <option value="Italian">Italian</option>
-                                            <option value="Mexican">Mexican</option>
-                                            <option value="Fast Food">Fast Food</option>
-                                            <option value="Vegetarian">Vegetarian</option>
-                                            <option value="Seafood">Seafood</option>
-                                            <option value="Barbecue">Barbecue</option>
-                                            <option value="Desserts">Desserts</option>
-                                        </select>
-                                    </div>
-                                </div>
-
-                                {/* Contact Information */}
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-2">Phone Number *</label>
-                                        <input
-                                            type="tel"
-                                            required
-                                            value={profileData.phone}
-                                            onChange={(e) => setProfileData({...profileData, phone: e.target.value})}
-                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
-                                            placeholder="09123456789"
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-2">Email *</label>
-                                        <input
-                                            type="email"
-                                            required
-                                            value={profileData.email}
-                                            onChange={(e) => setProfileData({...profileData, email: e.target.value})}
-                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
-                                            placeholder="restaurant@email.com"
-                                        />
-                                    </div>
-                                </div>
-
-                                {/* Address */}
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-2">Address *</label>
-                                    <textarea
-                                        required
-                                        value={profileData.address}
-                                        onChange={(e) => setProfileData({...profileData, address: e.target.value})}
-                                        rows="2"
-                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
-                                        placeholder="Complete restaurant address"
-                                    />
                                 </div>
 
                                 {/* Description */}
