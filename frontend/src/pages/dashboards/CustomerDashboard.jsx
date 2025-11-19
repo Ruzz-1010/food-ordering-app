@@ -750,7 +750,7 @@ const RiderRegisterForm = ({ onRegister, onSwitchToLogin, onSwitchToCustomer, on
     );
 };
 
-// Fixed RestaurantCard Component with Better Menu Display
+// Full Screen Menu RestaurantCard Component
 const RestaurantCard = ({ restaurant, onOrderClick, user }) => {
     const [showProducts, setShowProducts] = useState(false);
     const [products, setProducts] = useState([]);
@@ -800,172 +800,222 @@ const RestaurantCard = ({ restaurant, onOrderClick, user }) => {
         }
     };
 
+    // Close full screen menu
+    const closeMenu = () => {
+        setShowProducts(false);
+        setProducts([]);
+    };
+
     return (
-        <div className="bg-white rounded-lg shadow-md hover:shadow-lg transition-all duration-300 overflow-hidden border border-gray-200">
-            {/* Restaurant Header */}
-            <div className="h-48 bg-gradient-to-br from-red-700 to-red-900 flex items-center justify-center relative">
-                {restaurant.image ? (
-                    <img 
-                        src={restaurant.image} 
-                        alt={restaurant.name}
-                        className="w-full h-full object-cover"
-                    />
-                ) : (
-                    <span className="text-white text-4xl">🍕</span>
-                )}
-                <div className="absolute bottom-2 right-2 bg-black bg-opacity-50 text-white px-2 py-1 rounded text-xs">
-                    {restaurant.cuisine || 'Food'}
-                </div>
-            </div>
-            
-            <div className="p-4">
-                {/* Restaurant Info */}
-                <div className="flex justify-between items-start mb-3">
-                    <h3 className="text-xl font-bold text-gray-900">{restaurant.name || 'Restaurant Name'}</h3>
-                    <div className="flex items-center space-x-1">
-                        <Star size={16} className="text-yellow-400 fill-current" />
-                        <span className="text-sm font-bold">{restaurant.rating || '4.5'}</span>
+        <>
+            {/* Restaurant Card (Normal View) */}
+            <div className="bg-white rounded-lg shadow-md hover:shadow-lg transition-all duration-300 overflow-hidden border border-gray-200">
+                {/* Restaurant Header */}
+                <div className="h-48 bg-gradient-to-br from-red-700 to-red-900 flex items-center justify-center relative">
+                    {restaurant.image ? (
+                        <img 
+                            src={restaurant.image} 
+                            alt={restaurant.name}
+                            className="w-full h-full object-cover"
+                        />
+                    ) : (
+                        <span className="text-white text-4xl">🍕</span>
+                    )}
+                    <div className="absolute bottom-2 right-2 bg-black bg-opacity-50 text-white px-2 py-1 rounded text-xs">
+                        {restaurant.cuisine || 'Food'}
                     </div>
                 </div>
                 
-                <div className="flex items-center text-gray-600 text-sm mb-3">
-                    <MapPin size={14} className="mr-1 text-red-800" />
-                    <span className="text-xs line-clamp-1">{restaurant.address || 'Puerto Princesa City'}</span>
-                </div>
-
-                <div className="flex justify-between items-center text-sm text-gray-500 mb-4">
-                    <span className="bg-gray-100 px-2 py-1 rounded text-xs">{restaurant.cuisine || 'Various'}</span>
-                    <span className="text-green-600 font-semibold flex items-center text-xs">
-                        <Clock size={12} className="mr-1" />
-                        {restaurant.deliveryTime || '25-35 min'}
-                    </span>
-                </div>
-
-                {/* View Products Button */}
-                <button
-                    onClick={fetchProducts}
-                    disabled={loadingProducts}
-                    className="w-full bg-red-800 text-white py-3 rounded-lg mb-3 hover:bg-red-900 transition-colors disabled:opacity-50 flex items-center justify-center space-x-2 font-semibold"
-                >
-                    {loadingProducts ? (
-                        <>
-                            <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                            <span className="text-sm">Loading Menu...</span>
-                        </>
-                    ) : (
-                        <>
-                            <span className="text-sm">{showProducts ? '▲ Hide Menu' : '▼ View Menu'}</span>
-                        </>
-                    )}
-                </button>
-
-                {/* Error Message */}
-                {error && (
-                    <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mb-3">
-                        <p className="text-yellow-700 text-sm text-center">{error}</p>
+                <div className="p-4">
+                    {/* Restaurant Info */}
+                    <div className="flex justify-between items-start mb-3">
+                        <h3 className="text-xl font-bold text-gray-900">{restaurant.name || 'Restaurant Name'}</h3>
+                        <div className="flex items-center space-x-1">
+                            <Star size={16} className="text-yellow-400 fill-current" />
+                            <span className="text-sm font-bold">{restaurant.rating || '4.5'}</span>
+                        </div>
                     </div>
-                )}
+                    
+                    <div className="flex items-center text-gray-600 text-sm mb-3">
+                        <MapPin size={14} className="mr-1 text-red-800" />
+                        <span className="text-xs line-clamp-1">{restaurant.address || 'Puerto Princesa City'}</span>
+                    </div>
 
-                {/* Products List - IMPROVED DESIGN */}
-                {showProducts && (
-                    <div className="border-t pt-4 mt-4">
-                        <h4 className="font-bold text-gray-900 mb-4 text-center text-lg border-b pb-2">
-                            🍽️ MENU ITEMS
-                        </h4>
-                        
-                        {products.length === 0 ? (
-                            <div className="text-center py-6">
-                                <p className="text-gray-500 text-sm">No menu items available</p>
+                    <div className="flex justify-between items-center text-sm text-gray-500 mb-4">
+                        <span className="bg-gray-100 px-2 py-1 rounded text-xs">{restaurant.cuisine || 'Various'}</span>
+                        <span className="text-green-600 font-semibold flex items-center text-xs">
+                            <Clock size={12} className="mr-1" />
+                            {restaurant.deliveryTime || '25-35 min'}
+                        </span>
+                    </div>
+
+                    {/* View Products Button */}
+                    <button
+                        onClick={fetchProducts}
+                        disabled={loadingProducts}
+                        className="w-full bg-red-800 text-white py-3 rounded-lg mb-3 hover:bg-red-900 transition-colors disabled:opacity-50 flex items-center justify-center space-x-2 font-semibold"
+                    >
+                        {loadingProducts ? (
+                            <>
+                                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                                <span className="text-sm">Loading Menu...</span>
+                            </>
+                        ) : (
+                            <>
+                                <span className="text-sm">📖 VIEW FULL MENU</span>
+                            </>
+                        )}
+                    </button>
+
+                    {/* Order Button */}
+                    <div className="flex justify-between items-center mt-3 pt-3 border-t">
+                        <span className="text-red-800 font-bold text-sm">₱{restaurant.deliveryFee || '35'} delivery</span>
+                        <button
+                            onClick={() => onOrderClick(restaurant)}
+                            className="bg-red-800 text-white px-4 py-2 rounded text-sm hover:bg-red-900 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                            disabled={!user}
+                        >
+                            {user ? 'ORDER NOW' : 'LOGIN TO ORDER'}
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            {/* FULL SCREEN MENU MODAL */}
+            {showProducts && (
+                <div className="fixed inset-0 bg-white z-50 overflow-y-auto">
+                    {/* Header */}
+                    <div className="bg-red-800 text-white sticky top-0 z-10">
+                        <div className="container mx-auto px-4 py-4">
+                            <div className="flex items-center justify-between">
+                                <div className="flex items-center space-x-3">
+                                    <button 
+                                        onClick={closeMenu}
+                                        className="p-2 hover:bg-red-900 rounded-lg transition-colors"
+                                    >
+                                        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                                        </svg>
+                                    </button>
+                                    <div>
+                                        <h1 className="text-2xl font-bold">{restaurant.name}</h1>
+                                        <p className="text-red-100 text-sm">{restaurant.cuisine} • {restaurant.address}</p>
+                                    </div>
+                                </div>
+                                <div className="text-right">
+                                    <div className="flex items-center space-x-2 text-yellow-300">
+                                        <Star size={20} className="fill-current" />
+                                        <span className="font-bold text-lg">{restaurant.rating || '4.5'}</span>
+                                    </div>
+                                    <p className="text-red-100 text-sm">{products.length} items</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Menu Content */}
+                    <div className="container mx-auto px-4 py-6">
+                        {error ? (
+                            <div className="text-center py-12">
+                                <p className="text-gray-500 text-lg">{error}</p>
+                            </div>
+                        ) : products.length === 0 ? (
+                            <div className="text-center py-12">
+                                <p className="text-gray-500 text-lg">No menu items available</p>
                             </div>
                         ) : (
-                            <div className="space-y-4 max-h-80 overflow-y-auto">
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                                 {products.map((product) => (
                                     <div 
                                         key={product._id} 
-                                        className="flex items-start space-x-3 p-3 bg-white border border-gray-200 rounded-lg hover:border-red-300 hover:shadow-md transition-all duration-200"
+                                        className="bg-white border border-gray-200 rounded-xl shadow-sm hover:shadow-md transition-all duration-300 overflow-hidden"
                                     >
                                         {/* Product Image */}
-                                        <div className="flex-shrink-0">
+                                        <div className="h-48 bg-gray-100 relative">
                                             {product.image ? (
                                                 <img 
                                                     src={product.image} 
                                                     alt={product.name}
-                                                    className="w-16 h-16 object-cover rounded-lg"
-                                                    onError={(e) => {
-                                                        e.target.style.display = 'none';
-                                                        e.target.nextElementSibling.style.display = 'flex';
-                                                    }}
+                                                    className="w-full h-full object-cover"
                                                 />
-                                            ) : null}
-                                            <div className={`w-16 h-16 bg-gray-100 rounded-lg flex items-center justify-center ${product.image ? 'hidden' : 'flex'}`}>
-                                                <span className="text-gray-400 text-2xl">🍽️</span>
+                                            ) : (
+                                                <div className="w-full h-full flex items-center justify-center">
+                                                    <span className="text-gray-400 text-6xl">🍽️</span>
+                                                </div>
+                                            )}
+                                            <div className="absolute top-3 right-3 bg-white bg-opacity-90 px-3 py-1 rounded-full">
+                                                <span className="text-green-600 font-bold text-lg">₱{product.price}</span>
                                             </div>
                                         </div>
                                         
                                         {/* Product Info */}
-                                        <div className="flex-1 min-w-0">
-                                            <div className="flex justify-between items-start mb-1">
-                                                <h5 className="font-semibold text-gray-900 text-base truncate">
+                                        <div className="p-4">
+                                            <div className="mb-3">
+                                                <h3 className="font-bold text-xl text-gray-900 mb-2">
                                                     {product.name}
-                                                </h5>
-                                                <span className="text-green-600 font-bold text-lg ml-2 whitespace-nowrap">
-                                                    ₱{product.price}
-                                                </span>
+                                                </h3>
+                                                
+                                                {product.description && (
+                                                    <p className="text-gray-600 text-base mb-3 leading-relaxed">
+                                                        {product.description}
+                                                    </p>
+                                                )}
+                                                
+                                                {product.ingredients && (
+                                                    <div className="mb-3">
+                                                        <p className="text-sm text-gray-500 font-semibold mb-1">Ingredients:</p>
+                                                        <p className="text-gray-600 text-sm">{product.ingredients}</p>
+                                                    </div>
+                                                )}
                                             </div>
                                             
-                                            {product.description && (
-                                                <p className="text-gray-600 text-sm mb-2 line-clamp-2">
-                                                    {product.description}
-                                                </p>
-                                            )}
-                                            
-                                            {product.ingredients && (
-                                                <p className="text-gray-500 text-xs">
-                                                    <span className="font-medium">Ingredients:</span> {product.ingredients}
-                                                </p>
-                                            )}
-                                            
-                                            <div className="flex justify-between items-center mt-2">
-                                                <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">
-                                                    {product.category}
-                                                </span>
-                                                <span className="text-xs text-blue-600">
-                                                    ⏱️ {product.preparationTime || 15} min
-                                                </span>
+                                            <div className="flex justify-between items-center">
+                                                <div className="flex items-center space-x-2">
+                                                    <span className="bg-gray-100 text-gray-700 px-3 py-1 rounded-full text-sm font-medium">
+                                                        {product.category}
+                                                    </span>
+                                                    <span className="text-blue-600 text-sm flex items-center">
+                                                        <Clock size={14} className="mr-1" />
+                                                        {product.preparationTime || 15} min
+                                                    </span>
+                                                </div>
+                                                
+                                                <button
+                                                    onClick={() => onOrderClick(restaurant)}
+                                                    disabled={!user}
+                                                    className="bg-red-800 text-white px-4 py-2 rounded-lg font-semibold hover:bg-red-900 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+                                                >
+                                                    {user ? 'ADD TO CART' : 'LOGIN'}
+                                                </button>
                                             </div>
                                         </div>
                                     </div>
                                 ))}
                             </div>
                         )}
-                        
-                        {/* Products Count */}
-                        {products.length > 0 && (
-                            <div className="mt-4 pt-3 border-t">
-                                <p className="text-center text-sm text-gray-600">
-                                    🎉 <strong>{products.length}</strong> item{products.length !== 1 ? 's' : ''} available
-                                </p>
-                            </div>
-                        )}
                     </div>
-                )}
 
-                {/* Order Button */}
-                <div className="flex justify-between items-center mt-4 pt-4 border-t">
-                    <div className="text-left">
-                        <span className="text-red-800 font-bold text-sm block">Delivery Fee</span>
-                        <span className="text-green-600 font-bold">₱{restaurant.deliveryFee || '35'}</span>
+                    {/* Footer */}
+                    <div className="bg-gray-100 border-t mt-8">
+                        <div className="container mx-auto px-4 py-4">
+                            <div className="flex justify-between items-center">
+                                <div>
+                                    <p className="text-gray-600">
+                                        Showing <strong>{products.length}</strong> menu item{products.length !== 1 ? 's' : ''}
+                                    </p>
+                                </div>
+                                <button
+                                    onClick={closeMenu}
+                                    className="bg-gray-300 text-gray-700 px-6 py-2 rounded-lg font-semibold hover:bg-gray-400 transition-colors"
+                                >
+                                    CLOSE MENU
+                                </button>
+                            </div>
+                        </div>
                     </div>
-                    <button
-                        onClick={() => onOrderClick(restaurant)}
-                        className="bg-red-800 text-white px-6 py-3 rounded-lg font-semibold hover:bg-red-900 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm"
-                        disabled={!user}
-                    >
-                        {user ? 'ORDER NOW 🛒' : 'LOGIN TO ORDER'}
-                    </button>
                 </div>
-            </div>
-        </div>
+            )}
+        </>
     );
 };
 

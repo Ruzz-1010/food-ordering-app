@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { 
     Store, Plus, Package, DollarSign, Clock, Star, Eye, X, Save, 
     LogOut, RefreshCw, Image, MapPin, Navigation, ChefHat, 
-    CheckCircle, Users, TrendingUp, Phone, MessageCircle, Settings
+    CheckCircle, Users, TrendingUp, Phone, MessageCircle, Settings,
+    User, Edit, Camera, Upload
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 
@@ -14,6 +15,7 @@ const RestaurantDashboard = () => {
     const [showLocation, setShowLocation] = useState(false);
     const [selectedOrder, setSelectedOrder] = useState(null);
     const [showOrderDetails, setShowOrderDetails] = useState(false);
+    const [showProfile, setShowProfile] = useState(false);
     
     const API_URL = 'https://food-ordering-app-production-35eb.up.railway.app/api';
 
@@ -33,6 +35,24 @@ const RestaurantDashboard = () => {
     const [location, setLocation] = useState({
         address: '',
         coordinates: { lat: 9.7392, lng: 118.7353 }
+    });
+
+    // Profile State
+    const [profileData, setProfileData] = useState({
+        name: '',
+        cuisine: '',
+        description: '',
+        phone: '',
+        email: '',
+        address: '',
+        openingHours: {
+            open: '08:00',
+            close: '22:00'
+        },
+        deliveryTime: '25-35 min',
+        deliveryFee: 35,
+        image: '',
+        bannerImage: ''
     });
 
     // Fetch all data
@@ -66,6 +86,23 @@ const RestaurantDashboard = () => {
             if (restaurantResponse.ok) {
                 const restaurantData = await restaurantResponse.json();
                 setRestaurant(restaurantData.restaurant || restaurantData || {});
+                
+                // Set profile data from restaurant
+                if (restaurantData.restaurant) {
+                    setProfileData({
+                        name: restaurantData.restaurant.name || '',
+                        cuisine: restaurantData.restaurant.cuisine || '',
+                        description: restaurantData.restaurant.description || '',
+                        phone: restaurantData.restaurant.phone || '',
+                        email: restaurantData.restaurant.email || '',
+                        address: restaurantData.restaurant.address || '',
+                        openingHours: restaurantData.restaurant.openingHours || { open: '08:00', close: '22:00' },
+                        deliveryTime: restaurantData.restaurant.deliveryTime || '25-35 min',
+                        deliveryFee: restaurantData.restaurant.deliveryFee || 35,
+                        image: restaurantData.restaurant.image || '',
+                        bannerImage: restaurantData.restaurant.bannerImage || ''
+                    });
+                }
             }
 
         } catch (error) {
@@ -127,6 +164,36 @@ const RestaurantDashboard = () => {
             }
         } catch (error) {
             console.error('Error:', error);
+            alert('❌ Network error');
+        }
+    };
+
+    // Update Profile
+    const handleUpdateProfile = async (e) => {
+        e.preventDefault();
+        
+        try {
+            const token = localStorage.getItem('token');
+            const response = await fetch(`${API_URL}/restaurants/${restaurant._id}`, {
+                method: 'PUT',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(profileData)
+            });
+
+            const data = await response.json();
+
+            if (response.ok) {
+                alert('✅ Profile updated successfully!');
+                setShowProfile(false);
+                fetchData(); // Refresh data
+            } else {
+                alert(`❌ Failed to update profile: ${data.message}`);
+            }
+        } catch (error) {
+            console.error('Error updating profile:', error);
             alert('❌ Network error');
         }
     };
@@ -241,6 +308,13 @@ const RestaurantDashboard = () => {
                         
                         <div className="flex items-center space-x-3">
                             <button
+                                onClick={() => setShowProfile(true)}
+                                className="flex items-center space-x-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
+                            >
+                                <User size={16} />
+                                <span>Profile</span>
+                            </button>
+                            <button
                                 onClick={fetchData}
                                 className="flex items-center space-x-2 bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700"
                             >
@@ -328,6 +402,7 @@ const RestaurantDashboard = () => {
                                     </span>
                                 </p>
                                 <p><strong>Address:</strong> {restaurant.address || 'Not set'}</p>
+                                <p><strong>Phone:</strong> {restaurant.phone || 'Not set'}</p>
                             </div>
                         </div>
 
@@ -721,6 +796,211 @@ const RestaurantDashboard = () => {
                                     >
                                         <Save size={16} />
                                         <span>Add Item</span>
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Profile Modal */}
+            {showProfile && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+                    <div className="bg-white rounded-lg shadow-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+                        <div className="p-6">
+                            <div className="flex justify-between items-center mb-6">
+                                <h3 className="text-xl font-bold text-gray-900">🏪 Restaurant Profile</h3>
+                                <button onClick={() => setShowProfile(false)} className="text-gray-500 hover:text-gray-700">
+                                    <X size={24} />
+                                </button>
+                            </div>
+
+                            <form onSubmit={handleUpdateProfile} className="space-y-6">
+                                {/* Restaurant Images */}
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-2">Profile Image URL</label>
+                                        <input
+                                            type="url"
+                                            value={profileData.image}
+                                            onChange={(e) => setProfileData({...profileData, image: e.target.value})}
+                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+                                            placeholder="https://example.com/profile.jpg"
+                                        />
+                                        {profileData.image && (
+                                            <img src={profileData.image} alt="Profile" className="mt-2 w-20 h-20 object-cover rounded-lg" />
+                                        )}
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-2">Banner Image URL</label>
+                                        <input
+                                            type="url"
+                                            value={profileData.bannerImage}
+                                            onChange={(e) => setProfileData({...profileData, bannerImage: e.target.value})}
+                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+                                            placeholder="https://example.com/banner.jpg"
+                                        />
+                                    </div>
+                                </div>
+
+                                {/* Basic Information */}
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-2">Restaurant Name *</label>
+                                        <input
+                                            type="text"
+                                            required
+                                            value={profileData.name}
+                                            onChange={(e) => setProfileData({...profileData, name: e.target.value})}
+                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+                                            placeholder="Your Restaurant Name"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-2">Cuisine Type *</label>
+                                        <select
+                                            value={profileData.cuisine}
+                                            onChange={(e) => setProfileData({...profileData, cuisine: e.target.value})}
+                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+                                        >
+                                            <option value="">Select Cuisine</option>
+                                            <option value="Filipino">Filipino</option>
+                                            <option value="Chinese">Chinese</option>
+                                            <option value="Japanese">Japanese</option>
+                                            <option value="Korean">Korean</option>
+                                            <option value="American">American</option>
+                                            <option value="Italian">Italian</option>
+                                            <option value="Mexican">Mexican</option>
+                                            <option value="Fast Food">Fast Food</option>
+                                            <option value="Vegetarian">Vegetarian</option>
+                                            <option value="Seafood">Seafood</option>
+                                            <option value="Barbecue">Barbecue</option>
+                                            <option value="Desserts">Desserts</option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                {/* Contact Information */}
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-2">Phone Number *</label>
+                                        <input
+                                            type="tel"
+                                            required
+                                            value={profileData.phone}
+                                            onChange={(e) => setProfileData({...profileData, phone: e.target.value})}
+                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+                                            placeholder="09123456789"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-2">Email *</label>
+                                        <input
+                                            type="email"
+                                            required
+                                            value={profileData.email}
+                                            onChange={(e) => setProfileData({...profileData, email: e.target.value})}
+                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+                                            placeholder="restaurant@email.com"
+                                        />
+                                    </div>
+                                </div>
+
+                                {/* Address */}
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">Address *</label>
+                                    <textarea
+                                        required
+                                        value={profileData.address}
+                                        onChange={(e) => setProfileData({...profileData, address: e.target.value})}
+                                        rows="2"
+                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+                                        placeholder="Complete restaurant address"
+                                    />
+                                </div>
+
+                                {/* Description */}
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">Description</label>
+                                    <textarea
+                                        value={profileData.description}
+                                        onChange={(e) => setProfileData({...profileData, description: e.target.value})}
+                                        rows="3"
+                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+                                        placeholder="Describe your restaurant, specialties, etc."
+                                    />
+                                </div>
+
+                                {/* Delivery Settings */}
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-2">Delivery Time</label>
+                                        <input
+                                            type="text"
+                                            value={profileData.deliveryTime}
+                                            onChange={(e) => setProfileData({...profileData, deliveryTime: e.target.value})}
+                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+                                            placeholder="25-35 min"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-2">Delivery Fee (₱)</label>
+                                        <input
+                                            type="number"
+                                            value={profileData.deliveryFee}
+                                            onChange={(e) => setProfileData({...profileData, deliveryFee: parseFloat(e.target.value)})}
+                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+                                            placeholder="35"
+                                        />
+                                    </div>
+                                </div>
+
+                                {/* Opening Hours */}
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">Opening Hours</label>
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div>
+                                            <label className="block text-xs text-gray-600 mb-1">Open Time</label>
+                                            <input
+                                                type="time"
+                                                value={profileData.openingHours.open}
+                                                onChange={(e) => setProfileData({
+                                                    ...profileData, 
+                                                    openingHours: {...profileData.openingHours, open: e.target.value}
+                                                })}
+                                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-xs text-gray-600 mb-1">Close Time</label>
+                                            <input
+                                                type="time"
+                                                value={profileData.openingHours.close}
+                                                onChange={(e) => setProfileData({
+                                                    ...profileData, 
+                                                    openingHours: {...profileData.openingHours, close: e.target.value}
+                                                })}
+                                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="flex space-x-3 pt-4">
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowProfile(false)}
+                                        className="flex-1 px-4 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
+                                    >
+                                        Cancel
+                                    </button>
+                                    <button
+                                        type="submit"
+                                        className="flex-1 px-4 py-3 bg-orange-600 text-white rounded-lg hover:bg-orange-700 flex items-center justify-center space-x-2"
+                                    >
+                                        <Save size={16} />
+                                        <span>Save Profile</span>
                                     </button>
                                 </div>
                             </form>
