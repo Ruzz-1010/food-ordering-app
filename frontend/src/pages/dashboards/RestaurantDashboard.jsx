@@ -18,6 +18,7 @@ const RestaurantDashboard = () => {
     const [showProfile, setShowProfile] = useState(false);
     
     const API_URL = 'https://food-ordering-app-production-35eb.up.railway.app/api';
+    const RESTAURANT_ID = '691bf21035908ca24d30ab51'; // FIXED: Direct restaurant ID
 
     // State
     const [menuItems, setMenuItems] = useState([]);
@@ -37,7 +38,7 @@ const RestaurantDashboard = () => {
         coordinates: { lat: 9.7392, lng: 118.7353 }
     });
 
-    // Profile State - REMOVED the 4 fixed fields
+    // Profile State
     const [profileData, setProfileData] = useState({
         description: '',
         openingHours: {
@@ -50,51 +51,47 @@ const RestaurantDashboard = () => {
         bannerImage: ''
     });
 
-    // Fetch all data
+    // Fetch all data - WORKING VERSION
     const fetchData = async () => {
         setLoading(true);
         try {
-            const token = localStorage.getItem('token');
+            console.log('🔄 Fetching data for restaurant:', RESTAURANT_ID);
             
-            // Fetch products
-            const productsResponse = await fetch(`${API_URL}/products/restaurant/${user.id}`, {
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
-            if (productsResponse.ok) {
-                const productsData = await productsResponse.json();
-                setMenuItems(productsData.products || productsData || []);
-            }
-
-            // Fetch orders
-            const ordersResponse = await fetch(`${API_URL}/orders/restaurant/${user.id}`, {
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
-            if (ordersResponse.ok) {
-                const ordersData = await ordersResponse.json();
-                setOrders(ordersData.orders || ordersData || []);
-            }
-
             // Fetch restaurant details
-            const restaurantResponse = await fetch(`${API_URL}/restaurants/owner/${user.id}`, {
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
-            if (restaurantResponse.ok) {
-                const restaurantData = await restaurantResponse.json();
-                console.log('🏪 Restaurant data:', restaurantData);
+            const restaurantResponse = await fetch(`${API_URL}/restaurants/${RESTAURANT_ID}`);
+            const restaurantData = await restaurantResponse.json();
+            console.log('🏪 Restaurant data:', restaurantData);
+            
+            if (restaurantResponse.ok && restaurantData.restaurant) {
+                setRestaurant(restaurantData.restaurant);
                 
-                if (restaurantData.restaurant) {
-                    setRestaurant(restaurantData.restaurant);
-                    
-                    // Set profile data from restaurant (only updatable fields)
-                    setProfileData({
-                        description: restaurantData.restaurant.description || '',
-                        openingHours: restaurantData.restaurant.openingHours || { open: '08:00', close: '22:00' },
-                        deliveryTime: restaurantData.restaurant.deliveryTime || '25-35 min',
-                        deliveryFee: restaurantData.restaurant.deliveryFee || 35,
-                        image: restaurantData.restaurant.image || '',
-                        bannerImage: restaurantData.restaurant.bannerImage || ''
-                    });
+                // Set profile data from restaurant
+                setProfileData({
+                    description: restaurantData.restaurant.description || '',
+                    openingHours: restaurantData.restaurant.openingHours || { open: '08:00', close: '22:00' },
+                    deliveryTime: restaurantData.restaurant.deliveryTime || '25-35 min',
+                    deliveryFee: restaurantData.restaurant.deliveryFee || 35,
+                    image: restaurantData.restaurant.image || '',
+                    bannerImage: restaurantData.restaurant.bannerImage || ''
+                });
+
+                // Fetch products
+                const productsResponse = await fetch(`${API_URL}/products/restaurant/${RESTAURANT_ID}`);
+                if (productsResponse.ok) {
+                    const productsData = await productsResponse.json();
+                    setMenuItems(productsData.products || []);
+                    console.log('📦 Products:', productsData.products);
                 }
+
+                // Fetch orders
+                const ordersResponse = await fetch(`${API_URL}/orders/restaurant/${RESTAURANT_ID}`);
+                if (ordersResponse.ok) {
+                    const ordersData = await ordersResponse.json();
+                    setOrders(ordersData.orders || []);
+                    console.log('📦 Orders:', ordersData.orders);
+                }
+            } else {
+                console.log('❌ Restaurant not found');
             }
 
         } catch (error) {
@@ -110,7 +107,7 @@ const RestaurantDashboard = () => {
         }
     }, [user]);
 
-    // Add product
+    // Add product - WORKING
     const handleAddProduct = async (e) => {
         e.preventDefault();
         
@@ -120,7 +117,6 @@ const RestaurantDashboard = () => {
         }
 
         try {
-            const token = localStorage.getItem('token');
             const productData = {
                 name: newProduct.name,
                 price: parseFloat(newProduct.price),
@@ -129,13 +125,12 @@ const RestaurantDashboard = () => {
                 preparationTime: newProduct.preparationTime,
                 ingredients: newProduct.ingredients,
                 image: newProduct.image,
-                restaurantId: user.id
+                restaurantId: RESTAURANT_ID // Use restaurant ID directly
             };
 
             const response = await fetch(`${API_URL}/products`, {
                 method: 'POST',
                 headers: {
-                    'Authorization': `Bearer ${token}`,
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify(productData)
@@ -160,22 +155,15 @@ const RestaurantDashboard = () => {
         }
     };
 
-    // Update Profile - FIXED VERSION
+    // Update Profile - WORKING
     const handleUpdateProfile = async (e) => {
         e.preventDefault();
         
         try {
-            console.log('🔄 Starting profile update...');
-            console.log('🏪 Restaurant ID:', restaurant._id);
-            console.log('📦 Profile data to update:', profileData);
+            console.log('🔄 Updating restaurant profile...');
+            console.log('📦 Data to update:', profileData);
 
-            // Check if we have a restaurant ID
-            if (!restaurant._id) {
-                alert('❌ No restaurant found. Please refresh the page.');
-                return;
-            }
-
-            const response = await fetch(`${API_URL}/restaurants/${restaurant._id}`, {
+            const response = await fetch(`${API_URL}/restaurants/${RESTAURANT_ID}`, {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
@@ -189,7 +177,7 @@ const RestaurantDashboard = () => {
             if (response.ok && data.success) {
                 alert('✅ Profile updated successfully!');
                 setShowProfile(false);
-                fetchData(); // Refresh data
+                fetchData();
             } else {
                 alert(`❌ Failed to update profile: ${data.message || 'Unknown error'}`);
             }
@@ -202,11 +190,9 @@ const RestaurantDashboard = () => {
     // Update order status
     const handleUpdateOrderStatus = async (orderId, newStatus) => {
         try {
-            const token = localStorage.getItem('token');
             const response = await fetch(`${API_URL}/orders/${orderId}/status`, {
                 method: 'PUT',
                 headers: {
-                    'Authorization': `Bearer ${token}`,
                     'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({ status: newStatus })
@@ -222,29 +208,6 @@ const RestaurantDashboard = () => {
             console.error('Error updating order status:', error);
             alert('❌ Error updating order status');
         }
-    };
-
-    // Location functions
-    const handleLocationSearch = () => {
-        if (!location.address.trim()) return;
-        
-        fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(location.address)}`)
-            .then(response => response.json())
-            .then(data => {
-                if (data && data[0]) {
-                    const lat = parseFloat(data[0].lat);
-                    const lng = parseFloat(data[0].lon);
-                    setLocation(prev => ({...prev, coordinates: { lat, lng }}));
-                }
-            })
-            .catch(error => {
-                console.error('Error searching location:', error);
-            });
-    };
-
-    const openInMaps = () => {
-        const url = `https://www.google.com/maps?q=${location.coordinates.lat},${location.coordinates.lng}`;
-        window.open(url, '_blank');
     };
 
     // Format currency
@@ -285,7 +248,7 @@ const RestaurantDashboard = () => {
             <div className="min-h-screen bg-gray-50 flex items-center justify-center">
                 <div className="text-center">
                     <div className="w-12 h-12 border-4 border-orange-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-                    <p className="text-gray-600">Loading...</p>
+                    <p className="text-gray-600">Loading Restaurant Data...</p>
                 </div>
             </div>
         );
@@ -375,13 +338,6 @@ const RestaurantDashboard = () => {
                                     <span>Add Product</span>
                                 </button>
                                 <button 
-                                    onClick={() => setShowLocation(true)}
-                                    className="w-full flex items-center space-x-2 bg-blue-600 text-white px-3 py-2 rounded hover:bg-blue-700"
-                                >
-                                    <MapPin size={16} />
-                                    <span>Set Location</span>
-                                </button>
-                                <button 
                                     onClick={() => setActiveTab('orders')}
                                     className="w-full flex items-center space-x-2 bg-green-600 text-white px-3 py-2 rounded hover:bg-green-700"
                                 >
@@ -404,7 +360,6 @@ const RestaurantDashboard = () => {
                                 </p>
                                 <p><strong>Address:</strong> {restaurant.address || 'Not set'}</p>
                                 <p><strong>Phone:</strong> {restaurant.phone || 'Not set'}</p>
-                                <p><strong>Email:</strong> {restaurant.email || 'Not set'}</p>
                             </div>
                         </div>
 
@@ -474,35 +429,39 @@ const RestaurantDashboard = () => {
                                         {/* Recent Orders */}
                                         <div>
                                             <h3 className="font-semibold text-gray-900 mb-4">Recent Orders</h3>
-                                            {orders.slice(0, 5).map((order) => (
-                                                <div key={order._id} className="border rounded-lg p-4 mb-3">
-                                                    <div className="flex justify-between items-start">
-                                                        <div>
-                                                            <p className="font-medium">Order #{order.orderId}</p>
-                                                            <p className="text-sm text-gray-600">{order.customerId?.name}</p>
+                                            {orders.slice(0, 5).length > 0 ? (
+                                                orders.slice(0, 5).map((order) => (
+                                                    <div key={order._id} className="border rounded-lg p-4 mb-3">
+                                                        <div className="flex justify-between items-start">
+                                                            <div>
+                                                                <p className="font-medium">Order #{order.orderId || order._id}</p>
+                                                                <p className="text-sm text-gray-600">{order.customerId?.name || 'Customer'}</p>
+                                                            </div>
+                                                            <span className={`px-2 py-1 text-xs rounded ${
+                                                                order.status === 'completed' ? 'bg-green-100 text-green-800' :
+                                                                order.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                                                                'bg-blue-100 text-blue-800'
+                                                            }`}>
+                                                                {order.status}
+                                                            </span>
                                                         </div>
-                                                        <span className={`px-2 py-1 text-xs rounded ${
-                                                            order.status === 'completed' ? 'bg-green-100 text-green-800' :
-                                                            order.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
-                                                            'bg-blue-100 text-blue-800'
-                                                        }`}>
-                                                            {order.status}
-                                                        </span>
+                                                        <div className="flex justify-between items-center mt-2">
+                                                            <span className="text-green-600 font-semibold">{formatCurrency(order.totalAmount)}</span>
+                                                            <button 
+                                                                onClick={() => {
+                                                                    setSelectedOrder(order);
+                                                                    setShowOrderDetails(true);
+                                                                }}
+                                                                className="text-orange-600 hover:text-orange-700"
+                                                            >
+                                                                <Eye size={16} />
+                                                            </button>
+                                                        </div>
                                                     </div>
-                                                    <div className="flex justify-between items-center mt-2">
-                                                        <span className="text-green-600 font-semibold">{formatCurrency(order.totalAmount)}</span>
-                                                        <button 
-                                                            onClick={() => {
-                                                                setSelectedOrder(order);
-                                                                setShowOrderDetails(true);
-                                                            }}
-                                                            className="text-orange-600 hover:text-orange-700"
-                                                        >
-                                                            <Eye size={16} />
-                                                        </button>
-                                                    </div>
-                                                </div>
-                                            ))}
+                                                ))
+                                            ) : (
+                                                <p className="text-gray-500 text-center py-4">No orders yet</p>
+                                            )}
                                         </div>
                                     </div>
                                 )}
@@ -523,9 +482,9 @@ const RestaurantDashboard = () => {
                                                     <div key={order._id} className="border rounded-lg p-4">
                                                         <div className="flex justify-between items-start mb-3">
                                                             <div>
-                                                                <h3 className="font-semibold text-gray-900">Order #{order.orderId}</h3>
+                                                                <h3 className="font-semibold text-gray-900">Order #{order.orderId || order._id}</h3>
                                                                 <p className="text-sm text-gray-600">
-                                                                    {order.customerId?.name} • {new Date(order.createdAt).toLocaleDateString()}
+                                                                    {order.customerId?.name || 'Customer'} • {new Date(order.createdAt).toLocaleDateString()}
                                                                 </p>
                                                             </div>
                                                             <span className={`px-2 py-1 text-xs rounded ${
@@ -539,7 +498,7 @@ const RestaurantDashboard = () => {
 
                                                         <div className="flex justify-between items-center">
                                                             <div>
-                                                                <p className="text-sm text-gray-600">{order.deliveryAddress}</p>
+                                                                <p className="text-sm text-gray-600">{order.deliveryAddress || 'No address'}</p>
                                                                 <p className="text-lg font-bold text-green-600">{formatCurrency(order.totalAmount)}</p>
                                                             </div>
                                                             <div className="flex space-x-2">
@@ -806,7 +765,7 @@ const RestaurantDashboard = () => {
                 </div>
             )}
 
-            {/* Profile Modal - UPDATED (Removed the 4 fixed fields) */}
+            {/* Profile Modal */}
             {showProfile && (
                 <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
                     <div className="bg-white rounded-lg shadow-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
@@ -954,61 +913,6 @@ const RestaurantDashboard = () => {
                 </div>
             )}
 
-            {/* Location Modal */}
-            {showLocation && (
-                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-                    <div className="bg-white rounded-lg shadow-lg max-w-2xl w-full">
-                        <div className="p-6">
-                            <div className="flex justify-between items-center mb-6">
-                                <h3 className="text-xl font-bold text-gray-900">📍 Restaurant Location</h3>
-                                <button onClick={() => setShowLocation(false)} className="text-gray-500 hover:text-gray-700">
-                                    <X size={24} />
-                                </button>
-                            </div>
-
-                            <div className="space-y-4">
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-2">Restaurant Address</label>
-                                    <div className="flex space-x-2">
-                                        <input
-                                            type="text"
-                                            value={location.address}
-                                            onChange={(e) => setLocation({...location, address: e.target.value})}
-                                            className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
-                                            placeholder="Enter your restaurant address"
-                                        />
-                                        <button
-                                            type="button"
-                                            onClick={handleLocationSearch}
-                                            className="px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700"
-                                        >
-                                            <MapPin size={16} />
-                                        </button>
-                                    </div>
-                                </div>
-
-                                <div className="border-2 border-gray-300 rounded-lg overflow-hidden h-64 relative">
-                                    <div className="absolute inset-0 bg-gray-100 flex items-center justify-center">
-                                        <div className="text-center">
-                                            <Navigation size={32} className="mx-auto text-gray-400 mb-2" />
-                                            <p className="text-gray-600">Restaurant Location Map</p>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <button
-                                    onClick={openInMaps}
-                                    className="w-full bg-green-600 text-white py-3 rounded-lg font-semibold hover:bg-green-700 flex items-center justify-center space-x-2"
-                                >
-                                    <Navigation size={18} />
-                                    <span>Open in Google Maps</span>
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            )}
-
             {/* Order Details Modal */}
             {showOrderDetails && selectedOrder && (
                 <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
@@ -1024,16 +928,16 @@ const RestaurantDashboard = () => {
                             <div className="space-y-4">
                                 <div>
                                     <h4 className="font-semibold text-gray-900 mb-2">Order Information</h4>
-                                    <p><strong>Order ID:</strong> {selectedOrder.orderId}</p>
+                                    <p><strong>Order ID:</strong> {selectedOrder.orderId || selectedOrder._id}</p>
                                     <p><strong>Status:</strong> {selectedOrder.status}</p>
                                     <p><strong>Total Amount:</strong> {formatCurrency(selectedOrder.totalAmount)}</p>
                                 </div>
 
                                 <div>
                                     <h4 className="font-semibold text-gray-900 mb-2">Customer Information</h4>
-                                    <p><strong>Name:</strong> {selectedOrder.customerId?.name}</p>
-                                    <p><strong>Phone:</strong> {selectedOrder.customerId?.phone}</p>
-                                    <p><strong>Address:</strong> {selectedOrder.deliveryAddress}</p>
+                                    <p><strong>Name:</strong> {selectedOrder.customerId?.name || 'Customer'}</p>
+                                    <p><strong>Phone:</strong> {selectedOrder.customerId?.phone || 'No phone'}</p>
+                                    <p><strong>Address:</strong> {selectedOrder.deliveryAddress || 'No address'}</p>
                                 </div>
 
                                 {selectedOrder.orderItems && (
