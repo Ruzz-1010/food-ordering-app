@@ -69,12 +69,17 @@ const restaurantSchema = new mongoose.Schema({
     type: String,
     default: ''
   },
+  // ✅ ADD THIS BANNER IMAGE FIELD
+  bannerImage: {
+    type: String,
+    default: ''
+  },
   location: {
     lat: { type: Number },
     lng: { type: Number }
   }
 }, {
-  timestamps: true  // ✅ Better than createdAt only
+  timestamps: true
 });
 
 // ✅ Add indexes for better performance

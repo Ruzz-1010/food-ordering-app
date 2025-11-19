@@ -51,12 +51,15 @@ router.get('/approved', async (req, res) => {
   }
 });
 
-// CREATE RESTAURANT
+// CREATE RESTAURANT - UPDATED
 router.post('/', async (req, res) => {
   try {
     console.log('📝 Creating restaurant:', req.body);
     
-    const { name, owner, email, phone, address, cuisine, description } = req.body;
+    const { 
+      name, owner, email, phone, address, cuisine, description,
+      deliveryTime, deliveryFee, openingHours, image, bannerImage 
+    } = req.body;
 
     // Check if restaurant already exists with this email
     const existingRestaurant = await Restaurant.findOne({ email });
@@ -75,7 +78,12 @@ router.post('/', async (req, res) => {
       address,
       cuisine,
       description,
-      isApproved: false // Wait for admin approval
+      deliveryTime: deliveryTime || '20-30 min',
+      deliveryFee: deliveryFee || 35,
+      openingHours: openingHours || { open: '08:00', close: '22:00' },
+      image: image || '',
+      bannerImage: bannerImage || '',
+      isApproved: false
     });
 
     await restaurant.save();
@@ -238,6 +246,38 @@ router.get('/stats/count', async (req, res) => {
     res.status(500).json({ 
       success: false,
       message: 'Failed to get restaurant stats' 
+    });
+  }
+});
+
+// GET RESTAURANT BY OWNER ID - ADD THIS ROUTE
+router.get('/owner/:ownerId', async (req, res) => {
+  try {
+    const { ownerId } = req.params;
+    console.log('🔍 Fetching restaurant for owner:', ownerId);
+    
+    const restaurant = await Restaurant.findOne({ owner: ownerId })
+      .populate('owner', 'name email phone');
+
+    if (!restaurant) {
+      return res.status(404).json({
+        success: false,
+        message: 'Restaurant not found for this owner'
+      });
+    }
+
+    console.log('✅ Found restaurant:', restaurant.name);
+
+    res.json({
+      success: true,
+      restaurant
+    });
+
+  } catch (error) {
+    console.error('❌ Get restaurant by owner error:', error);
+    res.status(500).json({ 
+      success: false,
+      message: 'Failed to get restaurant: ' + error.message 
     });
   }
 });
