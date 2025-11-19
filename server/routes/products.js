@@ -8,8 +8,10 @@ router.get('/restaurant/:restaurantId', async (req, res) => {
     const { restaurantId } = req.params;
     console.log('📋 Fetching products for restaurant:', restaurantId);
     
-    const products = await Product.find({ restaurant: restaurantId })
-      .sort({ createdAt: -1 });
+    const products = await Product.find({ 
+      restaurant: restaurantId,
+      isAvailable: true 
+    }).sort({ createdAt: -1 });
 
     console.log(`✅ Found ${products.length} products`);
     
@@ -22,7 +24,7 @@ router.get('/restaurant/:restaurantId', async (req, res) => {
     console.error('❌ Get products error:', error);
     res.status(500).json({ 
       success: false,
-      message: 'Failed to get products' 
+      message: 'Failed to get products: ' + error.message 
     });
   }
 });
@@ -43,13 +45,13 @@ router.post('/', async (req, res) => {
     }
 
     const product = new Product({
-      name,
+      name: name.trim(),
       price: parseFloat(price),
-      description: description || '',
+      description: description?.trim() || '',
       category: category || 'main course',
       restaurant: restaurantId,
       preparationTime: preparationTime || 15,
-      ingredients: ingredients || '',
+      ingredients: ingredients?.trim() || '',
       image: image || '',
       isAvailable: true
     });
@@ -76,10 +78,12 @@ router.post('/', async (req, res) => {
 // UPDATE PRODUCT
 router.put('/:id', async (req, res) => {
   try {
+    console.log('📝 Updating product:', req.params.id);
+    
     const product = await Product.findByIdAndUpdate(
       req.params.id,
       req.body,
-      { new: true }
+      { new: true, runValidators: true }
     );
 
     if (!product) {
@@ -99,7 +103,7 @@ router.put('/:id', async (req, res) => {
     console.error('❌ Update product error:', error);
     res.status(500).json({ 
       success: false,
-      message: 'Failed to update product' 
+      message: 'Failed to update product: ' + error.message 
     });
   }
 });
@@ -127,7 +131,34 @@ router.delete('/:id', async (req, res) => {
     console.error('❌ Delete product error:', error);
     res.status(500).json({ 
       success: false,
-      message: 'Failed to delete product' 
+      message: 'Failed to delete product: ' + error.message 
+    });
+  }
+});
+
+// GET SINGLE PRODUCT
+router.get('/:id', async (req, res) => {
+  try {
+    const product = await Product.findById(req.params.id)
+      .populate('restaurant', 'name cuisine');
+
+    if (!product) {
+      return res.status(404).json({
+        success: false,
+        message: 'Product not found'
+      });
+    }
+
+    res.json({
+      success: true,
+      product
+    });
+
+  } catch (error) {
+    console.error('❌ Get product error:', error);
+    res.status(500).json({ 
+      success: false,
+      message: 'Failed to get product: ' + error.message 
     });
   }
 });
@@ -173,28 +204,6 @@ router.get('/quick-fix/:restaurantId', async (req, res) => {
         ingredients: "Carbonated water, sugar, caramel color",
         image: "https://images.unsplash.com/photo-1544145945-f90425340c7e?w=400",
         isAvailable: true
-      },
-      {
-        name: "Cheese Pizza",
-        price: 180,
-        description: "Classic cheese pizza with tomato sauce",
-        category: "main course",
-        restaurant: restaurantId,
-        preparationTime: 20,
-        ingredients: "Pizza dough, cheese, tomato sauce, herbs",
-        image: "https://images.unsplash.com/photo-1565299624946-b28f40a0ca4b?w=400",
-        isAvailable: true
-      },
-      {
-        name: "Ice Cream",
-        price: 80,
-        description: "Vanilla ice cream with chocolate syrup",
-        category: "dessert",
-        restaurant: restaurantId,
-        preparationTime: 5,
-        ingredients: "Milk, cream, sugar, vanilla",
-        image: "https://images.unsplash.com/photo-1563805042-7684c019e1cb?w=400",
-        isAvailable: true
       }
     ];
 
@@ -209,7 +218,7 @@ router.get('/quick-fix/:restaurantId', async (req, res) => {
 
     res.json({ 
       success: true, 
-      message: "5 sample products added successfully!",
+      message: "Sample products added successfully!",
       products: createdProducts
     });
 

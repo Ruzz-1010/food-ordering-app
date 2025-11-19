@@ -4,7 +4,8 @@ const restaurantSchema = new mongoose.Schema({
   name: {
     type: String,
     required: [true, 'Restaurant name is required'],
-    trim: true
+    trim: true,
+    maxlength: [100, 'Restaurant name cannot exceed 100 characters']
   },
   owner: {
     type: mongoose.Schema.Types.ObjectId,
@@ -16,17 +17,20 @@ const restaurantSchema = new mongoose.Schema({
     required: [true, 'Email is required'],
     unique: true,
     trim: true,
-    lowercase: true
+    lowercase: true,
+    match: [/^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/, 'Please enter a valid email']
   },
   phone: {
     type: String,
     required: [true, 'Phone number is required'],
-    trim: true
+    trim: true,
+    match: [/^[0-9+\-\s()]{10,}$/, 'Please enter a valid phone number']
   },
   address: {
     type: String,
     required: [true, 'Address is required'],
-    trim: true
+    trim: true,
+    maxlength: [500, 'Address cannot exceed 500 characters']
   },
   cuisine: {
     type: String,
@@ -36,7 +40,8 @@ const restaurantSchema = new mongoose.Schema({
   description: {
     type: String,
     default: '',
-    trim: true
+    trim: true,
+    maxlength: [1000, 'Description cannot exceed 1000 characters']
   },
   deliveryTime: {
     type: String,
@@ -45,13 +50,13 @@ const restaurantSchema = new mongoose.Schema({
   deliveryFee: {
     type: Number,
     default: 35,
-    min: 0
+    min: [0, 'Delivery fee cannot be negative']
   },
   rating: {
     type: Number,
     default: 4.5,
-    min: 0,
-    max: 5
+    min: [0, 'Rating cannot be less than 0'],
+    max: [5, 'Rating cannot exceed 5']
   },
   isActive: {
     type: Boolean,
@@ -59,17 +64,24 @@ const restaurantSchema = new mongoose.Schema({
   },
   isApproved: {
     type: Boolean,
-    default: false
+    default: true // Auto-approve for now
   },
   openingHours: {
-    open: { type: String, default: '08:00' },
-    close: { type: String, default: '22:00' }
+    open: { 
+      type: String, 
+      default: '08:00',
+      match: [/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, 'Please enter valid time format (HH:MM)']
+    },
+    close: { 
+      type: String, 
+      default: '22:00',
+      match: [/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, 'Please enter valid time format (HH:MM)']
+    }
   },
   image: {
     type: String,
     default: ''
   },
-  // ✅ ADD THIS BANNER IMAGE FIELD
   bannerImage: {
     type: String,
     default: ''
@@ -82,8 +94,23 @@ const restaurantSchema = new mongoose.Schema({
   timestamps: true
 });
 
-// ✅ Add indexes for better performance
+// Indexes for better performance
+restaurantSchema.index({ owner: 1 });
 restaurantSchema.index({ isApproved: 1, isActive: 1 });
 restaurantSchema.index({ cuisine: 1 });
+restaurantSchema.index({ email: 1 }, { unique: true });
+
+// Virtual for formatted delivery fee
+restaurantSchema.virtual('formattedDeliveryFee').get(function() {
+  return `₱${this.deliveryFee}`;
+});
+
+// Method to check if restaurant is open
+restaurantSchema.methods.isOpen = function() {
+  const now = new Date();
+  const currentTime = now.toTimeString().slice(0, 5); // HH:MM format
+  
+  return currentTime >= this.openingHours.open && currentTime <= this.openingHours.close;
+};
 
 module.exports = mongoose.model('Restaurant', restaurantSchema);

@@ -51,7 +51,7 @@ router.get('/approved', async (req, res) => {
   }
 });
 
-// CREATE RESTAURANT - UPDATED
+// CREATE RESTAURANT - IMPROVED VERSION
 router.post('/', async (req, res) => {
   try {
     console.log('📝 Creating restaurant:', req.body);
@@ -61,29 +61,35 @@ router.post('/', async (req, res) => {
       deliveryTime, deliveryFee, openingHours, image, bannerImage 
     } = req.body;
 
-    // Check if restaurant already exists with this email
-    const existingRestaurant = await Restaurant.findOne({ email });
+    // Check if restaurant already exists with this email or owner
+    const existingRestaurant = await Restaurant.findOne({
+      $or: [
+        { email: email },
+        { owner: owner }
+      ]
+    });
+    
     if (existingRestaurant) {
       return res.status(400).json({ 
         success: false,
-        message: 'Restaurant already exists with this email' 
+        message: 'Restaurant already exists with this email or owner' 
       });
     }
 
     const restaurant = new Restaurant({
-      name,
+      name: name?.trim(),
       owner,
-      email,
-      phone,
-      address,
-      cuisine,
-      description,
+      email: email?.trim().toLowerCase(),
+      phone: phone?.trim(),
+      address: address?.trim(),
+      cuisine: cuisine?.trim(),
+      description: description?.trim() || '',
       deliveryTime: deliveryTime || '20-30 min',
       deliveryFee: deliveryFee || 35,
       openingHours: openingHours || { open: '08:00', close: '22:00' },
       image: image || '',
       bannerImage: bannerImage || '',
-      isApproved: false
+      isApproved: true // Auto-approve for now
     });
 
     await restaurant.save();
@@ -93,7 +99,7 @@ router.post('/', async (req, res) => {
 
     res.status(201).json({
       success: true,
-      message: 'Restaurant created successfully! Waiting for admin approval.',
+      message: 'Restaurant created successfully!',
       restaurant
     });
 
@@ -166,13 +172,16 @@ router.get('/:id', async (req, res) => {
   }
 });
 
-// UPDATE RESTAURANT
+// UPDATE RESTAURANT - FIXED VERSION (No ownership check)
 router.put('/:id', async (req, res) => {
   try {
+    console.log('📝 Updating restaurant:', req.params.id);
+    console.log('📦 Update data:', req.body);
+    
     const restaurant = await Restaurant.findByIdAndUpdate(
       req.params.id,
       req.body,
-      { new: true }
+      { new: true, runValidators: true }
     ).populate('owner', 'name email phone');
 
     if (!restaurant) {
@@ -181,6 +190,8 @@ router.put('/:id', async (req, res) => {
         message: 'Restaurant not found'
       });
     }
+
+    console.log('✅ Restaurant updated:', restaurant.name);
 
     res.json({
       success: true,
@@ -192,7 +203,7 @@ router.put('/:id', async (req, res) => {
     console.error('❌ Update restaurant error:', error);
     res.status(500).json({ 
       success: false,
-      message: 'Failed to update restaurant' 
+      message: 'Failed to update restaurant: ' + error.message 
     });
   }
 });
@@ -250,7 +261,7 @@ router.get('/stats/count', async (req, res) => {
   }
 });
 
-// GET RESTAURANT BY OWNER ID - ADD THIS ROUTE
+// GET RESTAURANT BY OWNER ID
 router.get('/owner/:ownerId', async (req, res) => {
   try {
     const { ownerId } = req.params;
@@ -278,6 +289,42 @@ router.get('/owner/:ownerId', async (req, res) => {
     res.status(500).json({ 
       success: false,
       message: 'Failed to get restaurant: ' + error.message 
+    });
+  }
+});
+
+// FIX RESTAURANT OWNER
+router.put('/:id/fix-owner', async (req, res) => {
+  try {
+    const { ownerId } = req.body;
+    console.log('🔧 Fixing restaurant owner:', req.params.id, '->', ownerId);
+    
+    const restaurant = await Restaurant.findByIdAndUpdate(
+      req.params.id,
+      { owner: ownerId },
+      { new: true }
+    ).populate('owner', 'name email phone');
+
+    if (!restaurant) {
+      return res.status(404).json({
+        success: false,
+        message: 'Restaurant not found'
+      });
+    }
+
+    console.log('✅ Restaurant owner fixed:', restaurant.name);
+
+    res.json({
+      success: true,
+      message: 'Restaurant owner updated successfully!',
+      restaurant
+    });
+
+  } catch (error) {
+    console.error('❌ Fix owner error:', error);
+    res.status(500).json({ 
+      success: false,
+      message: 'Failed to fix restaurant owner: ' + error.message 
     });
   }
 });
