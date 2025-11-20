@@ -999,7 +999,7 @@ const RiderRegisterForm = ({ onRegister, onSwitchToLogin, onSwitchToCustomer, on
     );
 };
 
-// Full Screen Menu RestaurantCard Component
+/// Full Screen Menu RestaurantCard Component
 const RestaurantCard = ({ restaurant, onAddToCart, user }) => {
     const [showProducts, setShowProducts] = useState(false);
     const [products, setProducts] = useState([]);
@@ -1061,6 +1061,27 @@ const RestaurantCard = ({ restaurant, onAddToCart, user }) => {
             return;
         }
         onAddToCart(product, restaurant);
+        // Show success message
+        alert(`✅ ${product.name} added to cart!`);
+    };
+
+    const handleQuickOrder = () => {
+        if (!user) {
+            alert('Please login to place an order');
+            return;
+        }
+        
+        if (products.length === 0) {
+            alert('Please view the menu first to see available items');
+            return;
+        }
+
+        // Add the first available product to cart as a quick order
+        const firstProduct = products[0];
+        if (firstProduct) {
+            onAddToCart(firstProduct, restaurant);
+            alert(`✅ Quick order: ${firstProduct.name} added to cart! Proceed to checkout.`);
+        }
     };
 
     return (
@@ -1124,15 +1145,15 @@ const RestaurantCard = ({ restaurant, onAddToCart, user }) => {
                         )}
                     </button>
 
-                    {/* Order Button */}
+                    {/* Order Button - NOW WORKING */}
                     <div className="flex justify-between items-center mt-3 pt-3 border-t">
                         <span className="text-red-800 font-bold text-sm">₱{restaurant.deliveryFee || '35'} delivery</span>
                         <button
-                            onClick={fetchProducts}
+                            onClick={handleQuickOrder}
                             className="bg-red-800 text-white px-4 py-2 rounded text-sm hover:bg-red-900 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                             disabled={!user}
                         >
-                            {user ? 'ORDER NOW' : 'LOGIN TO ORDER'}
+                            {user ? 'QUICK ORDER' : 'LOGIN TO ORDER'}
                         </button>
                     </div>
                 </div>
@@ -1252,7 +1273,7 @@ const RestaurantCard = ({ restaurant, onAddToCart, user }) => {
                         )}
                     </div>
 
-                    {/* Footer */}
+                    {/* Footer with Order Now Button */}
                     <div className="bg-gray-100 border-t mt-8">
                         <div className="container mx-auto px-4 py-4">
                             <div className="flex justify-between items-center">
@@ -1261,12 +1282,26 @@ const RestaurantCard = ({ restaurant, onAddToCart, user }) => {
                                         Showing <strong>{products.length}</strong> menu item{products.length !== 1 ? 's' : ''}
                                     </p>
                                 </div>
-                                <button
-                                    onClick={closeMenu}
-                                    className="bg-gray-300 text-gray-700 px-6 py-2 rounded-lg font-semibold hover:bg-gray-400 transition-colors"
-                                >
-                                    CLOSE MENU
-                                </button>
+                                <div className="flex space-x-3">
+                                    <button
+                                        onClick={closeMenu}
+                                        className="bg-gray-300 text-gray-700 px-6 py-2 rounded-lg font-semibold hover:bg-gray-400 transition-colors"
+                                    >
+                                        CLOSE MENU
+                                    </button>
+                                    {user && products.length > 0 && (
+                                        <button
+                                            onClick={() => {
+                                                const firstProduct = products[0];
+                                                handleAddToCart(firstProduct);
+                                                closeMenu();
+                                            }}
+                                            className="bg-red-800 text-white px-6 py-2 rounded-lg font-semibold hover:bg-red-900 transition-colors"
+                                        >
+                                            ORDER NOW
+                                        </button>
+                                    )}
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -1355,7 +1390,7 @@ const CustomerDashboard = () => {
         console.log('✅ Added to cart:', product.name);
     };
 
-    const handleCheckout = () => {
+    const handleCheckout = async () => {
         if (cart.length === 0) return;
         
         if (!user) {
@@ -1363,11 +1398,47 @@ const CustomerDashboard = () => {
             setAuthMode('login');
             return;
         }
-
-        // Here you would typically navigate to checkout page
-        const total = getCartTotal() + 35 + 10;
-        alert(`Proceeding to checkout with ${getCartItemCount()} items. Total: ₱${total.toFixed(2)}`);
-        setIsCartOpen(false);
+    
+        try {
+            // Prepare order data
+            const orderData = {
+                restaurantId: cart[0].restaurant._id,
+                items: cart.map(item => ({
+                    productId: item.product._id,
+                    quantity: item.quantity,
+                    price: item.product.price
+                })),
+                deliveryAddress: user.address || 'Puerto Princesa City', // Get from user profile
+                paymentMethod: 'cash', // Default to cash
+                specialInstructions: ''
+            };
+    
+            const response = await fetch('https://food-ordering-app-production-35eb.up.railway.app/api/orders/create', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${localStorage.getItem('token')}`
+                },
+                body: JSON.stringify(orderData)
+            });
+    
+            const data = await response.json();
+    
+            if (data.success) {
+                alert('🎉 Order placed successfully!');
+                clearCart();
+                setIsCartOpen(false);
+                
+                // You can redirect to order tracking page here
+                console.log('Order details:', data.order);
+            } else {
+                alert(`Order failed: ${data.message}`);
+            }
+    
+        } catch (error) {
+            console.error('Checkout error:', error);
+            alert('Checkout failed. Please try again.');
+        }
     };
 
     const filteredRestaurants = restaurants.filter(restaurant =>
