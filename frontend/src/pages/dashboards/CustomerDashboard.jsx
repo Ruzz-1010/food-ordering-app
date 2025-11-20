@@ -7,95 +7,293 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 
-// Cart Hook for State Management
+// Updated useCart hook with backend integration
 const useCart = () => {
+    const { user } = useAuth(); // Get user from auth context
     const [cart, setCart] = useState([]);
     const [isCartOpen, setIsCartOpen] = useState(false);
+    const [loading, setLoading] = useState(false);
 
-    // Load cart from localStorage on component mount
+    // Fetch cart from backend when user logs in
     useEffect(() => {
-        const savedCart = localStorage.getItem('foodexpress_cart');
-        if (savedCart) {
-            setCart(JSON.parse(savedCart));
-        }
-    }, []);
-
-    // Save cart to localStorage whenever cart changes
-    useEffect(() => {
-        localStorage.setItem('foodexpress_cart', JSON.stringify(cart));
-    }, [cart]);
-
-    const addToCart = (product, restaurant) => {
-        setCart(prevCart => {
-            // Check if we're adding from a different restaurant
-            const differentRestaurantItem = prevCart.find(item => 
-                item.restaurant._id !== restaurant._id
-            );
-
-            if (differentRestaurantItem) {
-                const confirmReplace = window.confirm(
-                    `Your cart contains items from ${differentRestaurantItem.restaurant.name}. ` +
-                    `Adding items from ${restaurant.name} will clear your current cart. Continue?`
-                );
-                
-                if (!confirmReplace) {
-                    return prevCart;
-                }
-                // Replace entire cart with new item
-                return [{
-                    product,
-                    restaurant,
-                    quantity: 1
-                }];
+        if (user) {
+            fetchCart();
+        } else {
+            // If no user, use localStorage as fallback
+            const savedCart = localStorage.getItem('foodexpress_cart');
+            if (savedCart) {
+                setCart(JSON.parse(savedCart));
+            } else {
+                setCart([]);
             }
+        }
+    }, [user]);
 
-            // Same restaurant - add or update item
-            const existingItem = prevCart.find(item => 
-                item.product._id === product._id && item.restaurant._id === restaurant._id
-            );
+    // Save to localStorage when cart changes (for guest users)
+    useEffect(() => {
+        if (!user) {
+            localStorage.setItem('foodexpress_cart', JSON.stringify(cart));
+        }
+    }, [cart, user]);
 
-            if (existingItem) {
-                return prevCart.map(item =>
+    const fetchCart = async () => {
+        if (!user) return;
+        
+        try {
+            setLoading(true);
+            const token = localStorage.getItem('token');
+            const response = await fetch('https://food-ordering-app-production-35eb.up.railway.app/api/cart', {
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                }
+            });
+            
+            if (response.ok) {
+                const data = await response.json();
+                if (data.success) {
+                    setCart(data.cart?.items || []);
+                }
+            } else {
+                console.error('Failed to fetch cart');
+                // Fallback to localStorage if backend fails
+                const savedCart = localStorage.getItem('foodexpress_cart');
+                if (savedCart) {
+                    setCart(JSON.parse(savedCart));
+                }
+            }
+        } catch (error) {
+            console.error('Error fetching cart:', error);
+            // Fallback to localStorage on error
+            const savedCart = localStorage.getItem('foodexpress_cart');
+            if (savedCart) {
+                setCart(JSON.parse(savedCart));
+            }
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const addToCart = async (product, restaurant) => {
+        // For guest users, use localStorage
+        if (!user) {
+            setCart(prevCart => {
+                // Check if we're adding from a different restaurant
+                const differentRestaurantItem = prevCart.find(item => 
+                    item.restaurant._id !== restaurant._id
+                );
+
+                if (differentRestaurantItem) {
+                    const confirmReplace = window.confirm(
+                        `Your cart contains items from ${differentRestaurantItem.restaurant.name}. ` +
+                        `Adding items from ${restaurant.name} will clear your current cart. Continue?`
+                    );
+                    
+                    if (!confirmReplace) {
+                        return prevCart;
+                    }
+                    // Replace entire cart with new item
+                    return [{
+                        product,
+                        restaurant,
+                        quantity: 1,
+                        addedAt: new Date().toISOString()
+                    }];
+                }
+
+                // Same restaurant - add or update item
+                const existingItem = prevCart.find(item => 
                     item.product._id === product._id && item.restaurant._id === restaurant._id
-                        ? { ...item, quantity: item.quantity + 1 }
+                );
+
+                if (existingItem) {
+                    return prevCart.map(item =>
+                        item.product._id === product._id && item.restaurant._id === restaurant._id
+                            ? { ...item, quantity: item.quantity + 1 }
+                            : item
+                    );
+                } else {
+                    return [...prevCart, {
+                        product,
+                        restaurant,
+                        quantity: 1,
+                        addedAt: new Date().toISOString()
+                    }];
+                }
+            });
+            return { success: true, message: 'Item added to cart' };
+        }
+
+        // For logged-in users, use backend API
+        try {
+            setLoading(true);
+            const token = localStorage.getItem('token');
+            
+            const response = await fetch('https://food-ordering-app-production-35eb.up.railway.app/api/cart/add', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({
+                    productId: product._id,
+                    restaurantId: restaurant._id,
+                    quantity: 1
+                })
+            });
+
+            const data = await response.json();
+            
+            if (data.success) {
+                setCart(data.cart?.items || []);
+                return { success: true, message: 'Item added to cart' };
+            } else {
+                // Handle restaurant conflict
+                if (data.needsClear) {
+                    const confirmClear = window.confirm(data.message + ' Would you like to clear your cart and add this item?');
+                    if (confirmClear) {
+                        await clearCart();
+                        // Retry adding the item after clearing cart
+                        return await addToCart(product, restaurant);
+                    } else {
+                        return { success: false, message: 'Cart not cleared' };
+                    }
+                }
+                return { success: false, message: data.message || 'Failed to add item to cart' };
+            }
+        } catch (error) {
+            console.error('Error adding to cart:', error);
+            return { success: false, message: 'Network error. Please try again.' };
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const updateQuantity = async (productId, restaurantId, newQuantity) => {
+        // For guest users
+        if (!user) {
+            setCart(prevCart => {
+                if (newQuantity <= 0) {
+                    return prevCart.filter(item => 
+                        !(item.product._id === productId && item.restaurant._id === restaurantId)
+                    );
+                }
+                return prevCart.map(item =>
+                    item.product._id === productId && item.restaurant._id === restaurantId
+                        ? { ...item, quantity: newQuantity }
                         : item
                 );
-            } else {
-                return [...prevCart, {
-                    product,
-                    restaurant,
-                    quantity: 1,
-                    addedAt: new Date().toISOString()
-                }];
-            }
-        });
-    };
-
-    const removeFromCart = (productId, restaurantId) => {
-        setCart(prevCart => 
-            prevCart.filter(item => 
-                !(item.product._id === productId && item.restaurant._id === restaurantId)
-            )
-        );
-    };
-
-    const updateQuantity = (productId, restaurantId, newQuantity) => {
-        if (newQuantity <= 0) {
-            removeFromCart(productId, restaurantId);
+            });
             return;
         }
 
-        setCart(prevCart =>
-            prevCart.map(item =>
-                item.product._id === productId && item.restaurant._id === restaurantId
-                    ? { ...item, quantity: newQuantity }
-                    : item
-            )
-        );
+        // For logged-in users
+        try {
+            const token = localStorage.getItem('token');
+            const response = await fetch('https://food-ordering-app-production-35eb.up.railway.app/api/cart/update', {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({
+                    productId: productId,
+                    quantity: newQuantity
+                })
+            });
+
+            const data = await response.json();
+            if (data.success) {
+                setCart(data.cart?.items || []);
+            }
+        } catch (error) {
+            console.error('Error updating cart:', error);
+        }
     };
 
-    const clearCart = () => {
-        setCart([]);
+    const removeFromCart = async (productId, restaurantId) => {
+        // For guest users
+        if (!user) {
+            setCart(prevCart => 
+                prevCart.filter(item => 
+                    !(item.product._id === productId && item.restaurant._id === restaurantId)
+                )
+            );
+            return;
+        }
+
+        // For logged-in users
+        try {
+            const token = localStorage.getItem('token');
+            const response = await fetch(`https://food-ordering-app-production-35eb.up.railway.app/api/cart/remove/${productId}`, {
+                method: 'DELETE',
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+
+            const data = await response.json();
+            if (data.success) {
+                setCart(data.cart?.items || []);
+            }
+        } catch (error) {
+            console.error('Error removing from cart:', error);
+        }
+    };
+
+    const clearCart = async () => {
+        // For guest users
+        if (!user) {
+            setCart([]);
+            return;
+        }
+
+        // For logged-in users
+        try {
+            const token = localStorage.getItem('token');
+            const response = await fetch('https://food-ordering-app-production-35eb.up.railway.app/api/cart/clear', {
+                method: 'DELETE',
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+
+            const data = await response.json();
+            if (data.success) {
+                setCart([]);
+            }
+        } catch (error) {
+            console.error('Error clearing cart:', error);
+        }
+    };
+
+    const checkout = async (checkoutData) => {
+        if (!user) {
+            return { success: false, message: 'Please login to checkout' };
+        }
+
+        try {
+            const token = localStorage.getItem('token');
+            const response = await fetch('https://food-ordering-app-production-35eb.up.railway.app/api/cart/checkout', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify(checkoutData)
+            });
+
+            const data = await response.json();
+            if (data.success) {
+                setCart([]);
+                return { success: true, message: 'Order placed successfully!', order: data.order };
+            } else {
+                return { success: false, message: data.message || 'Checkout failed' };
+            }
+        } catch (error) {
+            console.error('Error during checkout:', error);
+            return { success: false, message: 'Checkout failed. Please try again.' };
+        }
     };
 
     const getCartTotal = () => {
@@ -119,12 +317,13 @@ const useCart = () => {
         removeFromCart,
         updateQuantity,
         clearCart,
+        checkout,
         getCartTotal,
         getCartItemCount,
-        getCurrentRestaurant
+        getCurrentRestaurant,
+        loading
     };
 };
-
 // Cart Component
 const Cart = ({ cart, isOpen, onClose, onUpdateQuantity, onRemoveItem, onClearCart, onCheckout, user }) => {
     if (!isOpen) return null;
