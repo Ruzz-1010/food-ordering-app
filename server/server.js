@@ -2,7 +2,7 @@ const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
 require('dotenv').config();
-
+const cartRoutes = require('./routes/cart');
 const app = express();
 
 // CORS - LAHAT PWEDE!
@@ -27,7 +27,7 @@ app.use('/api/users', require('./routes/users'));
 app.use('/api/restaurants', require('./routes/restaurants'));
 app.use('/api/orders', require('./routes/orders'));
 app.use('/api/products', require('./routes/products'));
-
+app.use('/api/cart', cartRoutes);
 // Basic route
 app.get('/', (req, res) => {
   res.json({ message: '🍕 Food Ordering API is RUNNING!' });
