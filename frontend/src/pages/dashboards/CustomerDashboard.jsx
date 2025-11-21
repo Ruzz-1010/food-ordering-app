@@ -11,6 +11,15 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 
+// Utility function for auth headers
+const getAuthHeaders = () => {
+    const token = localStorage.getItem('token');
+    return {
+        'Content-Type': 'application/json',
+        ...(token && { 'Authorization': `Bearer ${token}` })
+    };
+};
+
 // Cart Hook for State Management
 const useCart = () => {
     const [cart, setCart] = useState([]);
@@ -1319,21 +1328,31 @@ const TrackOrder = ({ user }) => {
     const fetchUserOrders = async () => {
         try {
             setLoading(true);
+            const token = localStorage.getItem('token');
+            
+            if (!token) {
+                setError('Please login to view orders');
+                setLoading(false);
+                return;
+            }
+
             const response = await fetch('https://food-ordering-app-production-35eb.up.railway.app/api/orders/user', {
-                headers: {
-                    'Authorization': `Bearer ${localStorage.getItem('token')}`
-                }
+                headers: getAuthHeaders()
             });
 
             if (response.ok) {
                 const data = await response.json();
+                console.log('📋 Orders API response:', data);
+                
                 if (data.success) {
                     setOrders(data.orders || []);
                 } else {
                     setError(data.message || 'Failed to load orders');
                 }
             } else {
-                setError('Failed to fetch orders');
+                const errorText = await response.text();
+                console.error('Orders API error:', errorText);
+                setError('Failed to fetch orders from server');
             }
         } catch (error) {
             console.error('Error fetching orders:', error);
@@ -1348,27 +1367,39 @@ const TrackOrder = ({ user }) => {
 
         try {
             setLoading(true);
+            const token = localStorage.getItem('token');
+            
+            if (!token) {
+                setError('Please login to track orders');
+                setLoading(false);
+                return;
+            }
+
             const response = await fetch(`https://food-ordering-app-production-35eb.up.railway.app/api/orders/track/${trackingId}`, {
-                headers: {
-                    'Authorization': `Bearer ${localStorage.getItem('token')}`
-                }
+                headers: getAuthHeaders()
             });
 
             if (response.ok) {
                 const data = await response.json();
+                console.log('📋 Track order response:', data);
+                
                 if (data.success) {
                     setOrders(data.order ? [data.order] : []);
+                    setError('');
                 } else {
                     setError(data.message || 'Order not found');
                     setOrders([]);
                 }
             } else {
-                setError('Order not found');
+                const errorText = await response.text();
+                console.error('Track order API error:', errorText);
+                setError('Order not found or server error');
                 setOrders([]);
             }
         } catch (error) {
             console.error('Error tracking order:', error);
             setError('Network error tracking order');
+            setOrders([]);
         } finally {
             setLoading(false);
         }
@@ -1455,7 +1486,7 @@ const TrackOrder = ({ user }) => {
                                     <div className="flex justify-between items-start">
                                         <div>
                                             <h3 className="text-lg font-semibold text-gray-900">
-                                                Order #{order._id?.slice(-8).toUpperCase() || 'N/A'}
+                                                Order #{order.orderId || order._id?.slice(-8).toUpperCase() || 'N/A'}
                                             </h3>
                                             <p className="text-gray-600 text-sm">
                                                 {new Date(order.createdAt).toLocaleDateString()} • 
@@ -1475,7 +1506,7 @@ const TrackOrder = ({ user }) => {
                                             <div className="space-y-2">
                                                 {order.items?.map((item, index) => (
                                                     <div key={index} className="flex justify-between text-sm">
-                                                        <span>{item.productId?.name || `Item ${index + 1}`} x {item.quantity}</span>
+                                                        <span>{item.productName || item.productId?.name || `Item ${index + 1}`} x {item.quantity}</span>
                                                         <span>₱{((item.price || 0) * item.quantity).toFixed(2)}</span>
                                                     </div>
                                                 ))}
@@ -1561,10 +1592,7 @@ const UserProfile = ({ user, onUpdate }) => {
         try {
             const response = await fetch('https://food-ordering-app-production-35eb.up.railway.app/api/users/profile', {
                 method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${localStorage.getItem('token')}`
-                },
+                headers: getAuthHeaders(),
                 body: JSON.stringify(formData)
             });
 
@@ -1706,23 +1734,28 @@ const RestaurantDashboard = ({ user }) => {
     const fetchRestaurantData = async () => {
         try {
             setLoading(true);
+            const token = localStorage.getItem('token');
             
+            if (!token) {
+                console.error('No token found');
+                setLoading(false);
+                return;
+            }
+
             // Fetch restaurant orders
             const ordersResponse = await fetch('https://food-ordering-app-production-35eb.up.railway.app/api/orders/restaurant', {
-                headers: {
-                    'Authorization': `Bearer ${localStorage.getItem('token')}`
-                }
+                headers: getAuthHeaders()
             });
 
             // Fetch restaurant products
             const productsResponse = await fetch('https://food-ordering-app-production-35eb.up.railway.app/api/products/restaurant', {
-                headers: {
-                    'Authorization': `Bearer ${localStorage.getItem('token')}`
-                }
+                headers: getAuthHeaders()
             });
 
             if (ordersResponse.ok) {
                 const ordersData = await ordersResponse.json();
+                console.log('🏪 Restaurant orders:', ordersData);
+                
                 if (ordersData.success) {
                     setOrders(ordersData.orders || []);
                     
@@ -1745,13 +1778,19 @@ const RestaurantDashboard = ({ user }) => {
                         totalRevenue
                     });
                 }
+            } else {
+                console.error('Failed to fetch restaurant orders');
             }
 
             if (productsResponse.ok) {
                 const productsData = await productsResponse.json();
+                console.log('🏪 Restaurant products:', productsData);
+                
                 if (productsData.success) {
                     setProducts(productsData.products || []);
                 }
+            } else {
+                console.error('Failed to fetch restaurant products');
             }
 
         } catch (error) {
@@ -1763,19 +1802,25 @@ const RestaurantDashboard = ({ user }) => {
 
     const updateOrderStatus = async (orderId, newStatus) => {
         try {
+            const token = localStorage.getItem('token');
+            
+            if (!token) {
+                alert('Please login to update orders');
+                return;
+            }
+
             const response = await fetch(`https://food-ordering-app-production-35eb.up.railway.app/api/orders/${orderId}/status`, {
                 method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${localStorage.getItem('token')}`
-                },
+                headers: getAuthHeaders(),
                 body: JSON.stringify({ status: newStatus })
             });
 
             const data = await response.json();
+            console.log('🔄 Update status response:', data);
 
             if (data.success) {
                 fetchRestaurantData();
+                alert(`Order status updated to ${newStatus}`);
             } else {
                 alert(data.message || 'Failed to update order status');
             }
@@ -1862,7 +1907,7 @@ const RestaurantDashboard = ({ user }) => {
                                         <div className="flex justify-between items-start mb-3">
                                             <div>
                                                 <h4 className="font-semibold">
-                                                    Order #{order._id?.slice(-8).toUpperCase() || 'N/A'}
+                                                    Order #{order.orderId || order._id?.slice(-8).toUpperCase() || 'N/A'}
                                                 </h4>
                                                 <p className="text-sm text-gray-600">
                                                     {new Date(order.createdAt).toLocaleString()}
@@ -1883,7 +1928,7 @@ const RestaurantDashboard = ({ user }) => {
                                         <div className="mb-3">
                                             {order.items?.map((item, index) => (
                                                 <div key={index} className="flex justify-between text-sm">
-                                                    <span>{item.productId?.name || `Item ${index + 1}`} x {item.quantity}</span>
+                                                    <span>{item.productName || item.productId?.name || `Item ${index + 1}`} x {item.quantity}</span>
                                                     <span>₱{((item.price || 0) * item.quantity).toFixed(2)}</span>
                                                 </div>
                                             ))}
@@ -2041,40 +2086,58 @@ const CustomerDashboard = () => {
             setAuthMode('login');
             return;
         }
-    
+
+        // Check if token exists
+        const token = localStorage.getItem('token');
+        if (!token) {
+            alert('Session expired. Please login again.');
+            logout();
+            return;
+        }
+
         try {
+            // Generate a unique order ID on the client side to avoid null issues
+            const orderId = `FX${Date.now()}${Math.random().toString(36).substr(2, 9)}`.toUpperCase();
+            
             const orderData = {
+                orderId: orderId, // Add unique order ID
                 restaurantId: cart[0].restaurant._id,
                 items: cart.map(item => ({
                     productId: item.product._id,
+                    productName: item.product.name, // Include product name for backup
                     quantity: item.quantity,
                     price: item.product.price
                 })),
                 deliveryAddress: user.address || 'Puerto Princesa City',
                 paymentMethod: 'cash',
-                specialInstructions: ''
+                specialInstructions: '',
+                totalAmount: getCartTotal() + 35 + 10 // subtotal + delivery + service fee
             };
-    
+
+            console.log('📦 Order data being sent:', orderData);
+
             const response = await fetch('https://food-ordering-app-production-35eb.up.railway.app/api/orders/create', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${localStorage.getItem('token')}`
-                },
+                headers: getAuthHeaders(),
                 body: JSON.stringify(orderData)
             });
-    
+
             const data = await response.json();
-    
+            console.log('📦 Order creation response:', data);
+
             if (data.success) {
                 alert('🎉 Order placed successfully!');
                 clearCart();
                 setIsCartOpen(false);
-                console.log('Order details:', data.order);
+                
+                // Refresh orders in track section
+                if (activeSection === 'track') {
+                    // You might want to trigger a refetch here
+                }
             } else {
                 alert(`Order failed: ${data.message}`);
             }
-    
+
         } catch (error) {
             console.error('Checkout error:', error);
             alert('Checkout failed. Please try again.');
