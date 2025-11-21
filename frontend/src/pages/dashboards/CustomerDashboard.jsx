@@ -3,7 +3,11 @@ import {
     Search, MapPin, Clock, Star, 
     ShoppingCart, Filter, Store, Bike, Navigation,
     Facebook, Twitter, Instagram, Youtube,
-    Plus, Minus, X
+    Plus, Minus, X, Package, User, History,
+    Phone, Mail, Map, Home, Settings, LogOut,
+    BarChart3, Users, DollarSign, ChevronDown,
+    Eye, Edit, Trash2, CheckCircle, XCircle,
+    Truck, CreditCard, MessageCircle, Heart
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 
@@ -999,7 +1003,7 @@ const RiderRegisterForm = ({ onRegister, onSwitchToLogin, onSwitchToCustomer, on
     );
 };
 
-/// Full Screen Menu RestaurantCard Component
+// RestaurantCard Component
 const RestaurantCard = ({ restaurant, onAddToCart, user }) => {
     const [showProducts, setShowProducts] = useState(false);
     const [products, setProducts] = useState([]);
@@ -1049,7 +1053,6 @@ const RestaurantCard = ({ restaurant, onAddToCart, user }) => {
         }
     };
 
-    // Close full screen menu
     const closeMenu = () => {
         setShowProducts(false);
         setProducts([]);
@@ -1061,7 +1064,6 @@ const RestaurantCard = ({ restaurant, onAddToCart, user }) => {
             return;
         }
         onAddToCart(product, restaurant);
-        // Show success message
         alert(`✅ ${product.name} added to cart!`);
     };
 
@@ -1076,7 +1078,6 @@ const RestaurantCard = ({ restaurant, onAddToCart, user }) => {
             return;
         }
 
-        // Add the first available product to cart as a quick order
         const firstProduct = products[0];
         if (firstProduct) {
             onAddToCart(firstProduct, restaurant);
@@ -1088,7 +1089,6 @@ const RestaurantCard = ({ restaurant, onAddToCart, user }) => {
         <>
             {/* Restaurant Card (Normal View) */}
             <div className="bg-white rounded-lg shadow-md hover:shadow-lg transition-all duration-300 overflow-hidden border border-gray-200">
-                {/* Restaurant Header */}
                 <div className="h-48 bg-gradient-to-br from-red-700 to-red-900 flex items-center justify-center relative">
                     {restaurant.image ? (
                         <img 
@@ -1105,7 +1105,6 @@ const RestaurantCard = ({ restaurant, onAddToCart, user }) => {
                 </div>
                 
                 <div className="p-4">
-                    {/* Restaurant Info */}
                     <div className="flex justify-between items-start mb-3">
                         <h3 className="text-xl font-bold text-gray-900">{restaurant.name || 'Restaurant Name'}</h3>
                         <div className="flex items-center space-x-1">
@@ -1127,7 +1126,6 @@ const RestaurantCard = ({ restaurant, onAddToCart, user }) => {
                         </span>
                     </div>
 
-                    {/* View Products Button */}
                     <button
                         onClick={fetchProducts}
                         disabled={loadingProducts}
@@ -1145,7 +1143,6 @@ const RestaurantCard = ({ restaurant, onAddToCart, user }) => {
                         )}
                     </button>
 
-                    {/* Order Button - NOW WORKING */}
                     <div className="flex justify-between items-center mt-3 pt-3 border-t">
                         <span className="text-red-800 font-bold text-sm">₱{restaurant.deliveryFee || '35'} delivery</span>
                         <button
@@ -1162,7 +1159,6 @@ const RestaurantCard = ({ restaurant, onAddToCart, user }) => {
             {/* FULL SCREEN MENU MODAL */}
             {showProducts && (
                 <div className="fixed inset-0 bg-white z-50 overflow-y-auto">
-                    {/* Header */}
                     <div className="bg-red-800 text-white sticky top-0 z-10">
                         <div className="container mx-auto px-4 py-4">
                             <div className="flex items-center justify-between">
@@ -1191,7 +1187,6 @@ const RestaurantCard = ({ restaurant, onAddToCart, user }) => {
                         </div>
                     </div>
 
-                    {/* Menu Content */}
                     <div className="container mx-auto px-4 py-6">
                         {error ? (
                             <div className="text-center py-12">
@@ -1208,7 +1203,6 @@ const RestaurantCard = ({ restaurant, onAddToCart, user }) => {
                                         key={product._id} 
                                         className="bg-white border border-gray-200 rounded-xl shadow-sm hover:shadow-md transition-all duration-300 overflow-hidden"
                                     >
-                                        {/* Product Image */}
                                         <div className="h-48 bg-gray-100 relative">
                                             {product.image ? (
                                                 <img 
@@ -1226,7 +1220,6 @@ const RestaurantCard = ({ restaurant, onAddToCart, user }) => {
                                             </div>
                                         </div>
                                         
-                                        {/* Product Info */}
                                         <div className="p-4">
                                             <div className="mb-3">
                                                 <h3 className="font-bold text-xl text-gray-900 mb-2">
@@ -1273,7 +1266,6 @@ const RestaurantCard = ({ restaurant, onAddToCart, user }) => {
                         )}
                     </div>
 
-                    {/* Footer with Order Now Button */}
                     <div className="bg-gray-100 border-t mt-8">
                         <div className="container mx-auto px-4 py-4">
                             <div className="flex justify-between items-center">
@@ -1311,15 +1303,667 @@ const RestaurantCard = ({ restaurant, onAddToCart, user }) => {
     );
 };
 
+// Track Order Component
+const TrackOrder = ({ user }) => {
+    const [orders, setOrders] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState('');
+    const [trackingId, setTrackingId] = useState('');
+
+    useEffect(() => {
+        if (user) {
+            fetchUserOrders();
+        }
+    }, [user]);
+
+    const fetchUserOrders = async () => {
+        try {
+            setLoading(true);
+            const response = await fetch('https://food-ordering-app-production-35eb.up.railway.app/api/orders/user', {
+                headers: {
+                    'Authorization': `Bearer ${localStorage.getItem('token')}`
+                }
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                if (data.success) {
+                    setOrders(data.orders || []);
+                } else {
+                    setError(data.message || 'Failed to load orders');
+                }
+            } else {
+                setError('Failed to fetch orders');
+            }
+        } catch (error) {
+            console.error('Error fetching orders:', error);
+            setError('Network error loading orders');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const trackOrderById = async () => {
+        if (!trackingId.trim()) return;
+
+        try {
+            setLoading(true);
+            const response = await fetch(`https://food-ordering-app-production-35eb.up.railway.app/api/orders/track/${trackingId}`, {
+                headers: {
+                    'Authorization': `Bearer ${localStorage.getItem('token')}`
+                }
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                if (data.success) {
+                    setOrders(data.order ? [data.order] : []);
+                } else {
+                    setError(data.message || 'Order not found');
+                    setOrders([]);
+                }
+            } else {
+                setError('Order not found');
+                setOrders([]);
+            }
+        } catch (error) {
+            console.error('Error tracking order:', error);
+            setError('Network error tracking order');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const getStatusColor = (status) => {
+        switch (status) {
+            case 'pending': return 'bg-yellow-100 text-yellow-800';
+            case 'confirmed': return 'bg-blue-100 text-blue-800';
+            case 'preparing': return 'bg-orange-100 text-orange-800';
+            case 'ready': return 'bg-purple-100 text-purple-800';
+            case 'picked_up': return 'bg-indigo-100 text-indigo-800';
+            case 'delivered': return 'bg-green-100 text-green-800';
+            case 'cancelled': return 'bg-red-100 text-red-800';
+            default: return 'bg-gray-100 text-gray-800';
+        }
+    };
+
+    const getStatusText = (status) => {
+        switch (status) {
+            case 'pending': return 'Pending';
+            case 'confirmed': return 'Confirmed';
+            case 'preparing': return 'Preparing';
+            case 'ready': return 'Ready for Pickup';
+            case 'picked_up': return 'On the Way';
+            case 'delivered': return 'Delivered';
+            case 'cancelled': return 'Cancelled';
+            default: return status;
+        }
+    };
+
+    const getStatusIndex = (status) => {
+        const statusOrder = ['pending', 'confirmed', 'preparing', 'ready', 'picked_up', 'delivered'];
+        return statusOrder.indexOf(status);
+    };
+
+    return (
+        <div className="min-h-screen bg-gray-50 py-8">
+            <div className="max-w-4xl mx-auto px-4">
+                <div className="bg-white rounded-lg shadow-md p-6 mb-6">
+                    <h1 className="text-3xl font-bold text-gray-900 mb-2">Track Your Order</h1>
+                    <p className="text-gray-600">Monitor your food delivery in real-time</p>
+                    
+                    <div className="mt-6 flex space-x-4">
+                        <input
+                            type="text"
+                            value={trackingId}
+                            onChange={(e) => setTrackingId(e.target.value)}
+                            placeholder="Enter Order ID"
+                            className="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-800 focus:border-red-800"
+                        />
+                        <button
+                            onClick={trackOrderById}
+                            disabled={!trackingId.trim()}
+                            className="bg-red-800 text-white px-6 py-3 rounded-lg hover:bg-red-900 disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                            Track Order
+                        </button>
+                    </div>
+                </div>
+
+                {loading ? (
+                    <div className="flex justify-center items-center py-12">
+                        <div className="text-center">
+                            <div className="w-12 h-12 border-4 border-red-800 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+                            <p className="text-gray-600">Loading orders...</p>
+                        </div>
+                    </div>
+                ) : error ? (
+                    <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-6">
+                        {error}
+                    </div>
+                ) : orders.length === 0 ? (
+                    <div className="bg-white rounded-lg shadow-md p-8 text-center">
+                        <Package size={64} className="mx-auto text-gray-400 mb-4" />
+                        <h3 className="text-xl font-semibold text-gray-900 mb-2">No Orders Found</h3>
+                        <p className="text-gray-600">You haven't placed any orders yet.</p>
+                    </div>
+                ) : (
+                    <div className="space-y-6">
+                        {orders.map((order) => (
+                            <div key={order._id} className="bg-white rounded-lg shadow-md overflow-hidden">
+                                <div className="border-b border-gray-200 p-6">
+                                    <div className="flex justify-between items-start">
+                                        <div>
+                                            <h3 className="text-lg font-semibold text-gray-900">
+                                                Order #{order._id?.slice(-8).toUpperCase() || 'N/A'}
+                                            </h3>
+                                            <p className="text-gray-600 text-sm">
+                                                {new Date(order.createdAt).toLocaleDateString()} • 
+                                                {new Date(order.createdAt).toLocaleTimeString()}
+                                            </p>
+                                        </div>
+                                        <span className={`px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(order.status)}`}>
+                                            {getStatusText(order.status)}
+                                        </span>
+                                    </div>
+                                </div>
+
+                                <div className="p-6">
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                        <div>
+                                            <h4 className="font-semibold text-gray-900 mb-3">Order Details</h4>
+                                            <div className="space-y-2">
+                                                {order.items?.map((item, index) => (
+                                                    <div key={index} className="flex justify-between text-sm">
+                                                        <span>{item.productId?.name || `Item ${index + 1}`} x {item.quantity}</span>
+                                                        <span>₱{((item.price || 0) * item.quantity).toFixed(2)}</span>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                            <div className="border-t mt-3 pt-3">
+                                                <div className="flex justify-between font-semibold">
+                                                    <span>Total</span>
+                                                    <span>₱{(order.totalAmount || 0).toFixed(2)}</span>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div>
+                                            <h4 className="font-semibold text-gray-900 mb-3">Delivery Information</h4>
+                                            <div className="space-y-2 text-sm">
+                                                <p><strong>Address:</strong> {order.deliveryAddress}</p>
+                                                <p><strong>Payment:</strong> {order.paymentMethod}</p>
+                                                {order.rider && (
+                                                    <p><strong>Rider:</strong> {order.rider.name}</p>
+                                                )}
+                                                {order.specialInstructions && (
+                                                    <p><strong>Instructions:</strong> {order.specialInstructions}</p>
+                                                )}
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Order Progress */}
+                                    <div className="mt-6">
+                                        <h4 className="font-semibold text-gray-900 mb-4">Order Progress</h4>
+                                        <div className="flex items-center justify-between">
+                                            {['pending', 'confirmed', 'preparing', 'ready', 'picked_up', 'delivered'].map((status, index) => (
+                                                <div key={status} className="flex flex-col items-center">
+                                                    <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                                                        getStatusIndex(order.status) >= index ? 'bg-red-800 text-white' : 'bg-gray-200 text-gray-400'
+                                                    }`}>
+                                                        {index + 1}
+                                                    </div>
+                                                    <span className="text-xs mt-2 text-center">
+                                                        {getStatusText(status)}
+                                                    </span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                )}
+            </div>
+        </div>
+    );
+};
+
+// User Profile Component
+const UserProfile = ({ user, onUpdate }) => {
+    const [formData, setFormData] = useState({
+        name: user?.name || '',
+        email: user?.email || '',
+        phone: user?.phone || '',
+        address: user?.address || ''
+    });
+    const [loading, setLoading] = useState(false);
+    const [message, setMessage] = useState('');
+
+    useEffect(() => {
+        if (user) {
+            setFormData({
+                name: user.name || '',
+                email: user.email || '',
+                phone: user.phone || '',
+                address: user.address || ''
+            });
+        }
+    }, [user]);
+
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        setLoading(true);
+        setMessage('');
+
+        try {
+            const response = await fetch('https://food-ordering-app-production-35eb.up.railway.app/api/users/profile', {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${localStorage.getItem('token')}`
+                },
+                body: JSON.stringify(formData)
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                setMessage('Profile updated successfully!');
+                onUpdate(data.user);
+            } else {
+                setMessage(data.message || 'Failed to update profile');
+            }
+        } catch (error) {
+            console.error('Error updating profile:', error);
+            setMessage('Network error updating profile');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleChange = (e) => {
+        setFormData({ ...formData, [e.target.name]: e.target.value });
+    };
+
+    if (!user) {
+        return (
+            <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+                <div className="text-center">
+                    <p className="text-gray-600">Please login to view your profile</p>
+                </div>
+            </div>
+        );
+    }
+
+    return (
+        <div className="min-h-screen bg-gray-50 py-8">
+            <div className="max-w-2xl mx-auto px-4">
+                <div className="bg-white rounded-lg shadow-md p-6">
+                    <h1 className="text-3xl font-bold text-gray-900 mb-2">My Profile</h1>
+                    <p className="text-gray-600 mb-6">Manage your account information</p>
+
+                    {message && (
+                        <div className={`p-4 rounded mb-6 ${
+                            message.includes('successfully') ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+                        }`}>
+                            {message}
+                        </div>
+                    )}
+
+                    <form onSubmit={handleSubmit} className="space-y-6">
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                                Full Name
+                            </label>
+                            <input
+                                type="text"
+                                name="name"
+                                value={formData.name}
+                                onChange={handleChange}
+                                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-800 focus:border-red-800"
+                                required
+                            />
+                        </div>
+
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                                Email Address
+                            </label>
+                            <input
+                                type="email"
+                                name="email"
+                                value={formData.email}
+                                onChange={handleChange}
+                                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-800 focus:border-red-800"
+                                required
+                            />
+                        </div>
+
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                                Phone Number
+                            </label>
+                            <input
+                                type="tel"
+                                name="phone"
+                                value={formData.phone}
+                                onChange={handleChange}
+                                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-800 focus:border-red-800"
+                                required
+                            />
+                        </div>
+
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                                Delivery Address
+                            </label>
+                            <textarea
+                                name="address"
+                                value={formData.address}
+                                onChange={handleChange}
+                                rows="3"
+                                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-800 focus:border-red-800"
+                                required
+                            />
+                        </div>
+
+                        <button
+                            type="submit"
+                            disabled={loading}
+                            className="w-full bg-red-800 text-white py-3 rounded-lg font-semibold hover:bg-red-900 transition-colors disabled:opacity-50"
+                        >
+                            {loading ? 'Updating...' : 'UPDATE PROFILE'}
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    );
+};
+
+// Restaurant Dashboard Component
+const RestaurantDashboard = ({ user }) => {
+    const [orders, setOrders] = useState([]);
+    const [products, setProducts] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [activeTab, setActiveTab] = useState('orders');
+    const [stats, setStats] = useState({
+        totalOrders: 0,
+        pendingOrders: 0,
+        completedOrders: 0,
+        totalRevenue: 0
+    });
+
+    useEffect(() => {
+        if (user) {
+            fetchRestaurantData();
+        }
+    }, [user]);
+
+    const fetchRestaurantData = async () => {
+        try {
+            setLoading(true);
+            
+            // Fetch restaurant orders
+            const ordersResponse = await fetch('https://food-ordering-app-production-35eb.up.railway.app/api/orders/restaurant', {
+                headers: {
+                    'Authorization': `Bearer ${localStorage.getItem('token')}`
+                }
+            });
+
+            // Fetch restaurant products
+            const productsResponse = await fetch('https://food-ordering-app-production-35eb.up.railway.app/api/products/restaurant', {
+                headers: {
+                    'Authorization': `Bearer ${localStorage.getItem('token')}`
+                }
+            });
+
+            if (ordersResponse.ok) {
+                const ordersData = await ordersResponse.json();
+                if (ordersData.success) {
+                    setOrders(ordersData.orders || []);
+                    
+                    // Calculate stats
+                    const totalOrders = ordersData.orders.length;
+                    const pendingOrders = ordersData.orders.filter(order => 
+                        ['pending', 'confirmed', 'preparing'].includes(order.status)
+                    ).length;
+                    const completedOrders = ordersData.orders.filter(order => 
+                        order.status === 'delivered'
+                    ).length;
+                    const totalRevenue = ordersData.orders
+                        .filter(order => order.status === 'delivered')
+                        .reduce((sum, order) => sum + (order.totalAmount || 0), 0);
+
+                    setStats({
+                        totalOrders,
+                        pendingOrders,
+                        completedOrders,
+                        totalRevenue
+                    });
+                }
+            }
+
+            if (productsResponse.ok) {
+                const productsData = await productsResponse.json();
+                if (productsData.success) {
+                    setProducts(productsData.products || []);
+                }
+            }
+
+        } catch (error) {
+            console.error('Error fetching restaurant data:', error);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const updateOrderStatus = async (orderId, newStatus) => {
+        try {
+            const response = await fetch(`https://food-ordering-app-production-35eb.up.railway.app/api/orders/${orderId}/status`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${localStorage.getItem('token')}`
+                },
+                body: JSON.stringify({ status: newStatus })
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                fetchRestaurantData();
+            } else {
+                alert(data.message || 'Failed to update order status');
+            }
+        } catch (error) {
+            console.error('Error updating order status:', error);
+            alert('Network error updating order status');
+        }
+    };
+
+    if (!user || user.role !== 'restaurant') {
+        return (
+            <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+                <div className="text-center">
+                    <p className="text-gray-600">Restaurant dashboard is only available for restaurant owners</p>
+                </div>
+            </div>
+        );
+    }
+
+    return (
+        <div className="min-h-screen bg-gray-50">
+            <div className="bg-white shadow-sm">
+                <div className="max-w-7xl mx-auto px-4 py-6">
+                    <h1 className="text-3xl font-bold text-gray-900">Restaurant Dashboard</h1>
+                    <p className="text-gray-600">Manage your restaurant operations</p>
+                </div>
+            </div>
+
+            {/* Stats Overview */}
+            <div className="max-w-7xl mx-auto px-4 py-6">
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+                    <div className="bg-white rounded-lg shadow p-6">
+                        <h3 className="text-lg font-semibold text-gray-900 mb-2">Total Orders</h3>
+                        <p className="text-3xl font-bold text-red-800">{stats.totalOrders}</p>
+                    </div>
+                    <div className="bg-white rounded-lg shadow p-6">
+                        <h3 className="text-lg font-semibold text-gray-900 mb-2">Pending Orders</h3>
+                        <p className="text-3xl font-bold text-orange-600">{stats.pendingOrders}</p>
+                    </div>
+                    <div className="bg-white rounded-lg shadow p-6">
+                        <h3 className="text-lg font-semibold text-gray-900 mb-2">Completed Orders</h3>
+                        <p className="text-3xl font-bold text-green-600">{stats.completedOrders}</p>
+                    </div>
+                    <div className="bg-white rounded-lg shadow p-6">
+                        <h3 className="text-lg font-semibold text-gray-900 mb-2">Total Revenue</h3>
+                        <p className="text-3xl font-bold text-blue-600">₱{stats.totalRevenue.toFixed(2)}</p>
+                    </div>
+                </div>
+
+                {/* Tabs */}
+                <div className="bg-white rounded-lg shadow">
+                    <div className="border-b border-gray-200">
+                        <nav className="flex -mb-px">
+                            {[
+                                { id: 'orders', name: 'Orders', count: orders.length },
+                                { id: 'products', name: 'Products', count: products.length },
+                                { id: 'analytics', name: 'Analytics' }
+                            ].map((tab) => (
+                                <button
+                                    key={tab.id}
+                                    onClick={() => setActiveTab(tab.id)}
+                                    className={`py-4 px-6 text-center border-b-2 font-medium text-sm ${
+                                        activeTab === tab.id
+                                            ? 'border-red-800 text-red-800'
+                                            : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                                    }`}
+                                >
+                                    {tab.name}
+                                    {tab.count !== undefined && (
+                                        <span className="ml-2 bg-gray-100 text-gray-900 py-0.5 px-2 rounded-full text-xs">
+                                            {tab.count}
+                                        </span>
+                                    )}
+                                </button>
+                            ))}
+                        </nav>
+                    </div>
+
+                    <div className="p-6">
+                        {activeTab === 'orders' && (
+                            <div className="space-y-4">
+                                {orders.map((order) => (
+                                    <div key={order._id} className="border border-gray-200 rounded-lg p-4">
+                                        <div className="flex justify-between items-start mb-3">
+                                            <div>
+                                                <h4 className="font-semibold">
+                                                    Order #{order._id?.slice(-8).toUpperCase() || 'N/A'}
+                                                </h4>
+                                                <p className="text-sm text-gray-600">
+                                                    {new Date(order.createdAt).toLocaleString()}
+                                                </p>
+                                            </div>
+                                            <span className={`px-2 py-1 rounded text-xs ${
+                                                order.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                                                order.status === 'confirmed' ? 'bg-blue-100 text-blue-800' :
+                                                order.status === 'preparing' ? 'bg-orange-100 text-orange-800' :
+                                                order.status === 'ready' ? 'bg-purple-100 text-purple-800' :
+                                                order.status === 'delivered' ? 'bg-green-100 text-green-800' :
+                                                'bg-gray-100 text-gray-800'
+                                            }`}>
+                                                {order.status}
+                                            </span>
+                                        </div>
+                                        
+                                        <div className="mb-3">
+                                            {order.items?.map((item, index) => (
+                                                <div key={index} className="flex justify-between text-sm">
+                                                    <span>{item.productId?.name || `Item ${index + 1}`} x {item.quantity}</span>
+                                                    <span>₱{((item.price || 0) * item.quantity).toFixed(2)}</span>
+                                                </div>
+                                            ))}
+                                        </div>
+
+                                        <div className="flex justify-between items-center">
+                                            <span className="font-semibold">Total: ₱{(order.totalAmount || 0).toFixed(2)}</span>
+                                            <div className="space-x-2">
+                                                {order.status === 'pending' && (
+                                                    <button
+                                                        onClick={() => updateOrderStatus(order._id, 'confirmed')}
+                                                        className="bg-blue-600 text-white px-3 py-1 rounded text-sm hover:bg-blue-700"
+                                                    >
+                                                        Confirm
+                                                    </button>
+                                                )}
+                                                {order.status === 'confirmed' && (
+                                                    <button
+                                                        onClick={() => updateOrderStatus(order._id, 'preparing')}
+                                                        className="bg-orange-600 text-white px-3 py-1 rounded text-sm hover:bg-orange-700"
+                                                    >
+                                                        Start Preparing
+                                                    </button>
+                                                )}
+                                                {order.status === 'preparing' && (
+                                                    <button
+                                                        onClick={() => updateOrderStatus(order._id, 'ready')}
+                                                        className="bg-purple-600 text-white px-3 py-1 rounded text-sm hover:bg-purple-700"
+                                                    >
+                                                        Mark Ready
+                                                    </button>
+                                                )}
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+
+                        {activeTab === 'products' && (
+                            <div>
+                                <div className="flex justify-between items-center mb-4">
+                                    <h3 className="text-lg font-semibold">Menu Items</h3>
+                                    <button className="bg-red-800 text-white px-4 py-2 rounded hover:bg-red-900">
+                                        Add Product
+                                    </button>
+                                </div>
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                    {products.map((product) => (
+                                        <div key={product._id} className="border border-gray-200 rounded-lg p-4">
+                                            <h4 className="font-semibold">{product.name}</h4>
+                                            <p className="text-gray-600 text-sm mb-2">{product.description}</p>
+                                            <div className="flex justify-between items-center">
+                                                <span className="text-red-800 font-bold">₱{product.price}</span>
+                                                <span className="bg-gray-100 text-gray-700 px-2 py-1 rounded text-xs">
+                                                    {product.category}
+                                                </span>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+};
+
 // Main Customer Dashboard Component
 const CustomerDashboard = () => {
-    const { user, login, register, logout, loading: authLoading } = useAuth();
+    const { user, login, register, logout, loading: authLoading, updateUser } = useAuth();
     const [showAuthModal, setShowAuthModal] = useState(false);
     const [authMode, setAuthMode] = useState('login');
     const [restaurants, setRestaurants] = useState([]);
     const [searchQuery, setSearchQuery] = useState('');
     const [loadingRestaurants, setLoadingRestaurants] = useState(true);
     const [apiError, setApiError] = useState('');
+    const [activeSection, setActiveSection] = useState('home');
 
     // Use the cart hook
     const {
@@ -1386,7 +2030,6 @@ const CustomerDashboard = () => {
             return;
         }
         addToCart(product, restaurant);
-        // Show success message
         console.log('✅ Added to cart:', product.name);
     };
 
@@ -1400,7 +2043,6 @@ const CustomerDashboard = () => {
         }
     
         try {
-            // Prepare order data
             const orderData = {
                 restaurantId: cart[0].restaurant._id,
                 items: cart.map(item => ({
@@ -1408,8 +2050,8 @@ const CustomerDashboard = () => {
                     quantity: item.quantity,
                     price: item.product.price
                 })),
-                deliveryAddress: user.address || 'Puerto Princesa City', // Get from user profile
-                paymentMethod: 'cash', // Default to cash
+                deliveryAddress: user.address || 'Puerto Princesa City',
+                paymentMethod: 'cash',
                 specialInstructions: ''
             };
     
@@ -1428,8 +2070,6 @@ const CustomerDashboard = () => {
                 alert('🎉 Order placed successfully!');
                 clearCart();
                 setIsCartOpen(false);
-                
-                // You can redirect to order tracking page here
                 console.log('Order details:', data.order);
             } else {
                 alert(`Order failed: ${data.message}`);
@@ -1445,6 +2085,197 @@ const CustomerDashboard = () => {
         restaurant.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
         restaurant.cuisine?.toLowerCase().includes(searchQuery.toLowerCase())
     );
+
+    const renderNavigation = () => (
+        <nav className="hidden lg:flex items-center space-x-8">
+            <button 
+                onClick={() => setActiveSection('home')}
+                className={`font-semibold text-sm ${
+                    activeSection === 'home' ? 'text-red-800 border-b-2 border-red-800' : 'text-gray-700 hover:text-red-800'
+                }`}
+            >
+                HOME
+            </button>
+            <button 
+                onClick={() => setActiveSection('track')}
+                className={`font-semibold text-sm ${
+                    activeSection === 'track' ? 'text-red-800 border-b-2 border-red-800' : 'text-gray-700 hover:text-red-800'
+                }`}
+            >
+                TRACK ORDER
+            </button>
+            {user && user.role === 'restaurant' && (
+                <button 
+                    onClick={() => setActiveSection('restaurant')}
+                    className={`font-semibold text-sm ${
+                        activeSection === 'restaurant' ? 'text-red-800 border-b-2 border-red-800' : 'text-gray-700 hover:text-red-800'
+                    }`}
+                >
+                    RESTAURANT DASHBOARD
+                </button>
+            )}
+            {user && (
+                <button 
+                    onClick={() => setActiveSection('profile')}
+                    className={`font-semibold text-sm ${
+                        activeSection === 'profile' ? 'text-red-800 border-b-2 border-red-800' : 'text-gray-700 hover:text-red-800'
+                    }`}
+                >
+                    PROFILE
+                </button>
+            )}
+        </nav>
+    );
+
+    const renderActiveSection = () => {
+        switch (activeSection) {
+            case 'track':
+                return <TrackOrder user={user} />;
+            case 'profile':
+                return <UserProfile user={user} onUpdate={updateUser} />;
+            case 'restaurant':
+                return <RestaurantDashboard user={user} />;
+            case 'home':
+            default:
+                return renderHomeSection();
+        }
+    };
+
+    const renderHomeSection = () => {
+        return (
+            <>
+                <div className="bg-gradient-to-r from-red-800 to-red-900 text-white py-16">
+                    <div className="max-w-7xl mx-auto px-4 text-center">
+                        <h1 className="text-4xl md:text-5xl font-bold mb-6">
+                            DELICIOUS FOOD DELIVERED TO YOUR DOORSTEP
+                        </h1>
+                        <p className="text-lg md:text-xl mb-8 opacity-90">
+                            Experience the best food delivery service in town
+                        </p>
+                        <div className="flex flex-col sm:flex-row justify-center space-y-4 sm:space-y-0 sm:space-x-6">
+                            <button 
+                                onClick={() => user ? setIsCartOpen(true) : setShowAuthModal(true)}
+                                className="bg-white text-red-800 px-8 py-4 rounded font-bold text-lg hover:bg-gray-100 transition-colors"
+                            >
+                                {user ? "ORDER NOW" : "LOGIN TO ORDER"}
+                            </button>
+                            <button className="border-2 border-white text-white px-8 py-4 rounded font-bold text-lg hover:bg-white hover:text-red-800 transition-colors">
+                                BROWSE RESTAURANTS
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div className="max-w-7xl mx-auto px-4 py-12">
+                    <div className="flex justify-between items-center mb-8">
+                        <h2 className="text-3xl font-bold text-gray-900">FEATURED RESTAURANTS</h2>
+                        <button className="text-red-800 hover:text-red-900 font-semibold">
+                            VIEW ALL →
+                        </button>
+                    </div>
+                    
+                    {loadingRestaurants ? (
+                        <div className="flex justify-center items-center py-12">
+                            <div className="text-center">
+                                <div className="w-12 h-12 border-4 border-red-800 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+                                <p className="text-gray-600">Loading restaurants...</p>
+                            </div>
+                        </div>
+                    ) : apiError ? (
+                        <div className="text-center py-12">
+                            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6 max-w-md mx-auto">
+                                <p className="text-yellow-800 font-semibold mb-2"> API Connection</p>
+                                <p className="text-yellow-700 text-sm">{apiError}</p>
+                                <p className="text-yellow-600 text-xs mt-2">Using real-time data from your database</p>
+                            </div>
+                        </div>
+                    ) : filteredRestaurants.length === 0 ? (
+                        <div className="text-center py-12">
+                            <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 max-w-md mx-auto">
+                                <p className="text-blue-800 font-semibold"> No Restaurants Yet</p>
+                                <p className="text-blue-700 text-sm mt-2">
+                                    No restaurants found in your database. Add restaurants via admin panel.
+                                </p>
+                            </div>
+                        </div>
+                    ) : (
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                            {filteredRestaurants.map((restaurant, index) => (
+                                <RestaurantCard 
+                                    key={restaurant._id || restaurant.id || index}
+                                    restaurant={restaurant}
+                                    onAddToCart={handleAddToCart}
+                                    user={user}
+                                />
+                            ))}
+                        </div>
+                    )}
+                </div>
+
+                <div className="bg-gray-100 py-16">
+                    <div className="max-w-7xl mx-auto px-4">
+                        <h2 className="text-3xl font-bold text-center text-gray-900 mb-12">Join Our Community</h2>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                            <div className="bg-white rounded-xl shadow-md p-6 text-center">
+                                <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                                    <span className="text-2xl">🍽️</span>
+                                </div>
+                                <h3 className="text-xl font-bold text-gray-900 mb-3">Food Lover</h3>
+                                <p className="text-gray-600 mb-4">Order from your favorite restaurants and enjoy delicious meals delivered to your door.</p>
+                                <button 
+                                    onClick={() => { setShowAuthModal(true); setAuthMode('customer'); }}
+                                    className="bg-red-800 text-white px-6 py-2 rounded hover:bg-red-900 transition-colors"
+                                >
+                                    Join as Customer
+                                </button>
+                            </div>
+
+                            <div className="bg-white rounded-xl shadow-md p-6 text-center">
+                                <div className="w-16 h-16 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                                    <Store className="text-orange-600" size={24} />
+                                </div>
+                                <h3 className="text-xl font-bold text-gray-900 mb-3">Restaurant Owner</h3>
+                                <p className="text-gray-600 mb-4">Reach more customers and grow your business with our delivery platform.</p>
+                                <button 
+                                    onClick={() => { setShowAuthModal(true); setAuthMode('restaurant'); }}
+                                    className="bg-orange-600 text-white px-6 py-2 rounded hover:bg-orange-700 transition-colors"
+                                >
+                                    Join as Restaurant
+                                </button>
+                            </div>
+
+                            <div className="bg-white rounded-xl shadow-md p-6 text-center">
+                                <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                                    <Bike className="text-blue-600" size={24} />
+                                </div>
+                                <h3 className="text-xl font-bold text-gray-900 mb-3">Delivery Rider</h3>
+                                <p className="text-gray-600 mb-4">Earn money by delivering food to customers in your area. Flexible hours available.</p>
+                                <button 
+                                    onClick={() => { setShowAuthModal(true); setAuthMode('rider'); }}
+                                    className="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700 transition-colors"
+                                >
+                                    Join as Rider
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div className="bg-red-800 text-white py-12">
+                    <div className="max-w-7xl mx-auto px-4 text-center">
+                        <h2 className="text-4xl font-bold mb-4">SPECIAL OFFER!</h2>
+                        <p className="text-xl mb-6">Get 20% OFF on your first order with promo code: WELCOME20</p>
+                        <button 
+                            onClick={() => user ? console.log('Grab offer') : setShowAuthModal(true)}
+                            className="bg-white text-red-800 px-8 py-3 rounded font-bold text-lg hover:bg-gray-100 transition-colors"
+                        >
+                            {user ? "GRAB THIS OFFER" : "LOGIN TO GET OFFER"}
+                        </button>
+                    </div>
+                </div>
+            </>
+        );
+    };
 
     if (authLoading) {
         return (
@@ -1478,13 +2309,7 @@ const CustomerDashboard = () => {
                             </div>
                         </div>
 
-                        <nav className="hidden lg:flex items-center space-x-8">
-                            <button className="font-semibold text-sm text-red-800 border-b-2 border-red-800">HOME</button>
-                            <button className="font-semibold text-sm text-gray-700 hover:text-red-800">RESTAURANTS</button>
-                            <button className="font-semibold text-sm text-gray-700 hover:text-red-800">MY ORDERS</button>
-                            <button className="font-semibold text-sm text-gray-700 hover:text-red-800">TRACK ORDER</button>
-                            <button className="font-semibold text-sm text-gray-700 hover:text-red-800">PROFILE</button>
-                        </nav>
+                        {renderNavigation()}
 
                         <div className="flex items-center space-x-4">
                             {user ? (
@@ -1563,163 +2388,37 @@ const CustomerDashboard = () => {
                     </div>
                 </div>
 
-                <div className="bg-gray-100 border-t border-b border-gray-200 py-4">
-                    <div className="max-w-7xl mx-auto px-4">
-                        <div className="flex items-center space-x-4">
-                            <div className="flex-1 max-w-2xl">
-                                <div className="relative">
-                                    <Search size={20} className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400" />
-                                    <input 
-                                        type="text" 
-                                        placeholder="Search for restaurants, cuisines, or dishes..." 
-                                        value={searchQuery}
-                                        onChange={(e) => setSearchQuery(e.target.value)}
-                                        className="w-full pl-12 pr-4 py-3 bg-white border border-gray-300 rounded focus:ring-2 focus:ring-red-800 focus:border-red-800"
-                                    />
+                {activeSection === 'home' && (
+                    <div className="bg-gray-100 border-t border-b border-gray-200 py-4">
+                        <div className="max-w-7xl mx-auto px-4">
+                            <div className="flex items-center space-x-4">
+                                <div className="flex-1 max-w-2xl">
+                                    <div className="relative">
+                                        <Search size={20} className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400" />
+                                        <input 
+                                            type="text" 
+                                            placeholder="Search for restaurants, cuisines, or dishes..." 
+                                            value={searchQuery}
+                                            onChange={(e) => setSearchQuery(e.target.value)}
+                                            className="w-full pl-12 pr-4 py-3 bg-white border border-gray-300 rounded focus:ring-2 focus:ring-red-800 focus:border-red-800"
+                                        />
+                                    </div>
                                 </div>
+                                <button className="flex items-center space-x-2 bg-red-800 text-white px-6 py-3 rounded hover:bg-red-900 transition-colors">
+                                    <Search size={16} />
+                                    <span>SEARCH</span>
+                                </button>
+                                <button className="flex items-center space-x-2 bg-white border border-gray-300 px-4 py-3 rounded hover:border-red-800 transition-colors">
+                                    <Filter size={16} />
+                                    <span className="font-semibold">FILTER</span>
+                                </button>
                             </div>
-                            <button className="flex items-center space-x-2 bg-red-800 text-white px-6 py-3 rounded hover:bg-red-900 transition-colors">
-                                <Search size={16} />
-                                <span>SEARCH</span>
-                            </button>
-                            <button className="flex items-center space-x-2 bg-white border border-gray-300 px-4 py-3 rounded hover:border-red-800 transition-colors">
-                                <Filter size={16} />
-                                <span className="font-semibold">FILTER</span>
-                            </button>
                         </div>
-                    </div>
-                </div>
-            </header>
-
-            <div className="bg-gradient-to-r from-red-800 to-red-900 text-white py-16">
-                <div className="max-w-7xl mx-auto px-4 text-center">
-                    <h1 className="text-4xl md:text-5xl font-bold mb-6">
-                        DELICIOUS FOOD DELIVERED TO YOUR DOORSTEP
-                    </h1>
-                    <p className="text-lg md:text-xl mb-8 opacity-90">
-                        Experience the best food delivery service in town
-                    </p>
-                    <div className="flex flex-col sm:flex-row justify-center space-y-4 sm:space-y-0 sm:space-x-6">
-                        <button 
-                            onClick={() => user ? setIsCartOpen(true) : setShowAuthModal(true)}
-                            className="bg-white text-red-800 px-8 py-4 rounded font-bold text-lg hover:bg-gray-100 transition-colors"
-                        >
-                            {user ? "ORDER NOW" : "LOGIN TO ORDER"}
-                        </button>
-                        <button className="border-2 border-white text-white px-8 py-4 rounded font-bold text-lg hover:bg-white hover:text-red-800 transition-colors">
-                            BROWSE RESTAURANTS
-                        </button>
-                    </div>
-                </div>
-            </div>
-
-            <div className="max-w-7xl mx-auto px-4 py-12">
-                <div className="flex justify-between items-center mb-8">
-                    <h2 className="text-3xl font-bold text-gray-900">FEATURED RESTAURANTS</h2>
-                    <button className="text-red-800 hover:text-red-900 font-semibold">
-                        VIEW ALL →
-                    </button>
-                </div>
-                
-                {loadingRestaurants ? (
-                    <div className="flex justify-center items-center py-12">
-                        <div className="text-center">
-                            <div className="w-12 h-12 border-4 border-red-800 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-                            <p className="text-gray-600">Loading restaurants...</p>
-                        </div>
-                    </div>
-                ) : apiError ? (
-                    <div className="text-center py-12">
-                        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6 max-w-md mx-auto">
-                            <p className="text-yellow-800 font-semibold mb-2"> API Connection</p>
-                            <p className="text-yellow-700 text-sm">{apiError}</p>
-                            <p className="text-yellow-600 text-xs mt-2">Using real-time data from your database</p>
-                        </div>
-                    </div>
-                ) : filteredRestaurants.length === 0 ? (
-                    <div className="text-center py-12">
-                        <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 max-w-md mx-auto">
-                            <p className="text-blue-800 font-semibold"> No Restaurants Yet</p>
-                            <p className="text-blue-700 text-sm mt-2">
-                                No restaurants found in your database. Add restaurants via admin panel.
-                            </p>
-                        </div>
-                    </div>
-                ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                        {filteredRestaurants.map((restaurant, index) => (
-                            <RestaurantCard 
-                                key={restaurant._id || restaurant.id || index}
-                                restaurant={restaurant}
-                                onAddToCart={handleAddToCart}
-                                user={user}
-                            />
-                        ))}
                     </div>
                 )}
-            </div>
+            </header>
 
-            <div className="bg-gray-100 py-16">
-                <div className="max-w-7xl mx-auto px-4">
-                    <h2 className="text-3xl font-bold text-center text-gray-900 mb-12">Join Our Community</h2>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                        <div className="bg-white rounded-xl shadow-md p-6 text-center">
-                            <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                                <span className="text-2xl">🍽️</span>
-                            </div>
-                            <h3 className="text-xl font-bold text-gray-900 mb-3">Food Lover</h3>
-                            <p className="text-gray-600 mb-4">Order from your favorite restaurants and enjoy delicious meals delivered to your door.</p>
-                            <button 
-                                onClick={() => { setShowAuthModal(true); setAuthMode('customer'); }}
-                                className="bg-red-800 text-white px-6 py-2 rounded hover:bg-red-900 transition-colors"
-                            >
-                                Join as Customer
-                            </button>
-                        </div>
-
-                        <div className="bg-white rounded-xl shadow-md p-6 text-center">
-                            <div className="w-16 h-16 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                                <Store className="text-orange-600" size={24} />
-                            </div>
-                            <h3 className="text-xl font-bold text-gray-900 mb-3">Restaurant Owner</h3>
-                            <p className="text-gray-600 mb-4">Reach more customers and grow your business with our delivery platform.</p>
-                            <button 
-                                onClick={() => { setShowAuthModal(true); setAuthMode('restaurant'); }}
-                                className="bg-orange-600 text-white px-6 py-2 rounded hover:bg-orange-700 transition-colors"
-                            >
-                                Join as Restaurant
-                            </button>
-                        </div>
-
-                        <div className="bg-white rounded-xl shadow-md p-6 text-center">
-                            <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                                <Bike className="text-blue-600" size={24} />
-                            </div>
-                            <h3 className="text-xl font-bold text-gray-900 mb-3">Delivery Rider</h3>
-                            <p className="text-gray-600 mb-4">Earn money by delivering food to customers in your area. Flexible hours available.</p>
-                            <button 
-                                onClick={() => { setShowAuthModal(true); setAuthMode('rider'); }}
-                                className="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700 transition-colors"
-                            >
-                                Join as Rider
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div className="bg-red-800 text-white py-12">
-                <div className="max-w-7xl mx-auto px-4 text-center">
-                    <h2 className="text-4xl font-bold mb-4">SPECIAL OFFER!</h2>
-                    <p className="text-xl mb-6">Get 20% OFF on your first order with promo code: WELCOME20</p>
-                    <button 
-                        onClick={() => user ? console.log('Grab offer') : setShowAuthModal(true)}
-                        className="bg-white text-red-800 px-8 py-3 rounded font-bold text-lg hover:bg-gray-100 transition-colors"
-                    >
-                        {user ? "GRAB THIS OFFER" : "LOGIN TO GET OFFER"}
-                    </button>
-                </div>
-            </div>
+            {renderActiveSection()}
 
             <footer className="bg-gray-900 text-white">
                 <div className="max-w-7xl mx-auto px-4 py-12">
