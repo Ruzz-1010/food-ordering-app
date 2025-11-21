@@ -5,8 +5,8 @@ const Order = require('../models/Order');
 
 // ======================= CUSTOMER ROUTES =======================
 
-// Get customer's orders
-router.get('/my-orders', auth, async (req, res) => {
+// Get customer's orders - FIXED ROUTE
+router.get('/user', auth, async (req, res) => {
     try {
         const orders = await Order.find({ user: req.user._id })
             .populate('restaurant', 'name image cuisine address phone')
@@ -24,35 +24,91 @@ router.get('/my-orders', auth, async (req, res) => {
     }
 });
 
-// Create new order (Checkout)
+// Track order by ID - NEW ROUTE
+router.get('/track/:orderId', auth, async (req, res) => {
+    try {
+        const order = await Order.findById(req.params.orderId)
+            .populate('restaurant', 'name image cuisine address phone')
+            .populate('items.product', 'name price image category')
+            .populate('rider', 'name phone vehicleType')
+            .populate('user', 'name email phone');
+
+        if (!order) {
+            return res.status(404).json({ success: false, message: 'Order not found' });
+        }
+
+        // Check if user has permission to view this order
+        const canView = 
+            req.user.role === 'admin' ||
+            order.user._id.toString() === req.user._id.toString() ||
+            (req.user.role === 'restaurant' && order.restaurant._id.toString() === req.user._id.toString()) ||
+            (req.user.role === 'rider' && order.rider && order.rider._id.toString() === req.user._id.toString());
+
+        if (!canView) {
+            return res.status(403).json({ success: false, message: 'Access denied' });
+        }
+
+        res.json({
+            success: true,
+            order
+        });
+
+    } catch (error) {
+        console.error('Track order error:', error);
+        res.status(500).json({ success: false, message: 'Server error' });
+    }
+});
+
+// Create new order (Checkout) - FIXED
 router.post('/create', auth, async (req, res) => {
     try {
         const {
             restaurantId,
             items,
             deliveryAddress,
-            paymentMethod,
-            specialInstructions = ''
+            paymentMethod = 'cash',
+            specialInstructions = '',
+            orderId // Optional client-generated order ID
         } = req.body;
+
+        console.log('📦 Creating order with data:', {
+            restaurantId,
+            itemsCount: items.length,
+            deliveryAddress,
+            paymentMethod
+        });
+
+        // Validate required fields
+        if (!restaurantId || !items || items.length === 0 || !deliveryAddress) {
+            return res.status(400).json({ 
+                success: false, 
+                message: 'Missing required fields: restaurantId, items, deliveryAddress' 
+            });
+        }
 
         // Calculate totals
         const subtotal = items.reduce((total, item) => total + (item.price * item.quantity), 0);
         const deliveryFee = subtotal > 299 ? 0 : 35;
         const serviceFee = Math.max(10, subtotal * 0.02);
-        const total = subtotal + deliveryFee + serviceFee;
+        const totalAmount = subtotal + deliveryFee + serviceFee;
+
+        // Generate order ID if not provided
+        const finalOrderId = orderId || `FX${Date.now()}${Math.random().toString(36).substr(2, 9)}`.toUpperCase();
 
         const order = new Order({
+            orderId: finalOrderId,
             user: req.user._id,
             restaurant: restaurantId,
             items: items.map(item => ({
                 product: item.productId,
+                productName: item.productName, // Store product name as backup
                 quantity: item.quantity,
                 price: item.price
             })),
             subtotal,
             deliveryFee,
             serviceFee,
-            total,
+            total: totalAmount,
             deliveryAddress,
             paymentMethod,
             specialInstructions,
@@ -66,15 +122,56 @@ router.post('/create', auth, async (req, res) => {
         await order.populate('restaurant', 'name image cuisine address');
         await order.populate('items.product', 'name price image');
 
+        console.log('✅ Order created successfully:', order.orderId);
+
         res.status(201).json({
             success: true,
             message: 'Order placed successfully!',
-            order
+            order: {
+                _id: order._id,
+                orderId: order.orderId,
+                status: order.status,
+                total: order.total,
+                estimatedDelivery: order.estimatedDelivery,
+                restaurant: order.restaurant,
+                items: order.items
+            }
         });
 
     } catch (error) {
-        console.error('Create order error:', error);
-        res.status(500).json({ success: false, message: 'Order creation failed' });
+        console.error('❌ Create order error:', error);
+        
+        // Handle duplicate key error
+        if (error.code === 11000) {
+            return res.status(400).json({ 
+                success: false, 
+                message: 'Order ID already exists. Please try again.' 
+            });
+        }
+        
+        res.status(500).json({ 
+            success: false, 
+            message: 'Order creation failed. Please try again.' 
+        });
+    }
+});
+
+// Get customer's orders (alternative route)
+router.get('/my-orders', auth, async (req, res) => {
+    try {
+        const orders = await Order.find({ user: req.user._id })
+            .populate('restaurant', 'name image cuisine address phone')
+            .populate('items.product', 'name price image category')
+            .populate('rider', 'name phone vehicleType')
+            .sort({ createdAt: -1 });
+
+        res.json({
+            success: true,
+            orders
+        });
+    } catch (error) {
+        console.error('Get customer orders error:', error);
+        res.status(500).json({ success: false, message: 'Server error' });
     }
 });
 
@@ -114,8 +211,8 @@ router.put('/:orderId/cancel', auth, async (req, res) => {
 
 // ======================= RESTAURANT ROUTES =======================
 
-// Get restaurant's orders
-router.get('/restaurant/my-orders', auth, requireRole(['restaurant']), async (req, res) => {
+// Get restaurant's orders - FIXED ROUTE
+router.get('/restaurant', auth, requireRole(['restaurant']), async (req, res) => {
     try {
         const orders = await Order.find({ restaurant: req.user._id })
             .populate('user', 'name phone email')

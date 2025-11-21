@@ -6,6 +6,10 @@ const orderItemSchema = new mongoose.Schema({
         ref: 'Product',
         required: true
     },
+    productName: {
+        type: String, // Store product name as backup
+        required: false
+    },
     quantity: {
         type: Number,
         required: true,
@@ -18,6 +22,11 @@ const orderItemSchema = new mongoose.Schema({
 });
 
 const orderSchema = new mongoose.Schema({
+    orderId: {
+        type: String,
+        required: true,
+        unique: true
+    },
     user: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'User',
@@ -52,7 +61,8 @@ const orderSchema = new mongoose.Schema({
     paymentMethod: {
         type: String,
         required: true,
-        enum: ['cash', 'card', 'digital_wallet']
+        enum: ['cash', 'card', 'digital_wallet'],
+        default: 'cash'
     },
     specialInstructions: {
         type: String,
@@ -68,6 +78,7 @@ const orderSchema = new mongoose.Schema({
         ref: 'User'
     },
     estimatedDelivery: Date,
+    deliveredAt: Date,
     createdAt: {
         type: Date,
         default: Date.now
@@ -83,5 +94,11 @@ orderSchema.pre('save', function(next) {
     this.updatedAt = Date.now();
     next();
 });
+
+// Add index for better performance
+orderSchema.index({ user: 1, createdAt: -1 });
+orderSchema.index({ restaurant: 1, createdAt: -1 });
+orderSchema.index({ status: 1 });
+orderSchema.index({ orderId: 1 });
 
 module.exports = mongoose.model('Order', orderSchema);

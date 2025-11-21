@@ -143,8 +143,8 @@ const Cart = ({ cart, isOpen, onClose, onUpdateQuantity, onRemoveItem, onClearCa
     if (!isOpen) return null;
 
     const subtotal = cart.reduce((sum, item) => sum + (item.product.price * item.quantity), 0);
-    const deliveryFee = 35;
-    const serviceFee = 10;
+    const deliveryFee = subtotal > 299 ? 0 : 35;
+    const serviceFee = Math.max(10, subtotal * 0.02);
     const grandTotal = subtotal + deliveryFee + serviceFee;
 
     return (
@@ -1411,7 +1411,7 @@ const TrackOrder = ({ user }) => {
             case 'confirmed': return 'bg-blue-100 text-blue-800';
             case 'preparing': return 'bg-orange-100 text-orange-800';
             case 'ready': return 'bg-purple-100 text-purple-800';
-            case 'picked_up': return 'bg-indigo-100 text-indigo-800';
+            case 'out_for_delivery': return 'bg-indigo-100 text-indigo-800';
             case 'delivered': return 'bg-green-100 text-green-800';
             case 'cancelled': return 'bg-red-100 text-red-800';
             default: return 'bg-gray-100 text-gray-800';
@@ -1424,7 +1424,7 @@ const TrackOrder = ({ user }) => {
             case 'confirmed': return 'Confirmed';
             case 'preparing': return 'Preparing';
             case 'ready': return 'Ready for Pickup';
-            case 'picked_up': return 'On the Way';
+            case 'out_for_delivery': return 'On the Way';
             case 'delivered': return 'Delivered';
             case 'cancelled': return 'Cancelled';
             default: return status;
@@ -1432,7 +1432,7 @@ const TrackOrder = ({ user }) => {
     };
 
     const getStatusIndex = (status) => {
-        const statusOrder = ['pending', 'confirmed', 'preparing', 'ready', 'picked_up', 'delivered'];
+        const statusOrder = ['pending', 'confirmed', 'preparing', 'ready', 'out_for_delivery', 'delivered'];
         return statusOrder.indexOf(status);
     };
 
@@ -1506,7 +1506,7 @@ const TrackOrder = ({ user }) => {
                                             <div className="space-y-2">
                                                 {order.items?.map((item, index) => (
                                                     <div key={index} className="flex justify-between text-sm">
-                                                        <span>{item.productName || item.productId?.name || `Item ${index + 1}`} x {item.quantity}</span>
+                                                        <span>{item.productName || item.product?.name || `Item ${index + 1}`} x {item.quantity}</span>
                                                         <span>₱{((item.price || 0) * item.quantity).toFixed(2)}</span>
                                                     </div>
                                                 ))}
@@ -1514,7 +1514,7 @@ const TrackOrder = ({ user }) => {
                                             <div className="border-t mt-3 pt-3">
                                                 <div className="flex justify-between font-semibold">
                                                     <span>Total</span>
-                                                    <span>₱{(order.totalAmount || 0).toFixed(2)}</span>
+                                                    <span>₱{(order.total || 0).toFixed(2)}</span>
                                                 </div>
                                             </div>
                                         </div>
@@ -1538,7 +1538,7 @@ const TrackOrder = ({ user }) => {
                                     <div className="mt-6">
                                         <h4 className="font-semibold text-gray-900 mb-4">Order Progress</h4>
                                         <div className="flex items-center justify-between">
-                                            {['pending', 'confirmed', 'preparing', 'ready', 'picked_up', 'delivered'].map((status, index) => (
+                                            {['pending', 'confirmed', 'preparing', 'ready', 'out_for_delivery', 'delivered'].map((status, index) => (
                                                 <div key={status} className="flex flex-col items-center">
                                                     <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
                                                         getStatusIndex(order.status) >= index ? 'bg-red-800 text-white' : 'bg-gray-200 text-gray-400'
@@ -1769,7 +1769,7 @@ const RestaurantDashboard = ({ user }) => {
                     ).length;
                     const totalRevenue = ordersData.orders
                         .filter(order => order.status === 'delivered')
-                        .reduce((sum, order) => sum + (order.totalAmount || 0), 0);
+                        .reduce((sum, order) => sum + (order.total || 0), 0);
 
                     setStats({
                         totalOrders,
@@ -1928,14 +1928,14 @@ const RestaurantDashboard = ({ user }) => {
                                         <div className="mb-3">
                                             {order.items?.map((item, index) => (
                                                 <div key={index} className="flex justify-between text-sm">
-                                                    <span>{item.productName || item.productId?.name || `Item ${index + 1}`} x {item.quantity}</span>
+                                                    <span>{item.productName || item.product?.name || `Item ${index + 1}`} x {item.quantity}</span>
                                                     <span>₱{((item.price || 0) * item.quantity).toFixed(2)}</span>
                                                 </div>
                                             ))}
                                         </div>
 
                                         <div className="flex justify-between items-center">
-                                            <span className="font-semibold">Total: ₱{(order.totalAmount || 0).toFixed(2)}</span>
+                                            <span className="font-semibold">Total: ₱{(order.total || 0).toFixed(2)}</span>
                                             <div className="space-x-2">
                                                 {order.status === 'pending' && (
                                                     <button
@@ -2100,18 +2100,17 @@ const CustomerDashboard = () => {
             const orderId = `FX${Date.now()}${Math.random().toString(36).substr(2, 9)}`.toUpperCase();
             
             const orderData = {
-                orderId: orderId, // Add unique order ID
+                orderId: orderId,
                 restaurantId: cart[0].restaurant._id,
                 items: cart.map(item => ({
                     productId: item.product._id,
-                    productName: item.product.name, // Include product name for backup
+                    productName: item.product.name,
                     quantity: item.quantity,
                     price: item.product.price
                 })),
                 deliveryAddress: user.address || 'Puerto Princesa City',
                 paymentMethod: 'cash',
-                specialInstructions: '',
-                totalAmount: getCartTotal() + 35 + 10 // subtotal + delivery + service fee
+                specialInstructions: ''
             };
 
             console.log('📦 Order data being sent:', orderData);
@@ -2130,10 +2129,8 @@ const CustomerDashboard = () => {
                 clearCart();
                 setIsCartOpen(false);
                 
-                // Refresh orders in track section
-                if (activeSection === 'track') {
-                    // You might want to trigger a refetch here
-                }
+                // Switch to track orders section
+                setActiveSection('track');
             } else {
                 alert(`Order failed: ${data.message}`);
             }
