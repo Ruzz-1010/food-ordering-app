@@ -10,103 +10,141 @@ export const AuthProvider = ({ children }) => {
 
   const API_URL = 'https://food-ordering-app-production-35eb.up.railway.app/api';
 
-  // Check if user is logged in on app start - FIXED VERSION
+  // Function to fetch restaurant data
+  const fetchRestaurantData = async (userId, userEmail) => {
+    try {
+      console.log('🔍 Searching for restaurant data...');
+      console.log('👤 User ID:', userId);
+      console.log('📧 User Email:', userEmail);
+
+      // Method 1: Try by owner ID
+      console.log('🔄 Method 1: Searching by owner ID...');
+      const ownerResponse = await fetch(`${API_URL}/restaurants/owner/${userId}`);
+      if (ownerResponse.ok) {
+        const ownerData = await ownerResponse.json();
+        console.log('📊 Owner API Response:', ownerData);
+        
+        if (ownerData.success && ownerData.restaurant) {
+          console.log('✅ Restaurant found by owner ID:', ownerData.restaurant._id);
+          return {
+            restaurantId: ownerData.restaurant._id,
+            restaurantData: ownerData.restaurant
+          };
+        }
+      }
+
+      // Method 2: Try by email
+      console.log('🔄 Method 2: Searching by email...');
+      const emailResponse = await fetch(`${API_URL}/restaurants/email/${userEmail}`);
+      if (emailResponse.ok) {
+        const emailData = await emailResponse.json();
+        console.log('📊 Email API Response:', emailData);
+        
+        if (emailData.success && emailData.restaurant) {
+          console.log('✅ Restaurant found by email:', emailData.restaurant._id);
+          return {
+            restaurantId: emailData.restaurant._id,
+            restaurantData: emailData.restaurant
+          };
+        }
+      }
+
+      // Method 3: Get all restaurants and find by owner or email
+      console.log('🔄 Method 3: Searching in all restaurants...');
+      const allResponse = await fetch(`${API_URL}/restaurants`);
+      if (allResponse.ok) {
+        const allData = await allResponse.json();
+        console.log('📊 All restaurants count:', allData.restaurants?.length);
+        
+        if (allData.success && allData.restaurants) {
+          // Find by owner
+          const byOwner = allData.restaurants.find(r => r.owner === userId || r.owner?._id === userId);
+          if (byOwner) {
+            console.log('✅ Restaurant found in all list by owner:', byOwner._id);
+            return {
+              restaurantId: byOwner._id,
+              restaurantData: byOwner
+            };
+          }
+
+          // Find by email
+          const byEmail = allData.restaurants.find(r => r.email === userEmail);
+          if (byEmail) {
+            console.log('✅ Restaurant found in all list by email:', byEmail._id);
+            return {
+              restaurantId: byEmail._id,
+              restaurantData: byEmail
+            };
+          }
+        }
+      }
+
+      console.log('❌ No restaurant found through any method');
+      return null;
+    } catch (error) {
+      console.error('❌ Error fetching restaurant data:', error);
+      return null;
+    }
+  };
+
+  // Check auth status - UPDATED
   useEffect(() => {
     const checkAuthStatus = async () => {
       console.log('🔄 AuthContext - Checking authentication status...');
       const token = localStorage.getItem('token');
       const userData = localStorage.getItem('user');
       
-      console.log('🔍 AuthContext - Token exists:', !!token);
-      console.log('🔍 AuthContext - User data exists:', !!userData);
-      
       if (token && userData) {
         try {
-          console.log('🔐 AuthContext - Verifying token with backend...');
-          
-          // Verify token is still valid with backend
-          const response = await fetch(`${API_URL}/auth/verify`, {
-            headers: {
-              'Authorization': `Bearer ${token}`
-            }
-          });
-          
-          console.log('🔐 AuthContext - Verification response status:', response.status);
-          
-          if (response.ok) {
-            const userObj = JSON.parse(userData);
-            console.log('✅ AuthContext - Token valid, user loaded:', userObj);
-            console.log('✅ AuthContext - User ID (_id):', userObj._id);
-            console.log('✅ AuthContext - User Role:', userObj.role);
+          const userObj = JSON.parse(userData);
+          console.log('👤 User from localStorage:', userObj);
+
+          // For restaurant users, ensure we have restaurant data
+          if (userObj.role === 'restaurant' && userObj._id && !userObj.restaurantId) {
+            console.log('🏪 Restaurant user detected, fetching restaurant data...');
+            const restaurantInfo = await fetchRestaurantData(userObj._id, userObj.email);
             
-            // For restaurant owners, ensure restaurantId is set
-            if (userObj.role === 'restaurant' && userObj._id && !userObj.restaurantId) {
-              await fetchRestaurantForUser(userObj);
+            if (restaurantInfo) {
+              const updatedUser = {
+                ...userObj,
+                restaurantId: restaurantInfo.restaurantId,
+                restaurantData: restaurantInfo.restaurantData
+              };
+              console.log('✅ User updated with restaurant data:', updatedUser);
+              setUser(updatedUser);
+              localStorage.setItem('user', JSON.stringify(updatedUser));
             } else {
+              console.log('❌ No restaurant data found, setting user without restaurant');
               setUser(userObj);
             }
           } else {
-            // Token is invalid, clear storage
-            console.log('❌ AuthContext - Token invalid, clearing storage');
-            localStorage.removeItem('token');
-            localStorage.removeItem('user');
-            setUser(null);
+            console.log('✅ User loaded from localStorage:', userObj);
+            setUser(userObj);
           }
         } catch (error) {
-          console.error('❌ AuthContext - Auth verification failed:', error);
+          console.error('❌ Auth verification failed:', error);
           localStorage.removeItem('token');
           localStorage.removeItem('user');
           setUser(null);
         }
       } else {
-        console.log('🔍 AuthContext - No token or user data found in localStorage');
+        console.log('🔍 No token or user data found');
         setUser(null);
       }
       
       setLoading(false);
       setAuthChecked(true);
-      console.log('✅ AuthContext - Authentication check completed');
     };
 
     checkAuthStatus();
   }, []);
 
-  // Helper function to fetch restaurant data
-  const fetchRestaurantForUser = async (userObj) => {
-    try {
-      console.log('🏪 Fetching restaurant for user:', userObj._id);
-      const restaurantResponse = await fetch(`${API_URL}/restaurants/owner/${userObj._id}`);
-      
-      if (restaurantResponse.ok) {
-        const restaurantData = await restaurantResponse.json();
-        if (restaurantData.success && restaurantData.restaurant) {
-          const updatedUser = {
-            ...userObj,
-            restaurantId: restaurantData.restaurant._id
-          };
-          console.log('✅ Restaurant found:', restaurantData.restaurant._id);
-          setUser(updatedUser);
-          localStorage.setItem('user', JSON.stringify(updatedUser));
-        } else {
-          console.log('❌ No restaurant found for user');
-          setUser(userObj);
-        }
-      } else {
-        console.log('❌ Restaurant fetch failed');
-        setUser(userObj);
-      }
-    } catch (error) {
-      console.error('❌ Error fetching restaurant:', error);
-      setUser(userObj);
-    }
-  };
-
-  // Enhanced login function - FIXED VERSION
+  // Login function - UPDATED
   const login = async (email, password) => {
     setLoading(true);
     
     try {
-      console.log('🔐 AuthContext - Attempting login for:', email);
+      console.log('🔐 Attempting login for:', email);
       
       const response = await fetch(`${API_URL}/auth/login`, {
         method: 'POST',
@@ -117,12 +155,11 @@ export const AuthProvider = ({ children }) => {
       });
 
       const data = await response.json();
-      console.log('🔐 AuthContext - Login API Response:', data);
+      console.log('🔐 Login API Response:', data);
 
       if (response.ok && data.success) {
-        // ✅ CRITICAL FIX: Ensure _id is properly set
         const userData = {
-          _id: data.user._id, // MongoDB always uses _id
+          _id: data.user._id,
           name: data.user.name,
           email: data.user.email,
           role: data.user.role,
@@ -131,62 +168,61 @@ export const AuthProvider = ({ children }) => {
           address: data.user.address
         };
         
-        console.log('✅ AuthContext - Login successful, user:', userData);
-        console.log('🆔 User ID after login:', userData._id);
-        
-        // CRITICAL FIX: Check if rider/restaurant is approved
-        if ((userData.role === 'rider' || userData.role === 'restaurant') && !userData.isApproved) {
-          console.log('🚫 AuthContext - Rider/Restaurant not approved, blocking login');
-          return { 
-            success: false, 
-            message: 'Your account is pending admin approval. Please wait for approval before logging in.' 
-          };
-        }
+        console.log('✅ Login successful, user:', userData);
         
         // For restaurant owners, fetch restaurant data
         if (userData.role === 'restaurant') {
-          await fetchRestaurantForUser(userData);
-        } else {
-          setUser(userData);
+          console.log('🏪 Fetching restaurant data for restaurant owner...');
+          const restaurantInfo = await fetchRestaurantData(userData._id, userData.email);
+          
+          if (restaurantInfo) {
+            userData.restaurantId = restaurantInfo.restaurantId;
+            userData.restaurantData = restaurantInfo.restaurantData;
+            console.log('✅ Restaurant data added to user:', userData.restaurantId);
+          } else {
+            console.log('❌ No restaurant data found for this user');
+          }
         }
         
+        if ((userData.role === 'rider' || userData.role === 'restaurant') && !userData.isApproved) {
+          console.log('🚫 Account not approved');
+          return { 
+            success: false, 
+            message: 'Your account is pending admin approval.' 
+          };
+        }
+        
+        setUser(userData);
         localStorage.setItem('token', data.token);
         localStorage.setItem('user', JSON.stringify(userData));
         
-        console.log('💾 AuthContext - User saved to localStorage');
-        
         return { 
           success: true, 
-          message: data.message || 'Login successful! 🎉', 
+          message: 'Login successful! 🎉', 
           user: userData 
         };
       } else {
-        console.log('❌ AuthContext - Login failed:', data.message);
         return { 
           success: false, 
-          message: data.message || 'Login failed. Please check your credentials.' 
+          message: data.message || 'Login failed.' 
         };
       }
-      
     } catch (error) {
-      console.error('❌ AuthContext - Login error:', error);
+      console.error('❌ Login error:', error);
       return { 
         success: false, 
-        message: 'Network error. Please check your internet connection.' 
+        message: 'Network error.' 
       };
     } finally {
       setLoading(false);
     }
   };
 
-  // Enhanced register function
+  // Register function
   const register = async (userData) => {
     setLoading(true);
     
     try {
-      console.log('📝 AuthContext - REGISTERING USER DATA:', userData);
-      console.log('🔗 AuthContext - Sending to:', `${API_URL}/auth/register`);
-
       const response = await fetch(`${API_URL}/auth/register`, {
         method: 'POST',
         headers: {
@@ -194,15 +230,10 @@ export const AuthProvider = ({ children }) => {
         },
         body: JSON.stringify(userData),
       });
-
-      console.log('📡 AuthContext - Registration response status:', response.status);
       
       const data = await response.json();
-      console.log('📝 AuthContext - Register API Response:', data);
 
       if (response.ok && data.success) {
-        console.log('✅ AuthContext - Registration successful! User data:', data.user);
-        
         const userInfo = {
           _id: data.user._id,
           name: data.user.name,
@@ -213,95 +244,72 @@ export const AuthProvider = ({ children }) => {
           address: data.user.address
         };
         
-        console.log('✅ AuthContext - User ID after registration:', userInfo._id);
-        console.log('✅ AuthContext - User Role:', userInfo.role);
-        console.log('✅ AuthContext - Is Approved:', userInfo.isApproved);
-        
-        // CRITICAL FIX: Don't auto-login if rider/restaurant needs approval
         if ((userInfo.role === 'rider' || userInfo.role === 'restaurant') && !userInfo.isApproved) {
-          console.log('🚫 AuthContext - Rider/Restaurant registered but needs approval - not auto-logging in');
           return { 
             success: true, 
-            message: 'Registration successful! Your account is pending admin approval. You will be notified once approved.', 
+            message: 'Registration successful! Your account is pending approval.', 
             user: userInfo,
             needsApproval: true
           };
         }
         
-        console.log('💾 AuthContext - Auto-logging in approved user:', userInfo);
-        
         // For restaurant owners, fetch restaurant data
         if (userInfo.role === 'restaurant') {
-          await fetchRestaurantForUser(userInfo);
-        } else {
-          setUser(userInfo);
+          const restaurantInfo = await fetchRestaurantData(userInfo._id, userInfo.email);
+          if (restaurantInfo) {
+            userInfo.restaurantId = restaurantInfo.restaurantId;
+            userInfo.restaurantData = restaurantInfo.restaurantData;
+          }
         }
         
+        setUser(userInfo);
         localStorage.setItem('token', data.token);
         localStorage.setItem('user', JSON.stringify(userInfo));
         
         return { 
           success: true, 
-          message: data.message || 'Registration successful! 🎉', 
+          message: 'Registration successful! 🎉', 
           user: userInfo 
         };
       } else {
-        console.log('❌ AuthContext - Registration failed:', data.message);
         return { 
           success: false, 
-          message: data.message || 'Registration failed. Please try again.' 
+          message: data.message || 'Registration failed.' 
         };
       }
-      
     } catch (error) {
-      console.error('❌ AuthContext - Registration network error:', error);
+      console.error('❌ Registration error:', error);
       return { 
         success: false, 
-        message: 'Network error. Please check your internet connection.' 
+        message: 'Network error.' 
       };
     } finally {
       setLoading(false);
     }
   };
 
-  // Enhanced logout function
+  // Logout function
   const logout = () => {
-    console.log('🚪 AuthContext - Logging out user:', user?.email);
+    console.log('🚪 Logging out user');
     setUser(null);
     localStorage.removeItem('token');
     localStorage.removeItem('user');
-    console.log('✅ AuthContext - Logout completed, redirecting to home...');
-    // Redirect to home page after logout
     window.location.href = '/';
   };
 
-  // Function to check if user has specific role
-  const hasRole = (role) => {
-    return user?.role === role;
-  };
-
-  // Function to check if user is approved
-  const isApproved = () => {
-    return user?.isApproved === true;
-  };
-
-  // Function to update user data
+  // Update user function
   const updateUser = (updatedUserData) => {
-    console.log('🔄 AuthContext - Updating user data:', updatedUserData);
     const newUserData = { ...user, ...updatedUserData };
     setUser(newUserData);
-    // Also update localStorage
     localStorage.setItem('user', JSON.stringify(newUserData));
-    console.log('✅ AuthContext - User data updated');
   };
 
-  // Function to refresh user data from backend
+  // Refresh user data
   const refreshUser = async () => {
     const token = localStorage.getItem('token');
     if (!token) return;
 
     try {
-      console.log('🔄 AuthContext - Refreshing user data from backend...');
       const response = await fetch(`${API_URL}/auth/me`, {
         headers: {
           'Authorization': `Bearer ${token}`
@@ -321,69 +329,65 @@ export const AuthProvider = ({ children }) => {
             address: data.user.address
           };
           
-          // For restaurant owners, fetch restaurant data
           if (userData.role === 'restaurant') {
-            await fetchRestaurantForUser(userData);
-          } else {
-            setUser(userData);
-            localStorage.setItem('user', JSON.stringify(userData));
+            const restaurantInfo = await fetchRestaurantData(userData._id, userData.email);
+            if (restaurantInfo) {
+              userData.restaurantId = restaurantInfo.restaurantId;
+              userData.restaurantData = restaurantInfo.restaurantData;
+            }
           }
-          console.log('✅ AuthContext - User data refreshed from backend');
+          
+          setUser(userData);
+          localStorage.setItem('user', JSON.stringify(userData));
         }
       }
     } catch (error) {
-      console.error('❌ AuthContext - Error refreshing user data:', error);
+      console.error('❌ Error refreshing user data:', error);
     }
   };
 
-  // Function to refresh restaurant data
+  // Refresh restaurant data
   const refreshRestaurantData = async () => {
     if (user?.role === 'restaurant' && user?._id) {
-      await fetchRestaurantForUser(user);
+      const restaurantInfo = await fetchRestaurantData(user._id, user.email);
+      if (restaurantInfo) {
+        const updatedUser = {
+          ...user,
+          restaurantId: restaurantInfo.restaurantId,
+          restaurantData: restaurantInfo.restaurantData
+        };
+        setUser(updatedUser);
+        localStorage.setItem('user', JSON.stringify(updatedUser));
+      }
     }
   };
 
-  // Function to check if user is authenticated
-  const isAuthenticated = () => {
-    return !!user && !!localStorage.getItem('token');
-  };
-
-  // Function to get user ID safely
-  const getUserId = () => {
-    return user?._id;
-  };
-
-  // Function to get restaurant ID safely
-  const getRestaurantId = () => {
-    return user?.restaurantId;
-  };
-
-  // Function to check if auth check is complete
-  const isAuthChecked = () => {
-    return authChecked;
-  };
+  // Utility functions
+  const hasRole = (role) => user?.role === role;
+  const isApproved = () => user?.isApproved === true;
+  const isAuthenticated = () => !!user && !!localStorage.getItem('token');
+  const getUserId = () => user?._id;
+  const getRestaurantId = () => user?.restaurantId;
+  const getRestaurantData = () => user?.restaurantData;
+  const isAuthChecked = () => authChecked;
 
   return (
     <AuthContext.Provider value={{ 
-      // State
       user, 
       loading,
       authChecked,
-      
-      // Auth actions
       login, 
       register, 
       logout,
       refreshUser,
       updateUser,
       refreshRestaurantData,
-      
-      // Utility functions
       hasRole,
       isApproved,
       isAuthenticated,
       getUserId,
       getRestaurantId,
+      getRestaurantData,
       isAuthChecked
     }}>
       {children}

@@ -8,7 +8,7 @@ import {
 import { useAuth } from '../../context/AuthContext';
 
 const RestaurantDashboard = () => {
-    const { user, logout, getRestaurantId, refreshRestaurantData } = useAuth();
+    const { user, logout, getRestaurantId, getRestaurantData, refreshRestaurantData } = useAuth();
     const [activeTab, setActiveTab] = useState('dashboard');
     const [loading, setLoading] = useState(false);
     const [showAddProduct, setShowAddProduct] = useState(false);
@@ -18,11 +18,11 @@ const RestaurantDashboard = () => {
     
     const API_URL = 'https://food-ordering-app-production-35eb.up.railway.app/api';
     const [restaurantId, setRestaurantId] = useState(null);
+    const [restaurant, setRestaurant] = useState({});
 
     // State
     const [menuItems, setMenuItems] = useState([]);
     const [orders, setOrders] = useState([]);
-    const [restaurant, setRestaurant] = useState({});
     const [newProduct, setNewProduct] = useState({
         name: '',
         price: '',
@@ -46,53 +46,60 @@ const RestaurantDashboard = () => {
         bannerImage: ''
     });
 
-    // Get restaurant ID - FIXED VERSION
-    const getRestaurantIdFromUser = async () => {
-        console.log('🔍 Getting restaurant ID for user:', user);
+    // Get restaurant ID - MULTIPLE FALLBACK METHODS
+    const initializeRestaurantData = async () => {
+        console.log('🔍 Initializing restaurant data...');
+        console.log('👤 Current user:', user);
+
+        // Method 1: From AuthContext
+        let currentRestaurantId = getRestaurantId();
+        let restaurantData = getRestaurantData();
         
-        // Try from auth context first
-        const idFromAuth = getRestaurantId();
-        if (idFromAuth) {
-            console.log('✅ Using restaurant ID from auth context:', idFromAuth);
-            return idFromAuth;
+        if (currentRestaurantId && restaurantData) {
+            console.log('✅ Restaurant data from AuthContext:', currentRestaurantId);
+            setRestaurantId(currentRestaurantId);
+            setRestaurant(restaurantData);
+            return currentRestaurantId;
         }
 
-        // If not in auth context, try to fetch by owner ID
+        // Method 2: Try to fetch from API using user ID
         if (user?._id) {
             try {
                 console.log('🔄 Fetching restaurant by owner ID:', user._id);
                 const response = await fetch(`${API_URL}/restaurants/owner/${user._id}`);
-                console.log('📡 Restaurant fetch response status:', response.status);
                 
                 if (response.ok) {
                     const data = await response.json();
-                    console.log('📊 Restaurant fetch response:', data);
+                    console.log('📊 Restaurant API response:', data);
                     
                     if (data.success && data.restaurant) {
-                        console.log('✅ Found restaurant by owner:', data.restaurant._id);
-                        // Update auth context with restaurant ID
+                        console.log('✅ Restaurant found by owner ID:', data.restaurant._id);
+                        setRestaurantId(data.restaurant._id);
+                        setRestaurant(data.restaurant);
+                        
+                        // Update AuthContext with restaurant data
                         refreshRestaurantData();
                         return data.restaurant._id;
-                    } else {
-                        console.log('❌ No restaurant found for owner');
                     }
-                } else {
-                    console.log('❌ Restaurant fetch failed with status:', response.status);
                 }
             } catch (error) {
                 console.error('❌ Error fetching restaurant by owner:', error);
             }
         }
 
-        // Last resort: try by email
+        // Method 3: Try by email
         if (user?.email) {
             try {
-                console.log('🔄 Trying to fetch restaurant by email:', user.email);
+                console.log('🔄 Fetching restaurant by email:', user.email);
                 const response = await fetch(`${API_URL}/restaurants/email/${user.email}`);
+                
                 if (response.ok) {
                     const data = await response.json();
                     if (data.success && data.restaurant) {
-                        console.log('✅ Found restaurant by email:', data.restaurant._id);
+                        console.log('✅ Restaurant found by email:', data.restaurant._id);
+                        setRestaurantId(data.restaurant._id);
+                        setRestaurant(data.restaurant);
+                        refreshRestaurantData();
                         return data.restaurant._id;
                     }
                 }
@@ -101,74 +108,60 @@ const RestaurantDashboard = () => {
             }
         }
 
-        console.log('❌ No restaurant ID found through any method');
+        console.log('❌ Could not find restaurant data');
         return null;
     };
 
-    // Fetch all data - FIXED VERSION
+    // Fetch all data
     const fetchData = async () => {
         setLoading(true);
         try {
-            console.log('🔄 Starting data fetch for user:', user);
+            console.log('🔄 Starting data fetch...');
             
-            // Get restaurant ID first
-            const currentRestaurantId = await getRestaurantIdFromUser();
+            // Initialize restaurant data first
+            const currentRestaurantId = await initializeRestaurantData();
             
             if (!currentRestaurantId) {
-                console.error('❌ No restaurant ID found for user');
+                console.error('❌ No restaurant ID found');
                 setLoading(false);
                 return;
             }
 
-            setRestaurantId(currentRestaurantId);
             console.log('🏪 Fetching data for restaurant:', currentRestaurantId);
             
-            // Fetch restaurant details
+            // Fetch updated restaurant details
             const restaurantResponse = await fetch(`${API_URL}/restaurants/${currentRestaurantId}`);
-            const restaurantData = await restaurantResponse.json();
-            console.log('🏪 Restaurant data response:', restaurantData);
-            
-            if (restaurantResponse.ok && restaurantData.restaurant) {
-                const restaurantInfo = restaurantData.restaurant;
-                setRestaurant(restaurantInfo);
-                
-                // Set profile data from restaurant
-                setProfileData({
-                    description: restaurantInfo.description || '',
-                    openingHours: restaurantInfo.openingHours || { open: '08:00', close: '22:00' },
-                    deliveryTime: restaurantInfo.deliveryTime || '25-35 min',
-                    deliveryFee: restaurantInfo.deliveryFee || 35,
-                    image: restaurantInfo.image || '',
-                    bannerImage: restaurantInfo.bannerImage || ''
-                });
-
-                // Fetch products
-                console.log('📦 Fetching products...');
-                const productsResponse = await fetch(`${API_URL}/products/restaurant/${currentRestaurantId}`);
-                if (productsResponse.ok) {
-                    const productsData = await productsResponse.json();
-                    setMenuItems(productsData.products || []);
-                    console.log('✅ Products loaded:', productsData.products?.length || 0);
-                } else {
-                    console.log('❌ Products fetch failed');
-                    setMenuItems([]);
+            if (restaurantResponse.ok) {
+                const restaurantData = await restaurantResponse.json();
+                if (restaurantData.success && restaurantData.restaurant) {
+                    setRestaurant(restaurantData.restaurant);
+                    
+                    // Update profile data
+                    setProfileData({
+                        description: restaurantData.restaurant.description || '',
+                        openingHours: restaurantData.restaurant.openingHours || { open: '08:00', close: '22:00' },
+                        deliveryTime: restaurantData.restaurant.deliveryTime || '25-35 min',
+                        deliveryFee: restaurantData.restaurant.deliveryFee || 35,
+                        image: restaurantData.restaurant.image || '',
+                        bannerImage: restaurantData.restaurant.bannerImage || ''
+                    });
                 }
+            }
 
-                // Fetch orders
-                console.log('📦 Fetching orders...');
-                const ordersResponse = await fetch(`${API_URL}/orders/restaurant/${currentRestaurantId}`);
-                console.log('📦 Orders response status:', ordersResponse.status);
-                
-                if (ordersResponse.ok) {
-                    const ordersData = await ordersResponse.json();
-                    setOrders(ordersData.orders || []);
-                    console.log('✅ Orders loaded:', ordersData.orders?.length || 0);
-                } else {
-                    console.log('❌ Orders fetch failed');
-                    setOrders([]);
-                }
-            } else {
-                console.log('❌ Restaurant not found or invalid response');
+            // Fetch products
+            const productsResponse = await fetch(`${API_URL}/products/restaurant/${currentRestaurantId}`);
+            if (productsResponse.ok) {
+                const productsData = await productsResponse.json();
+                setMenuItems(productsData.products || []);
+                console.log('✅ Products loaded:', productsData.products?.length || 0);
+            }
+
+            // Fetch orders
+            const ordersResponse = await fetch(`${API_URL}/orders/restaurant/${currentRestaurantId}`);
+            if (ordersResponse.ok) {
+                const ordersData = await ordersResponse.json();
+                setOrders(ordersData.orders || []);
+                console.log('✅ Orders loaded:', ordersData.orders?.length || 0);
             }
 
         } catch (error) {
@@ -179,11 +172,9 @@ const RestaurantDashboard = () => {
     };
 
     useEffect(() => {
-        if (user && user._id) {
-            console.log('👤 User detected, fetching data...');
+        if (user && user.role === 'restaurant') {
+            console.log('👤 Restaurant user detected, fetching data...');
             fetchData();
-        } else {
-            console.log('👤 No user or user ID found');
         }
     }, [user]);
 
@@ -197,7 +188,7 @@ const RestaurantDashboard = () => {
         }
 
         if (!restaurantId) {
-            alert('Restaurant not found. Please refresh the page.');
+            alert('Restaurant not found');
             return;
         }
 
@@ -212,8 +203,6 @@ const RestaurantDashboard = () => {
                 image: newProduct.image,
                 restaurantId: restaurantId
             };
-
-            console.log('📦 Adding product:', productData);
 
             const response = await fetch(`${API_URL}/products`, {
                 method: 'POST',
@@ -234,7 +223,7 @@ const RestaurantDashboard = () => {
                 });
                 fetchData();
             } else {
-                alert(`❌ Failed: ${data.message || 'Please check backend'}`);
+                alert(`❌ Failed: ${data.message || 'Error adding product'}`);
             }
         } catch (error) {
             console.error('Error:', error);
@@ -247,13 +236,11 @@ const RestaurantDashboard = () => {
         e.preventDefault();
         
         if (!restaurantId) {
-            alert('Restaurant not found. Please refresh the page.');
+            alert('Restaurant not found');
             return;
         }
         
         try {
-            console.log('🔄 Updating restaurant profile...');
-
             const response = await fetch(`${API_URL}/restaurants/${restaurantId}`, {
                 method: 'PUT',
                 headers: {
@@ -273,7 +260,7 @@ const RestaurantDashboard = () => {
             }
         } catch (error) {
             console.error('Error updating profile:', error);
-            alert('❌ Network error: ' + error.message);
+            alert('❌ Network error');
         }
     };
 
@@ -352,11 +339,8 @@ const RestaurantDashboard = () => {
         return (
             <div className="min-h-screen bg-gray-50 flex items-center justify-center">
                 <div className="text-center">
-                    <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                        <Store className="text-red-600" size={32} />
-                    </div>
                     <h2 className="text-xl font-bold text-gray-900 mb-2">Not Logged In</h2>
-                    <p className="text-gray-600 mb-4">Please login to access the restaurant dashboard.</p>
+                    <p className="text-gray-600">Please login to access the restaurant dashboard.</p>
                 </div>
             </div>
         );
@@ -369,14 +353,14 @@ const RestaurantDashboard = () => {
                     <div className="w-16 h-16 bg-yellow-100 rounded-full flex items-center justify-center mx-auto mb-4">
                         <Store className="text-yellow-600" size={32} />
                     </div>
-                    <h2 className="text-xl font-bold text-gray-900 mb-2">Restaurant Not Found</h2>
-                    <p className="text-gray-600 mb-4">We couldn't find your restaurant data.</p>
+                    <h2 className="text-xl font-bold text-gray-900 mb-2">Restaurant Setup Required</h2>
+                    <p className="text-gray-600 mb-4">Your restaurant account needs to be set up.</p>
                     <div className="space-y-2">
                         <button
                             onClick={fetchData}
                             className="bg-orange-600 text-white px-6 py-2 rounded-lg hover:bg-orange-700 block mx-auto"
                         >
-                            Try Again
+                            Retry
                         </button>
                         <button
                             onClick={logout}
@@ -384,12 +368,6 @@ const RestaurantDashboard = () => {
                         >
                             Logout
                         </button>
-                    </div>
-                    <div className="mt-4 p-4 bg-gray-100 rounded-lg text-left">
-                        <p className="text-sm text-gray-600">Debug Info:</p>
-                        <p className="text-xs">User ID: {user?._id}</p>
-                        <p className="text-xs">User Email: {user?.email}</p>
-                        <p className="text-xs">User Role: {user?.role}</p>
                     </div>
                 </div>
             </div>
@@ -409,9 +387,8 @@ const RestaurantDashboard = () => {
                             <div>
                                 <h1 className="text-xl font-bold text-gray-900">Restaurant Dashboard</h1>
                                 <p className="text-sm text-gray-500">
-                                    Welcome, {user?.name} - {restaurant.name || 'Your Restaurant'}
+                                    {restaurant.name || 'Your Restaurant'} - {user?.name}
                                 </p>
-                                <p className="text-xs text-gray-400">Restaurant ID: {restaurantId}</p>
                             </div>
                         </div>
                         
