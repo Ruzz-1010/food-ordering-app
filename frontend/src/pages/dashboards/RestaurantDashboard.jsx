@@ -133,6 +133,21 @@ const RestaurantDashboard = () => {
     });
   };
 
+  // Earnings array (build-safe)
+  const earnings = orders
+    .filter(order => order.status === 'completed' || order.status === 'delivered')
+    .reduce((groups, order) => {
+      const date = new Date(order.createdAt).toLocaleDateString();
+      if (!groups[date]) groups[date] = { revenue: 0, orders: 0 };
+      groups[date].revenue += order.total || 0;
+      groups[date].orders += 1;
+      return groups;
+    }, {});
+
+  const earningsArray = Object.entries(earnings)
+    .map(([date, data]) => ({ date, ...data }))
+    .slice(0, 7);
+
   // ✅ Add product
   const handleAddProduct = async (e) => {
     e.preventDefault();
