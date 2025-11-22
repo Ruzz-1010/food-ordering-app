@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const Restaurant = require('../models/Restaurant');
+const mongoose = require('mongoose');
 
 // GET ALL RESTAURANTS
 router.get('/', async (req, res) => {
@@ -261,12 +262,28 @@ router.get('/stats/count', async (req, res) => {
   }
 });
 
-// GET RESTAURANT BY OWNER ID
+// GET RESTAURANT BY OWNER ID - FIXED VERSION
 router.get('/owner/:ownerId', async (req, res) => {
   try {
     const { ownerId } = req.params;
     console.log('🔍 Fetching restaurant for owner:', ownerId);
     
+    // Check if ownerId is valid
+    if (!ownerId || ownerId === 'undefined' || ownerId === 'null') {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid owner ID provided'
+      });
+    }
+
+    // Check if ownerId is a valid MongoDB ObjectId
+    if (!mongoose.Types.ObjectId.isValid(ownerId)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid owner ID format'
+      });
+    }
+
     const restaurant = await Restaurant.findOne({ owner: ownerId })
       .populate('owner', 'name email phone');
 
@@ -293,12 +310,62 @@ router.get('/owner/:ownerId', async (req, res) => {
   }
 });
 
+// GET ALL RESTAURANTS BY OWNER (Multiple restaurants support)
+router.get('/owner/:ownerId/all', async (req, res) => {
+  try {
+    const { ownerId } = req.params;
+    console.log('🔍 Fetching ALL restaurants for owner:', ownerId);
+    
+    // Check if ownerId is valid
+    if (!ownerId || ownerId === 'undefined' || ownerId === 'null') {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid owner ID provided'
+      });
+    }
+
+    if (!mongoose.Types.ObjectId.isValid(ownerId)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid owner ID format'
+      });
+    }
+
+    const restaurants = await Restaurant.find({ owner: ownerId })
+      .populate('owner', 'name email phone')
+      .sort({ createdAt: -1 });
+
+    console.log(`✅ Found ${restaurants.length} restaurants for owner`);
+
+    res.json({
+      success: true,
+      count: restaurants.length,
+      restaurants
+    });
+
+  } catch (error) {
+    console.error('❌ Get restaurants by owner error:', error);
+    res.status(500).json({ 
+      success: false,
+      message: 'Failed to get restaurants: ' + error.message 
+    });
+  }
+});
+
 // FIX RESTAURANT OWNER
 router.put('/:id/fix-owner', async (req, res) => {
   try {
     const { ownerId } = req.body;
     console.log('🔧 Fixing restaurant owner:', req.params.id, '->', ownerId);
     
+    // Validate ownerId
+    if (!ownerId || !mongoose.Types.ObjectId.isValid(ownerId)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid owner ID'
+      });
+    }
+
     const restaurant = await Restaurant.findByIdAndUpdate(
       req.params.id,
       { owner: ownerId },
@@ -325,6 +392,38 @@ router.put('/:id/fix-owner', async (req, res) => {
     res.status(500).json({ 
       success: false,
       message: 'Failed to fix restaurant owner: ' + error.message 
+    });
+  }
+});
+
+// GET RESTAURANT BY EMAIL (Alternative method)
+router.get('/email/:email', async (req, res) => {
+  try {
+    const { email } = req.params;
+    console.log('🔍 Fetching restaurant by email:', email);
+    
+    const restaurant = await Restaurant.findOne({ email: email.toLowerCase() })
+      .populate('owner', 'name email phone');
+
+    if (!restaurant) {
+      return res.status(404).json({
+        success: false,
+        message: 'Restaurant not found with this email'
+      });
+    }
+
+    console.log('✅ Found restaurant by email:', restaurant.name);
+
+    res.json({
+      success: true,
+      restaurant
+    });
+
+  } catch (error) {
+    console.error('❌ Get restaurant by email error:', error);
+    res.status(500).json({ 
+      success: false,
+      message: 'Failed to get restaurant by email' 
     });
   }
 });

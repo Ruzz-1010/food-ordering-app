@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { 
     Store, Plus, Package, DollarSign, Clock, Star, Eye, X, Save, 
-    LogOut, RefreshCw, Image, MapPin, Navigation, ChefHat, 
-    CheckCircle, Users, TrendingUp, Phone, MessageCircle, Settings,
-    User, Edit, Camera, Upload, AlertCircle, Building, List
+    LogOut, RefreshCw, Image, MapPin, ChefHat, 
+    CheckCircle, Users, Phone, MessageCircle,
+    User, AlertCircle, Building, List
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 
@@ -15,7 +15,6 @@ const RestaurantDashboard = () => {
     const [showAddRestaurant, setShowAddRestaurant] = useState(false);
     const [selectedOrder, setSelectedOrder] = useState(null);
     const [showOrderDetails, setShowOrderDetails] = useState(false);
-    const [showProfile, setShowProfile] = useState(false);
     const [error, setError] = useState('');
     
     const API_URL = 'https://food-ordering-app-production-35eb.up.railway.app/api';
@@ -60,23 +59,29 @@ const RestaurantDashboard = () => {
         };
     };
 
-    // Fetch all restaurants owned by the user
+    // Fetch all restaurants owned by the user - FIXED VERSION
     const fetchRestaurants = async () => {
         setLoading(true);
         setError('');
         try {
             console.log('🔄 Fetching restaurants for user:', user?._id);
+            console.log('👤 User object:', user);
             
-            const response = await fetch(`${API_URL}/restaurants/owner/${user?._id}`, {
+            if (!user?._id) {
+                setError('User not loaded properly. Please login again.');
+                return;
+            }
+
+            // Use the endpoint that gets ALL restaurants for owner
+            const response = await fetch(`${API_URL}/restaurants/owner/${user._id}/all`, {
                 headers: getAuthHeaders()
             });
             
             const data = await response.json();
-            console.log('🏪 Restaurants response:', data);
+            console.log('🏪 Restaurants API response:', data);
 
             if (response.ok && data.success) {
                 if (data.restaurants && data.restaurants.length > 0) {
-                    // User has multiple restaurants
                     setRestaurants(data.restaurants);
                     // Auto-select the first restaurant
                     setSelectedRestaurant(data.restaurants[0]);
@@ -84,32 +89,48 @@ const RestaurantDashboard = () => {
                     
                     // Fetch data for the selected restaurant
                     await fetchRestaurantData(data.restaurants[0]._id);
-                } else if (data.restaurant) {
-                    // User has single restaurant (backward compatibility)
-                    setRestaurants([data.restaurant]);
-                    setSelectedRestaurant(data.restaurant);
-                    console.log('✅ Found single restaurant:', data.restaurant.name);
-                    
-                    // Fetch data for the selected restaurant
-                    await fetchRestaurantData(data.restaurant._id);
                 } else {
                     setError('No restaurants found. Create your first restaurant!');
                     setRestaurants([]);
                     setSelectedRestaurant(null);
                 }
             } else {
-                setError(data.message || 'Failed to load restaurants');
-                setRestaurants([]);
-                setSelectedRestaurant(null);
+                // Try the single restaurant endpoint as fallback
+                await fetchSingleRestaurant();
             }
 
         } catch (error) {
             console.error('❌ Error fetching restaurants:', error);
-            setError('Network error loading restaurants');
+            setError('Network error loading restaurants: ' + error.message);
             setRestaurants([]);
             setSelectedRestaurant(null);
         } finally {
             setLoading(false);
+        }
+    };
+
+    // Fallback: Fetch single restaurant
+    const fetchSingleRestaurant = async () => {
+        try {
+            console.log('🔄 Trying single restaurant endpoint...');
+            const response = await fetch(`${API_URL}/restaurants/owner/${user._id}`, {
+                headers: getAuthHeaders()
+            });
+            
+            const data = await response.json();
+            console.log('🏪 Single restaurant response:', data);
+
+            if (response.ok && data.success && data.restaurant) {
+                setRestaurants([data.restaurant]);
+                setSelectedRestaurant(data.restaurant);
+                console.log('✅ Found single restaurant:', data.restaurant.name);
+                await fetchRestaurantData(data.restaurant._id);
+            } else {
+                setError(data.message || 'No restaurants found. Create your first restaurant!');
+            }
+        } catch (error) {
+            console.error('❌ Error fetching single restaurant:', error);
+            setError('Failed to load restaurant data');
         }
     };
 
@@ -124,6 +145,8 @@ const RestaurantDashboard = () => {
                 const productsData = await productsResponse.json();
                 setMenuItems(productsData.products || []);
                 console.log('📦 Products found:', productsData.products?.length || 0);
+            } else {
+                console.log('❌ Failed to fetch products');
             }
 
             // Fetch orders
@@ -428,6 +451,16 @@ const RestaurantDashboard = () => {
                 </div>
             </header>
 
+            {/* Error Display */}
+            {error && (
+                <div className="max-w-7xl mx-auto px-4 py-2">
+                    <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded flex items-center">
+                        <AlertCircle size={20} className="mr-2" />
+                        <span>{error}</span>
+                    </div>
+                </div>
+            )}
+
             {/* Restaurant Selector */}
             {restaurants.length > 0 && (
                 <div className="bg-white border-b">
@@ -450,16 +483,6 @@ const RestaurantDashboard = () => {
                                 ))}
                             </div>
                         </div>
-                    </div>
-                </div>
-            )}
-
-            {/* Error Display */}
-            {error && (
-                <div className="max-w-7xl mx-auto px-4 py-2">
-                    <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded flex items-center">
-                        <AlertCircle size={20} className="mr-2" />
-                        <span>{error}</span>
                     </div>
                 </div>
             )}
