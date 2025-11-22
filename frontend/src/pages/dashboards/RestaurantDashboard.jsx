@@ -8,11 +8,10 @@ import {
 import { useAuth } from '../../context/AuthContext';
 
 const RestaurantDashboard = () => {
-    const { user, logout, getRestaurantId } = useAuth();
+    const { user, logout, getRestaurantId, refreshRestaurantData } = useAuth();
     const [activeTab, setActiveTab] = useState('dashboard');
     const [loading, setLoading] = useState(false);
     const [showAddProduct, setShowAddProduct] = useState(false);
-    const [showLocation, setShowLocation] = useState(false);
     const [selectedOrder, setSelectedOrder] = useState(null);
     const [showOrderDetails, setShowOrderDetails] = useState(false);
     const [showProfile, setShowProfile] = useState(false);
@@ -33,10 +32,6 @@ const RestaurantDashboard = () => {
         ingredients: '',
         image: ''
     });
-    const [location, setLocation] = useState({
-        address: '',
-        coordinates: { lat: 9.7392, lng: 118.7353 }
-    });
 
     // Profile State
     const [profileData, setProfileData] = useState({
@@ -51,54 +46,87 @@ const RestaurantDashboard = () => {
         bannerImage: ''
     });
 
-    // Get restaurant ID from auth context or fetch it
+    // Get restaurant ID - FIXED VERSION
     const getRestaurantIdFromUser = async () => {
+        console.log('🔍 Getting restaurant ID for user:', user);
+        
+        // Try from auth context first
         const idFromAuth = getRestaurantId();
         if (idFromAuth) {
-            console.log('🏪 Using restaurant ID from auth:', idFromAuth);
+            console.log('✅ Using restaurant ID from auth context:', idFromAuth);
             return idFromAuth;
         }
 
-        // If not in auth context, fetch it from API
+        // If not in auth context, try to fetch by owner ID
         if (user?._id) {
             try {
-                console.log('🔍 Fetching restaurant ID for user:', user._id);
+                console.log('🔄 Fetching restaurant by owner ID:', user._id);
                 const response = await fetch(`${API_URL}/restaurants/owner/${user._id}`);
-                const data = await response.json();
+                console.log('📡 Restaurant fetch response status:', response.status);
                 
-                if (response.ok && data.success && data.restaurant) {
-                    console.log('✅ Found restaurant:', data.restaurant._id);
-                    return data.restaurant._id;
+                if (response.ok) {
+                    const data = await response.json();
+                    console.log('📊 Restaurant fetch response:', data);
+                    
+                    if (data.success && data.restaurant) {
+                        console.log('✅ Found restaurant by owner:', data.restaurant._id);
+                        // Update auth context with restaurant ID
+                        refreshRestaurantData();
+                        return data.restaurant._id;
+                    } else {
+                        console.log('❌ No restaurant found for owner');
+                    }
+                } else {
+                    console.log('❌ Restaurant fetch failed with status:', response.status);
                 }
             } catch (error) {
-                console.error('Error fetching restaurant ID:', error);
+                console.error('❌ Error fetching restaurant by owner:', error);
             }
         }
-        
+
+        // Last resort: try by email
+        if (user?.email) {
+            try {
+                console.log('🔄 Trying to fetch restaurant by email:', user.email);
+                const response = await fetch(`${API_URL}/restaurants/email/${user.email}`);
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.success && data.restaurant) {
+                        console.log('✅ Found restaurant by email:', data.restaurant._id);
+                        return data.restaurant._id;
+                    }
+                }
+            } catch (error) {
+                console.error('❌ Error fetching restaurant by email:', error);
+            }
+        }
+
+        console.log('❌ No restaurant ID found through any method');
         return null;
     };
 
-    // Fetch all data - UPDATED VERSION
+    // Fetch all data - FIXED VERSION
     const fetchData = async () => {
         setLoading(true);
         try {
+            console.log('🔄 Starting data fetch for user:', user);
+            
             // Get restaurant ID first
             const currentRestaurantId = await getRestaurantIdFromUser();
             
             if (!currentRestaurantId) {
                 console.error('❌ No restaurant ID found for user');
-                alert('Restaurant not found. Please contact support.');
                 setLoading(false);
                 return;
             }
 
             setRestaurantId(currentRestaurantId);
-            console.log('🔄 Fetching data for restaurant:', currentRestaurantId);
+            console.log('🏪 Fetching data for restaurant:', currentRestaurantId);
             
             // Fetch restaurant details
             const restaurantResponse = await fetch(`${API_URL}/restaurants/${currentRestaurantId}`);
             const restaurantData = await restaurantResponse.json();
-            console.log('🏪 Restaurant data:', restaurantData);
+            console.log('🏪 Restaurant data response:', restaurantData);
             
             if (restaurantResponse.ok && restaurantData.restaurant) {
                 const restaurantInfo = restaurantData.restaurant;
@@ -115,48 +143,51 @@ const RestaurantDashboard = () => {
                 });
 
                 // Fetch products
+                console.log('📦 Fetching products...');
                 const productsResponse = await fetch(`${API_URL}/products/restaurant/${currentRestaurantId}`);
                 if (productsResponse.ok) {
                     const productsData = await productsResponse.json();
                     setMenuItems(productsData.products || []);
-                    console.log('📦 Products:', productsData.products);
+                    console.log('✅ Products loaded:', productsData.products?.length || 0);
                 } else {
-                    console.log('❌ Products fetch failed:', productsResponse.status);
+                    console.log('❌ Products fetch failed');
                     setMenuItems([]);
                 }
 
-                // Fetch orders - USING THE CORRECT ENDPOINT
+                // Fetch orders
+                console.log('📦 Fetching orders...');
                 const ordersResponse = await fetch(`${API_URL}/orders/restaurant/${currentRestaurantId}`);
                 console.log('📦 Orders response status:', ordersResponse.status);
                 
                 if (ordersResponse.ok) {
                     const ordersData = await ordersResponse.json();
-                    console.log('📦 Orders data:', ordersData);
                     setOrders(ordersData.orders || []);
+                    console.log('✅ Orders loaded:', ordersData.orders?.length || 0);
                 } else {
-                    console.log('❌ Orders fetch failed:', ordersResponse.status);
+                    console.log('❌ Orders fetch failed');
                     setOrders([]);
                 }
             } else {
-                console.log('❌ Restaurant not found');
-                alert('Restaurant not found. Please contact support.');
+                console.log('❌ Restaurant not found or invalid response');
             }
 
         } catch (error) {
-            console.error('Error fetching data:', error);
-            alert('Error loading data. Please check your connection.');
+            console.error('❌ Error fetching data:', error);
         } finally {
             setLoading(false);
         }
     };
 
     useEffect(() => {
-        if (user) {
+        if (user && user._id) {
+            console.log('👤 User detected, fetching data...');
             fetchData();
+        } else {
+            console.log('👤 No user or user ID found');
         }
     }, [user]);
 
-    // Add product - UPDATED
+    // Add product
     const handleAddProduct = async (e) => {
         e.preventDefault();
         
@@ -193,7 +224,6 @@ const RestaurantDashboard = () => {
             });
 
             const data = await response.json();
-            console.log('📦 Add product response:', data);
 
             if (response.ok) {
                 alert('✅ Product added successfully!');
@@ -212,7 +242,7 @@ const RestaurantDashboard = () => {
         }
     };
 
-    // Update Profile - UPDATED
+    // Update Profile
     const handleUpdateProfile = async (e) => {
         e.preventDefault();
         
@@ -223,7 +253,6 @@ const RestaurantDashboard = () => {
         
         try {
             console.log('🔄 Updating restaurant profile...');
-            console.log('📦 Data to update:', profileData);
 
             const response = await fetch(`${API_URL}/restaurants/${restaurantId}`, {
                 method: 'PUT',
@@ -234,7 +263,6 @@ const RestaurantDashboard = () => {
             });
 
             const data = await response.json();
-            console.log('📡 Update response:', data);
 
             if (response.ok && data.success) {
                 alert('✅ Profile updated successfully!');
@@ -249,7 +277,7 @@ const RestaurantDashboard = () => {
         }
     };
 
-    // Update order status - UPDATED
+    // Update order status
     const handleUpdateOrderStatus = async (orderId, newStatus) => {
         try {
             const response = await fetch(`${API_URL}/orders/${orderId}/status`, {
@@ -261,7 +289,6 @@ const RestaurantDashboard = () => {
             });
 
             const data = await response.json();
-            console.log('📦 Update order status response:', data);
 
             if (response.ok) {
                 await fetchData();
@@ -321,21 +348,49 @@ const RestaurantDashboard = () => {
         );
     }
 
-    if (!restaurantId) {
+    if (!user) {
         return (
             <div className="min-h-screen bg-gray-50 flex items-center justify-center">
                 <div className="text-center">
                     <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
                         <Store className="text-red-600" size={32} />
                     </div>
+                    <h2 className="text-xl font-bold text-gray-900 mb-2">Not Logged In</h2>
+                    <p className="text-gray-600 mb-4">Please login to access the restaurant dashboard.</p>
+                </div>
+            </div>
+        );
+    }
+
+    if (!restaurantId) {
+        return (
+            <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+                <div className="text-center">
+                    <div className="w-16 h-16 bg-yellow-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <Store className="text-yellow-600" size={32} />
+                    </div>
                     <h2 className="text-xl font-bold text-gray-900 mb-2">Restaurant Not Found</h2>
                     <p className="text-gray-600 mb-4">We couldn't find your restaurant data.</p>
-                    <button
-                        onClick={fetchData}
-                        className="bg-orange-600 text-white px-6 py-2 rounded-lg hover:bg-orange-700"
-                    >
-                        Try Again
-                    </button>
+                    <div className="space-y-2">
+                        <button
+                            onClick={fetchData}
+                            className="bg-orange-600 text-white px-6 py-2 rounded-lg hover:bg-orange-700 block mx-auto"
+                        >
+                            Try Again
+                        </button>
+                        <button
+                            onClick={logout}
+                            className="bg-gray-600 text-white px-6 py-2 rounded-lg hover:bg-gray-700 block mx-auto"
+                        >
+                            Logout
+                        </button>
+                    </div>
+                    <div className="mt-4 p-4 bg-gray-100 rounded-lg text-left">
+                        <p className="text-sm text-gray-600">Debug Info:</p>
+                        <p className="text-xs">User ID: {user?._id}</p>
+                        <p className="text-xs">User Email: {user?.email}</p>
+                        <p className="text-xs">User Role: {user?.role}</p>
+                    </div>
                 </div>
             </div>
         );
@@ -356,7 +411,7 @@ const RestaurantDashboard = () => {
                                 <p className="text-sm text-gray-500">
                                     Welcome, {user?.name} - {restaurant.name || 'Your Restaurant'}
                                 </p>
-                                <p className="text-xs text-gray-400">ID: {restaurantId}</p>
+                                <p className="text-xs text-gray-400">Restaurant ID: {restaurantId}</p>
                             </div>
                         </div>
                         
