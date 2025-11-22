@@ -112,6 +112,65 @@ const RestaurantDashboard = () => {
         return null;
     };
 
+    // Fetch orders with multiple endpoint attempts
+    const fetchOrders = async (restaurantId) => {
+        try {
+            console.log('📦 Fetching orders for restaurant:', restaurantId);
+            
+            const endpoints = [
+                `${API_URL}/orders/restaurant/${restaurantId}`,
+                `${API_URL}/orders/restaurant`,
+                `${API_URL}/orders`
+            ];
+
+            let ordersData = [];
+            
+            for (let endpoint of endpoints) {
+                try {
+                    console.log(`🔄 Trying endpoint: ${endpoint}`);
+                    const response = await fetch(endpoint);
+                    
+                    if (response.ok) {
+                        const data = await response.json();
+                        console.log(`✅ Orders response from ${endpoint}:`, data);
+                        
+                        if (data.orders && Array.isArray(data.orders)) {
+                            // Filter orders by restaurant ID if needed
+                            if (endpoint === `${API_URL}/orders`) {
+                                ordersData = data.orders.filter(order => 
+                                    order.restaurant?._id === restaurantId || 
+                                    order.restaurant === restaurantId ||
+                                    order.restaurantId === restaurantId
+                                );
+                            } else {
+                                ordersData = data.orders;
+                            }
+                            console.log(`✅ Found ${ordersData.length} orders from ${endpoint}`);
+                            break;
+                        } else if (data.success && data.orders) {
+                            ordersData = data.orders;
+                            console.log(`✅ Found ${ordersData.length} orders from ${endpoint}`);
+                            break;
+                        }
+                    } else {
+                        console.log(`❌ Endpoint ${endpoint} returned status: ${response.status}`);
+                    }
+                } catch (error) {
+                    console.error(`❌ Error fetching from ${endpoint}:`, error);
+                }
+            }
+
+            console.log('📦 Final orders data:', ordersData);
+            setOrders(ordersData);
+            return ordersData;
+            
+        } catch (error) {
+            console.error('❌ Error fetching orders:', error);
+            setOrders([]);
+            return [];
+        }
+    };
+
     // Fetch all data
     const fetchData = async () => {
         setLoading(true);
@@ -157,17 +216,38 @@ const RestaurantDashboard = () => {
             }
 
             // Fetch orders
-            const ordersResponse = await fetch(`${API_URL}/orders/restaurant/${currentRestaurantId}`);
-            if (ordersResponse.ok) {
-                const ordersData = await ordersResponse.json();
-                setOrders(ordersData.orders || []);
-                console.log('✅ Orders loaded:', ordersData.orders?.length || 0);
-            }
+            await fetchOrders(currentRestaurantId);
 
         } catch (error) {
             console.error('❌ Error fetching data:', error);
         } finally {
             setLoading(false);
+        }
+    };
+
+    // Test API endpoints
+    const testAPIEndpoints = async () => {
+        if (!restaurantId) return;
+        
+        console.log('🧪 Testing API endpoints...');
+        
+        const endpoints = [
+            `${API_URL}/orders/restaurant/${restaurantId}`,
+            `${API_URL}/orders/restaurant`,
+            `${API_URL}/orders`,
+            `${API_URL}/restaurants/${restaurantId}`,
+            `${API_URL}/products/restaurant/${restaurantId}`
+        ];
+
+        for (let endpoint of endpoints) {
+            try {
+                console.log(`🧪 Testing: ${endpoint}`);
+                const response = await fetch(endpoint);
+                const data = await response.json();
+                console.log(`🧪 Response from ${endpoint}:`, data);
+            } catch (error) {
+                console.error(`🧪 Error testing ${endpoint}:`, error);
+            }
         }
     };
 
@@ -295,19 +375,42 @@ const RestaurantDashboard = () => {
         return `₱${parseFloat(amount).toLocaleString('en-PH', { minimumFractionDigits: 2 })}`;
     };
 
+    // Format date
+    const formatDate = (dateString) => {
+        return new Date(dateString).toLocaleDateString('en-PH', {
+            year: 'numeric',
+            month: 'short',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+    };
+
     // Calculate stats
-    const stats = {
-        totalOrders: orders.length,
-        pendingOrders: orders.filter(order => order.status === 'pending').length,
-        completedOrders: orders.filter(order => order.status === 'completed' || order.status === 'delivered').length,
-        todayRevenue: orders
+    const calculateStats = () => {
+        const totalOrders = orders.length;
+        const pendingOrders = orders.filter(order => order.status === 'pending').length;
+        const completedOrders = orders.filter(order => order.status === 'completed' || order.status === 'delivered').length;
+        
+        const todayRevenue = orders
             .filter(order => (order.status === 'completed' || order.status === 'delivered') && 
                    new Date(order.createdAt).toDateString() === new Date().toDateString())
-            .reduce((sum, order) => sum + (order.total || order.totalAmount || 0), 0),
-        totalRevenue: orders
+            .reduce((sum, order) => sum + (order.total || order.totalAmount || 0), 0);
+        
+        const totalRevenue = orders
             .filter(order => order.status === 'completed' || order.status === 'delivered')
-            .reduce((sum, order) => sum + (order.total || order.totalAmount || 0), 0)
+            .reduce((sum, order) => sum + (order.total || order.totalAmount || 0), 0);
+
+        return {
+            totalOrders,
+            pendingOrders,
+            completedOrders,
+            todayRevenue,
+            totalRevenue
+        };
     };
+
+    const stats = calculateStats();
 
     // Earnings calculation
     const earnings = orders
@@ -389,10 +492,20 @@ const RestaurantDashboard = () => {
                                 <p className="text-sm text-gray-500">
                                     {restaurant.name || 'Your Restaurant'} - {user?.name}
                                 </p>
+                                <p className="text-xs text-gray-400">
+                                    Orders: {stats.totalOrders} | Products: {menuItems.length}
+                                </p>
                             </div>
                         </div>
                         
                         <div className="flex items-center space-x-3">
+                            <button
+                                onClick={testAPIEndpoints}
+                                className="flex items-center space-x-2 bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700"
+                            >
+                                <Package size={16} />
+                                <span>Test API</span>
+                            </button>
                             <button
                                 onClick={() => setShowProfile(true)}
                                 className="flex items-center space-x-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
@@ -441,6 +554,39 @@ const RestaurantDashboard = () => {
                         <p className="text-sm text-gray-600">Menu Items</p>
                         <p className="text-2xl font-bold text-green-600">{menuItems.length}</p>
                         <p className="text-xs text-green-600">available</p>
+                    </div>
+                </div>
+
+                {/* Debug Info */}
+                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
+                    <h3 className="font-semibold text-yellow-800 mb-2">Debug Information</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                        <div>
+                            <p><strong>Restaurant ID:</strong> {restaurantId}</p>
+                            <p><strong>Restaurant Name:</strong> {restaurant.name}</p>
+                        </div>
+                        <div>
+                            <p><strong>User ID:</strong> {user?._id}</p>
+                            <p><strong>User Role:</strong> {user?.role}</p>
+                        </div>
+                        <div>
+                            <p><strong>Orders Found:</strong> {orders.length}</p>
+                            <p><strong>Products Found:</strong> {menuItems.length}</p>
+                        </div>
+                    </div>
+                    <div className="mt-2 flex space-x-2">
+                        <button
+                            onClick={testAPIEndpoints}
+                            className="bg-yellow-600 text-white px-3 py-1 rounded text-sm hover:bg-yellow-700"
+                        >
+                            Test All APIs
+                        </button>
+                        <button
+                            onClick={() => console.log('Orders:', orders)}
+                            className="bg-blue-600 text-white px-3 py-1 rounded text-sm hover:bg-blue-700"
+                        >
+                            Log Orders to Console
+                        </button>
                     </div>
                 </div>
 
@@ -561,7 +707,7 @@ const RestaurantDashboard = () => {
                                                                     {order.user?.name || order.customerId?.name || 'Customer'}
                                                                 </p>
                                                                 <p className="text-xs text-gray-500">
-                                                                    {new Date(order.createdAt).toLocaleString()}
+                                                                    {formatDate(order.createdAt)}
                                                                 </p>
                                                             </div>
                                                             <span className={`px-2 py-1 text-xs rounded ${
@@ -590,7 +736,11 @@ const RestaurantDashboard = () => {
                                                     </div>
                                                 ))
                                             ) : (
-                                                <p className="text-gray-500 text-center py-4">No orders yet</p>
+                                                <div className="text-center py-8">
+                                                    <Package size={48} className="mx-auto text-gray-300 mb-4" />
+                                                    <p className="text-gray-500">No orders yet</p>
+                                                    <p className="text-sm text-gray-400 mt-2">When customers place orders, they will appear here</p>
+                                                </div>
                                             )}
                                         </div>
                                     </div>
@@ -606,6 +756,20 @@ const RestaurantDashboard = () => {
                                                 <Package size={48} className="mx-auto text-gray-300 mb-4" />
                                                 <p className="text-gray-500">No orders yet</p>
                                                 <p className="text-sm text-gray-400 mt-2">Orders will appear here when customers place them</p>
+                                                <div className="mt-4 space-y-2">
+                                                    <button
+                                                        onClick={fetchData}
+                                                        className="bg-orange-600 text-white px-6 py-2 rounded-lg hover:bg-orange-700 block mx-auto"
+                                                    >
+                                                        Refresh Data
+                                                    </button>
+                                                    <button
+                                                        onClick={testAPIEndpoints}
+                                                        className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 block mx-auto"
+                                                    >
+                                                        Test Orders API
+                                                    </button>
+                                                </div>
                                             </div>
                                         ) : (
                                             <div className="space-y-4">
@@ -618,8 +782,7 @@ const RestaurantDashboard = () => {
                                                                 </h3>
                                                                 <p className="text-sm text-gray-600">
                                                                     {order.user?.name || order.customerId?.name || 'Customer'} • 
-                                                                    {new Date(order.createdAt).toLocaleDateString()} • 
-                                                                    {new Date(order.createdAt).toLocaleTimeString()}
+                                                                    {formatDate(order.createdAt)}
                                                                 </p>
                                                             </div>
                                                             <span className={`px-2 py-1 text-xs rounded ${
@@ -1097,7 +1260,7 @@ const RestaurantDashboard = () => {
                                         </span>
                                     </p>
                                     <p><strong>Total Amount:</strong> {formatCurrency(selectedOrder.total || selectedOrder.totalAmount)}</p>
-                                    <p><strong>Order Date:</strong> {new Date(selectedOrder.createdAt).toLocaleString()}</p>
+                                    <p><strong>Order Date:</strong> {formatDate(selectedOrder.createdAt)}</p>
                                 </div>
 
                                 <div>
