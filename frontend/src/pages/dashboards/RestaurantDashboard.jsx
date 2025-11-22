@@ -32,7 +32,10 @@ const RestaurantDashboard = () => {
     if (!user || user.role !== 'restaurant') return;
     let id = getRestaurantId();
     if (!id) {
-      const res = await fetch(`${API_URL}/restaurants/owner/${user._id}`);
+      const token = localStorage.getItem('token');
+      const res = await fetch(`${API_URL}/restaurants/owner/${user._id}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
       const data = await res.json();
       if (data.success && data.restaurant) {
         id = data.restaurant._id;
@@ -44,18 +47,24 @@ const RestaurantDashboard = () => {
     return id;
   };
 
-  // 📦 2. Fetch orders for this restaurant
+  // 📦 2. Fetch orders for this restaurant (with token)
   const fetchOrders = async (id) => {
     if (!id) return;
-    const res = await fetch(`${API_URL}/orders/restaurant/${id}`);
+    const token = localStorage.getItem('token');
+    const res = await fetch(`${API_URL}/orders/restaurant/${id}`, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
     const data = await res.json();
     if (data.success) setOrders(data.orders);
   };
 
-  // 🍽️ 3. Fetch menu
+  // 🍽️ 3. Fetch menu (with token)
   const fetchMenu = async (id) => {
     if (!id) return;
-    const res = await fetch(`${API_URL}/products/restaurant/${id}`);
+    const token = localStorage.getItem('token');
+    const res = await fetch(`${API_URL}/products/restaurant/${id}`, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
     const data = await res.json();
     if (data.success) setMenuItems(data.products);
   };
@@ -89,9 +98,13 @@ const RestaurantDashboard = () => {
   const handleAddProduct = async e => {
     e.preventDefault();
     if (!restaurantId) return alert('Restaurant not found');
+    const token = localStorage.getItem('token');
     const res = await fetch(`${API_URL}/products`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`
+      },
       body: JSON.stringify({ ...newProduct, restaurantId })
     });
     if (res.ok) {
@@ -104,9 +117,13 @@ const RestaurantDashboard = () => {
 
   // ✅ Update order status
   const updateOrderStatus = async (orderId, status) => {
+    const token = localStorage.getItem('token');
     await fetch(`${API_URL}/orders/${orderId}/status`, {
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`
+      },
       body: JSON.stringify({ status })
     });
     fetchOrders(restaurantId);
