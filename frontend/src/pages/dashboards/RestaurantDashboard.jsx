@@ -18,7 +18,6 @@ const RestaurantDashboard = () => {
     const [showProfile, setShowProfile] = useState(false);
     
     const API_URL = 'https://food-ordering-app-production-35eb.up.railway.app/api';
-    const RESTAURANT_ID = '691bf21035908ca24d30ab51'; // FIXED: Direct restaurant ID
 
     // State
     const [menuItems, setMenuItems] = useState([]);
@@ -51,68 +50,115 @@ const RestaurantDashboard = () => {
         bannerImage: ''
     });
 
-    // Fetch all data - WORKING VERSION
-    const fetchData = async () => {
+    // Get auth headers
+    const getAuthHeaders = () => {
+        const token = localStorage.getItem('token');
+        return {
+            'Content-Type': 'application/json',
+            ...(token && { 'Authorization': `Bearer ${token}` })
+        };
+    };
+
+    // Fetch restaurant data for the logged-in user - FIXED VERSION
+    const fetchRestaurantData = async () => {
         setLoading(true);
         try {
-            console.log('🔄 Fetching data for restaurant:', RESTAURANT_ID);
+            console.log('🔄 Fetching restaurant data for user:', user?._id);
             
-            // Fetch restaurant details
-            const restaurantResponse = await fetch(`${API_URL}/restaurants/${RESTAURANT_ID}`);
+            // First, get the restaurant owned by this user
+            const restaurantResponse = await fetch(`${API_URL}/restaurants/owner/${user?._id}`, {
+                headers: getAuthHeaders()
+            });
+            
             const restaurantData = await restaurantResponse.json();
-            console.log('🏪 Restaurant data:', restaurantData);
-            
-            if (restaurantResponse.ok && restaurantData.restaurant) {
-                setRestaurant(restaurantData.restaurant);
+            console.log('🏪 Restaurant response:', restaurantData);
+
+            if (restaurantResponse.ok && restaurantData.success && restaurantData.restaurant) {
+                const restaurantInfo = restaurantData.restaurant;
+                setRestaurant(restaurantInfo);
                 
+                console.log('✅ Found restaurant:', restaurantInfo._id, restaurantInfo.name);
+
                 // Set profile data from restaurant
                 setProfileData({
-                    description: restaurantData.restaurant.description || '',
-                    openingHours: restaurantData.restaurant.openingHours || { open: '08:00', close: '22:00' },
-                    deliveryTime: restaurantData.restaurant.deliveryTime || '25-35 min',
-                    deliveryFee: restaurantData.restaurant.deliveryFee || 35,
-                    image: restaurantData.restaurant.image || '',
-                    bannerImage: restaurantData.restaurant.bannerImage || ''
+                    description: restaurantInfo.description || '',
+                    openingHours: restaurantInfo.openingHours || { open: '08:00', close: '22:00' },
+                    deliveryTime: restaurantInfo.deliveryTime || '25-35 min',
+                    deliveryFee: restaurantInfo.deliveryFee || 35,
+                    image: restaurantInfo.image || '',
+                    bannerImage: restaurantInfo.bannerImage || ''
                 });
 
-                // Fetch products
-                const productsResponse = await fetch(`${API_URL}/products/restaurant/${RESTAURANT_ID}`);
+                // Fetch products for this restaurant
+                const productsResponse = await fetch(`${API_URL}/products/restaurant/${restaurantInfo._id}`);
                 if (productsResponse.ok) {
                     const productsData = await productsResponse.json();
                     setMenuItems(productsData.products || []);
-                    console.log('📦 Products:', productsData.products);
+                    console.log('📦 Products found:', productsData.products?.length || 0);
+                } else {
+                    console.log('❌ Failed to fetch products');
                 }
 
-                // Fetch orders
-                const ordersResponse = await fetch(`${API_URL}/orders/restaurant/${RESTAURANT_ID}`);
+                // Fetch orders for this restaurant - USING THE CORRECT ENDPOINT
+                const ordersResponse = await fetch(`${API_URL}/orders/restaurant`, {
+                    headers: getAuthHeaders()
+                });
+                
                 if (ordersResponse.ok) {
                     const ordersData = await ordersResponse.json();
-                    setOrders(ordersData.orders || []);
-                    console.log('📦 Orders:', ordersData.orders);
+                    console.log('📋 Orders response:', ordersData);
+                    
+                    if (ordersData.success) {
+                        setOrders(ordersData.orders || []);
+                        console.log('✅ Orders found:', ordersData.orders?.length || 0);
+                    } else {
+                        console.log('❌ Orders API returned success: false');
+                    }
+                } else {
+                    console.log('❌ Failed to fetch orders, status:', ordersResponse.status);
+                    // Try alternative endpoint
+                    try {
+                        const altResponse = await fetch(`${API_URL}/orders/restaurant/${restaurantInfo._id}`);
+                        if (altResponse.ok) {
+                            const altData = await altResponse.json();
+                            setOrders(altData.orders || []);
+                            console.log('✅ Orders found via alt endpoint:', altData.orders?.length || 0);
+                        }
+                    } catch (altError) {
+                        console.log('❌ Alternative endpoint also failed');
+                    }
                 }
+
             } else {
-                console.log('❌ Restaurant not found');
+                console.log('❌ Restaurant not found for user:', restaurantData.message);
+                alert('Restaurant not found. Please make sure you have a registered restaurant.');
             }
 
         } catch (error) {
-            console.error('Error fetching data:', error);
+            console.error('❌ Error fetching restaurant data:', error);
+            alert('Error loading restaurant data. Please try again.');
         } finally {
             setLoading(false);
         }
     };
 
     useEffect(() => {
-        if (user) {
-            fetchData();
+        if (user && user.role === 'restaurant') {
+            fetchRestaurantData();
         }
     }, [user]);
 
-    // Add product - WORKING
+    // Add product - UPDATED
     const handleAddProduct = async (e) => {
         e.preventDefault();
         
         if (!newProduct.name || !newProduct.price) {
             alert('Please enter product name and price');
+            return;
+        }
+
+        if (!restaurant._id) {
+            alert('Restaurant not loaded. Please wait or refresh.');
             return;
         }
 
@@ -125,49 +171,53 @@ const RestaurantDashboard = () => {
                 preparationTime: newProduct.preparationTime,
                 ingredients: newProduct.ingredients,
                 image: newProduct.image,
-                restaurantId: RESTAURANT_ID // Use restaurant ID directly
+                restaurantId: restaurant._id // Use dynamic restaurant ID
             };
+
+            console.log('📦 Adding product:', productData);
 
             const response = await fetch(`${API_URL}/products`, {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
+                headers: getAuthHeaders(),
                 body: JSON.stringify(productData)
             });
 
             const data = await response.json();
+            console.log('📡 Add product response:', data);
 
-            if (response.ok) {
+            if (response.ok && data.success) {
                 alert('✅ Product added successfully!');
                 setShowAddProduct(false);
                 setNewProduct({ 
                     name: '', price: '', description: '', category: 'main course',
                     preparationTime: '', ingredients: '', image: '' 
                 });
-                fetchData();
+                fetchRestaurantData(); // Refresh data
             } else {
-                alert(`❌ Failed: ${data.message || 'Please check backend'}`);
+                alert(`❌ Failed to add product: ${data.message || 'Unknown error'}`);
             }
         } catch (error) {
-            console.error('Error:', error);
-            alert('❌ Network error');
+            console.error('Error adding product:', error);
+            alert('❌ Network error adding product');
         }
     };
 
-    // Update Profile - WORKING
+    // Update Profile - UPDATED
     const handleUpdateProfile = async (e) => {
         e.preventDefault();
         
+        if (!restaurant._id) {
+            alert('Restaurant not loaded');
+            return;
+        }
+
         try {
             console.log('🔄 Updating restaurant profile...');
             console.log('📦 Data to update:', profileData);
 
-            const response = await fetch(`${API_URL}/restaurants/${RESTAURANT_ID}`, {
+            const response = await fetch(`${API_URL}/restaurants/${restaurant._id}`, {
                 method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
+                headers: getAuthHeaders(),
                 body: JSON.stringify(profileData)
             });
 
@@ -177,7 +227,7 @@ const RestaurantDashboard = () => {
             if (response.ok && data.success) {
                 alert('✅ Profile updated successfully!');
                 setShowProfile(false);
-                fetchData();
+                fetchRestaurantData();
             } else {
                 alert(`❌ Failed to update profile: ${data.message || 'Unknown error'}`);
             }
@@ -187,22 +237,25 @@ const RestaurantDashboard = () => {
         }
     };
 
-    // Update order status
+    // Update order status - UPDATED
     const handleUpdateOrderStatus = async (orderId, newStatus) => {
         try {
+            console.log(`🔄 Updating order ${orderId} to ${newStatus}`);
+            
             const response = await fetch(`${API_URL}/orders/${orderId}/status`, {
                 method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
+                headers: getAuthHeaders(),
                 body: JSON.stringify({ status: newStatus })
             });
 
-            if (response.ok) {
-                await fetchData();
+            const data = await response.json();
+            console.log('📡 Update status response:', data);
+
+            if (response.ok && data.success) {
+                await fetchRestaurantData();
                 alert(`✅ Order status updated to ${newStatus}`);
             } else {
-                alert('❌ Failed to update order status');
+                alert(`❌ Failed to update order status: ${data.message || 'Unknown error'}`);
             }
         } catch (error) {
             console.error('Error updating order status:', error);
@@ -215,26 +268,54 @@ const RestaurantDashboard = () => {
         return `₱${amount?.toLocaleString('en-PH') || '0'}`;
     };
 
-    // Calculate stats
-    const stats = {
-        totalOrders: orders.length,
-        pendingOrders: orders.filter(order => order.status === 'pending').length,
-        completedOrders: orders.filter(order => order.status === 'completed').length,
-        todayRevenue: orders
-            .filter(order => order.status === 'completed')
-            .reduce((sum, order) => sum + (order.totalAmount || 0), 0),
-        totalRevenue: orders
-            .filter(order => order.status === 'completed')
-            .reduce((sum, order) => sum + (order.totalAmount || 0), 0)
+    // Get status color
+    const getStatusColor = (status) => {
+        switch (status) {
+            case 'pending': return 'bg-yellow-100 text-yellow-800';
+            case 'confirmed': return 'bg-blue-100 text-blue-800';
+            case 'preparing': return 'bg-orange-100 text-orange-800';
+            case 'ready': return 'bg-purple-100 text-purple-800';
+            case 'out_for_delivery': return 'bg-indigo-100 text-indigo-800';
+            case 'delivered': return 'bg-green-100 text-green-800';
+            case 'cancelled': return 'bg-red-100 text-red-800';
+            default: return 'bg-gray-100 text-gray-800';
+        }
     };
 
-    // Earnings calculation
+    // Get status text
+    const getStatusText = (status) => {
+        switch (status) {
+            case 'pending': return 'Pending';
+            case 'confirmed': return 'Confirmed';
+            case 'preparing': return 'Preparing';
+            case 'ready': return 'Ready';
+            case 'out_for_delivery': return 'Out for Delivery';
+            case 'delivered': return 'Delivered';
+            case 'cancelled': return 'Cancelled';
+            default: return status;
+        }
+    };
+
+    // Calculate stats - UPDATED
+    const stats = {
+        totalOrders: orders.length,
+        pendingOrders: orders.filter(order => ['pending', 'confirmed', 'preparing'].includes(order.status)).length,
+        completedOrders: orders.filter(order => order.status === 'delivered').length,
+        todayRevenue: orders
+            .filter(order => order.status === 'delivered')
+            .reduce((sum, order) => sum + (order.total || 0), 0),
+        totalRevenue: orders
+            .filter(order => order.status === 'delivered')
+            .reduce((sum, order) => sum + (order.total || 0), 0)
+    };
+
+    // Earnings calculation - UPDATED
     const earnings = orders
-        .filter(order => order.status === 'completed')
+        .filter(order => order.status === 'delivered')
         .reduce((groups, order) => {
             const date = new Date(order.createdAt).toLocaleDateString();
             if (!groups[date]) groups[date] = { revenue: 0, orders: 0 };
-            groups[date].revenue += order.totalAmount || 0;
+            groups[date].revenue += order.total || 0;
             groups[date].orders += 1;
             return groups;
         }, {});
@@ -242,6 +323,16 @@ const RestaurantDashboard = () => {
     const earningsArray = Object.entries(earnings)
         .map(([date, data]) => ({ date, ...data }))
         .slice(0, 7);
+
+    if (!user || user.role !== 'restaurant') {
+        return (
+            <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+                <div className="text-center">
+                    <p className="text-gray-600">Restaurant dashboard is only available for restaurant owners</p>
+                </div>
+            </div>
+        );
+    }
 
     if (loading) {
         return (
@@ -266,7 +357,9 @@ const RestaurantDashboard = () => {
                             </div>
                             <div>
                                 <h1 className="text-xl font-bold text-gray-900">Restaurant Dashboard</h1>
-                                <p className="text-sm text-gray-500">Welcome, {user?.name}</p>
+                                <p className="text-sm text-gray-500">
+                                    {restaurant.name ? `Welcome to ${restaurant.name}` : 'Loading...'} • {user?.name}
+                                </p>
                             </div>
                         </div>
                         
@@ -279,7 +372,7 @@ const RestaurantDashboard = () => {
                                 <span>Profile</span>
                             </button>
                             <button
-                                onClick={fetchData}
+                                onClick={fetchRestaurantData}
                                 className="flex items-center space-x-2 bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700"
                             >
                                 <RefreshCw size={16} />
@@ -301,8 +394,8 @@ const RestaurantDashboard = () => {
                 {/* Stats Overview */}
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
                     <div className="bg-white p-4 rounded-lg shadow-sm border">
-                        <p className="text-sm text-gray-600">Today's Revenue</p>
-                        <p className="text-2xl font-bold text-gray-900">{formatCurrency(stats.todayRevenue)}</p>
+                        <p className="text-sm text-gray-600">Total Revenue</p>
+                        <p className="text-2xl font-bold text-gray-900">{formatCurrency(stats.totalRevenue)}</p>
                         <p className="text-xs text-gray-500">from {stats.completedOrders} orders</p>
                     </div>
                     <div className="bg-white p-4 rounded-lg shadow-sm border">
@@ -435,18 +528,16 @@ const RestaurantDashboard = () => {
                                                         <div className="flex justify-between items-start">
                                                             <div>
                                                                 <p className="font-medium">Order #{order.orderId || order._id}</p>
-                                                                <p className="text-sm text-gray-600">{order.customerId?.name || 'Customer'}</p>
+                                                                <p className="text-sm text-gray-600">
+                                                                    {order.user?.name || 'Customer'} • {new Date(order.createdAt).toLocaleDateString()}
+                                                                </p>
                                                             </div>
-                                                            <span className={`px-2 py-1 text-xs rounded ${
-                                                                order.status === 'completed' ? 'bg-green-100 text-green-800' :
-                                                                order.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
-                                                                'bg-blue-100 text-blue-800'
-                                                            }`}>
-                                                                {order.status}
+                                                            <span className={`px-2 py-1 text-xs rounded ${getStatusColor(order.status)}`}>
+                                                                {getStatusText(order.status)}
                                                             </span>
                                                         </div>
                                                         <div className="flex justify-between items-center mt-2">
-                                                            <span className="text-green-600 font-semibold">{formatCurrency(order.totalAmount)}</span>
+                                                            <span className="text-green-600 font-semibold">{formatCurrency(order.total)}</span>
                                                             <button 
                                                                 onClick={() => {
                                                                     setSelectedOrder(order);
@@ -484,22 +575,18 @@ const RestaurantDashboard = () => {
                                                             <div>
                                                                 <h3 className="font-semibold text-gray-900">Order #{order.orderId || order._id}</h3>
                                                                 <p className="text-sm text-gray-600">
-                                                                    {order.customerId?.name || 'Customer'} • {new Date(order.createdAt).toLocaleDateString()}
+                                                                    {order.user?.name || 'Customer'} • {new Date(order.createdAt).toLocaleDateString()}
                                                                 </p>
                                                             </div>
-                                                            <span className={`px-2 py-1 text-xs rounded ${
-                                                                order.status === 'completed' ? 'bg-green-100 text-green-800' :
-                                                                order.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
-                                                                'bg-blue-100 text-blue-800'
-                                                            }`}>
-                                                                {order.status}
+                                                            <span className={`px-2 py-1 text-xs rounded ${getStatusColor(order.status)}`}>
+                                                                {getStatusText(order.status)}
                                                             </span>
                                                         </div>
 
                                                         <div className="flex justify-between items-center">
                                                             <div>
                                                                 <p className="text-sm text-gray-600">{order.deliveryAddress || 'No address'}</p>
-                                                                <p className="text-lg font-bold text-green-600">{formatCurrency(order.totalAmount)}</p>
+                                                                <p className="text-lg font-bold text-green-600">{formatCurrency(order.total)}</p>
                                                             </div>
                                                             <div className="flex space-x-2">
                                                                 <button 
@@ -517,6 +604,22 @@ const RestaurantDashboard = () => {
                                                                         className="bg-blue-600 text-white px-3 py-1 rounded text-sm hover:bg-blue-700"
                                                                     >
                                                                         Accept
+                                                                    </button>
+                                                                )}
+                                                                {order.status === 'confirmed' && (
+                                                                    <button 
+                                                                        onClick={() => handleUpdateOrderStatus(order._id, 'preparing')}
+                                                                        className="bg-orange-600 text-white px-3 py-1 rounded text-sm hover:bg-orange-700"
+                                                                    >
+                                                                        Start Preparing
+                                                                    </button>
+                                                                )}
+                                                                {order.status === 'preparing' && (
+                                                                    <button 
+                                                                        onClick={() => handleUpdateOrderStatus(order._id, 'ready')}
+                                                                        className="bg-purple-600 text-white px-3 py-1 rounded text-sm hover:bg-purple-700"
+                                                                    >
+                                                                        Mark Ready
                                                                     </button>
                                                                 )}
                                                             </div>
@@ -573,9 +676,9 @@ const RestaurantDashboard = () => {
                                                                 <div className="flex justify-between items-start">
                                                                     <h3 className="font-semibold text-gray-900">{item.name}</h3>
                                                                     <span className={`px-2 py-1 text-xs rounded ${
-                                                                        item.isAvailable ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                                                                        item.isAvailable !== false ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
                                                                     }`}>
-                                                                        {item.isAvailable ? 'Available' : 'Unavailable'}
+                                                                        {item.isAvailable !== false ? 'Available' : 'Unavailable'}
                                                                     </span>
                                                                 </div>
                                                                 <p className="text-sm text-gray-600">{item.category}</p>
@@ -930,23 +1033,29 @@ const RestaurantDashboard = () => {
                                     <h4 className="font-semibold text-gray-900 mb-2">Order Information</h4>
                                     <p><strong>Order ID:</strong> {selectedOrder.orderId || selectedOrder._id}</p>
                                     <p><strong>Status:</strong> {selectedOrder.status}</p>
-                                    <p><strong>Total Amount:</strong> {formatCurrency(selectedOrder.totalAmount)}</p>
+                                    <p><strong>Total Amount:</strong> {formatCurrency(selectedOrder.total)}</p>
+                                    <p><strong>Order Date:</strong> {new Date(selectedOrder.createdAt).toLocaleString()}</p>
                                 </div>
 
                                 <div>
                                     <h4 className="font-semibold text-gray-900 mb-2">Customer Information</h4>
-                                    <p><strong>Name:</strong> {selectedOrder.customerId?.name || 'Customer'}</p>
-                                    <p><strong>Phone:</strong> {selectedOrder.customerId?.phone || 'No phone'}</p>
+                                    <p><strong>Name:</strong> {selectedOrder.user?.name || 'Customer'}</p>
+                                    <p><strong>Phone:</strong> {selectedOrder.user?.phone || 'No phone'}</p>
                                     <p><strong>Address:</strong> {selectedOrder.deliveryAddress || 'No address'}</p>
                                 </div>
 
-                                {selectedOrder.orderItems && (
+                                {selectedOrder.items && selectedOrder.items.length > 0 && (
                                     <div>
                                         <h4 className="font-semibold text-gray-900 mb-2">Order Items</h4>
-                                        {selectedOrder.orderItems.map((item, index) => (
+                                        {selectedOrder.items.map((item, index) => (
                                             <div key={index} className="flex justify-between border-b py-2">
-                                                <span>{item.quantity}x {item.name}</span>
-                                                <span>{formatCurrency(item.price)}</span>
+                                                <div>
+                                                    <span>{item.quantity}x {item.productName || item.product?.name || 'Item'}</span>
+                                                    {item.product?.description && (
+                                                        <p className="text-xs text-gray-500">{item.product.description}</p>
+                                                    )}
+                                                </div>
+                                                <span>{formatCurrency(item.price * item.quantity)}</span>
                                             </div>
                                         ))}
                                     </div>
@@ -961,9 +1070,25 @@ const RestaurantDashboard = () => {
                                             Accept Order
                                         </button>
                                     )}
-                                    {selectedOrder.customerId?.phone && (
+                                    {selectedOrder.status === 'confirmed' && (
+                                        <button
+                                            onClick={() => handleUpdateOrderStatus(selectedOrder._id, 'preparing')}
+                                            className="flex-1 bg-orange-600 text-white py-2 rounded hover:bg-orange-700"
+                                        >
+                                            Start Preparing
+                                        </button>
+                                    )}
+                                    {selectedOrder.status === 'preparing' && (
+                                        <button
+                                            onClick={() => handleUpdateOrderStatus(selectedOrder._id, 'ready')}
+                                            className="flex-1 bg-purple-600 text-white py-2 rounded hover:bg-purple-700"
+                                        >
+                                            Mark Ready
+                                        </button>
+                                    )}
+                                    {selectedOrder.user?.phone && (
                                         <a
-                                            href={`tel:${selectedOrder.customerId.phone}`}
+                                            href={`tel:${selectedOrder.user.phone}`}
                                             className="px-4 bg-gray-600 text-white py-2 rounded hover:bg-gray-700 flex items-center justify-center"
                                         >
                                             <Phone size={16} />

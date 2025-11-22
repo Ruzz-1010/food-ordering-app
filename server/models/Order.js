@@ -7,7 +7,7 @@ const orderItemSchema = new mongoose.Schema({
         required: true
     },
     productName: {
-        type: String, // Store product name as backup
+        type: String,
         required: false
     },
     quantity: {

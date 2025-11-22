@@ -2,10 +2,11 @@ const express = require('express');
 const router = express.Router();
 const { auth, requireRole } = require('../middleware/auth');
 const Order = require('../models/Order');
+const Restaurant = require('../models/Restaurant');
 
 // ======================= CUSTOMER ROUTES =======================
 
-// Get customer's orders - FIXED ROUTE
+// Get customer's orders
 router.get('/user', auth, async (req, res) => {
     try {
         const orders = await Order.find({ user: req.user._id })
@@ -24,10 +25,10 @@ router.get('/user', auth, async (req, res) => {
     }
 });
 
-// Track order by ID - NEW ROUTE
+// Track order by ID
 router.get('/track/:orderId', auth, async (req, res) => {
     try {
-        const order = await Order.findById(req.params.orderId)
+        const order = await Order.findOne({ orderId: req.params.orderId })
             .populate('restaurant', 'name image cuisine address phone')
             .populate('items.product', 'name price image category')
             .populate('rider', 'name phone vehicleType')
@@ -41,7 +42,7 @@ router.get('/track/:orderId', auth, async (req, res) => {
         const canView = 
             req.user.role === 'admin' ||
             order.user._id.toString() === req.user._id.toString() ||
-            (req.user.role === 'restaurant' && order.restaurant._id.toString() === req.user._id.toString()) ||
+            (req.user.role === 'restaurant' && order.restaurant._id.toString() === req.user.restaurantId?.toString()) ||
             (req.user.role === 'rider' && order.rider && order.rider._id.toString() === req.user._id.toString());
 
         if (!canView) {
@@ -59,7 +60,7 @@ router.get('/track/:orderId', auth, async (req, res) => {
     }
 });
 
-// Create new order (Checkout) - FIXED
+// Create new order (Checkout)
 router.post('/create', auth, async (req, res) => {
     try {
         const {
@@ -68,7 +69,7 @@ router.post('/create', auth, async (req, res) => {
             deliveryAddress,
             paymentMethod = 'cash',
             specialInstructions = '',
-            orderId // Optional client-generated order ID
+            orderId
         } = req.body;
 
         console.log('📦 Creating order with data:', {
@@ -101,7 +102,7 @@ router.post('/create', auth, async (req, res) => {
             restaurant: restaurantId,
             items: items.map(item => ({
                 product: item.productId,
-                productName: item.productName, // Store product name as backup
+                productName: item.productName,
                 quantity: item.quantity,
                 price: item.price
             })),
@@ -113,7 +114,7 @@ router.post('/create', auth, async (req, res) => {
             paymentMethod,
             specialInstructions,
             status: 'pending',
-            estimatedDelivery: new Date(Date.now() + 45 * 60000) // 45 minutes from now
+            estimatedDelivery: new Date(Date.now() + 45 * 60000)
         });
 
         await order.save();
@@ -141,7 +142,6 @@ router.post('/create', auth, async (req, res) => {
     } catch (error) {
         console.error('❌ Create order error:', error);
         
-        // Handle duplicate key error
         if (error.code === 11000) {
             return res.status(400).json({ 
                 success: false, 
@@ -211,21 +211,65 @@ router.put('/:orderId/cancel', auth, async (req, res) => {
 
 // ======================= RESTAURANT ROUTES =======================
 
-// Get restaurant's orders - FIXED ROUTE
+// Get restaurant's orders - UPDATED WITH BETTER LOGIC
 router.get('/restaurant', auth, requireRole(['restaurant']), async (req, res) => {
     try {
-        const orders = await Order.find({ restaurant: req.user._id })
+        console.log('🏪 Fetching orders for restaurant user:', req.user._id);
+        
+        // First, find the restaurant owned by this user
+        const restaurant = await Restaurant.findOne({ owner: req.user._id });
+        
+        if (!restaurant) {
+            return res.status(404).json({ 
+                success: false, 
+                message: 'Restaurant not found for this user' 
+            });
+        }
+
+        console.log('🔍 Found restaurant:', restaurant._id, restaurant.name);
+
+        const orders = await Order.find({ restaurant: restaurant._id })
             .populate('user', 'name phone email')
             .populate('items.product', 'name price category')
             .populate('rider', 'name phone vehicleType')
             .sort({ createdAt: -1 });
+
+        console.log(`📊 Found ${orders.length} orders for restaurant`);
+
+        res.json({
+            success: true,
+            restaurant: {
+                _id: restaurant._id,
+                name: restaurant.name
+            },
+            orders
+        });
+    } catch (error) {
+        console.error('Get restaurant orders error:', error);
+        res.status(500).json({ success: false, message: 'Server error' });
+    }
+});
+
+// Get restaurant orders by restaurant ID
+router.get('/restaurant/:restaurantId', auth, async (req, res) => {
+    try {
+        const { restaurantId } = req.params;
+        console.log('🏪 Fetching orders for restaurant ID:', restaurantId);
+
+        const orders = await Order.find({ restaurant: restaurantId })
+            .populate('user', 'name phone email')
+            .populate('items.product', 'name price category')
+            .populate('rider', 'name phone vehicleType')
+            .sort({ createdAt: -1 });
+
+        console.log(`📊 Found ${orders.length} orders for restaurant ${restaurantId}`);
 
         res.json({
             success: true,
             orders
         });
     } catch (error) {
-        console.error('Get restaurant orders error:', error);
+        console.error('Get restaurant orders by ID error:', error);
         res.status(500).json({ success: false, message: 'Server error' });
     }
 });
@@ -240,9 +284,15 @@ router.put('/:orderId/status', auth, requireRole(['restaurant']), async (req, re
             return res.status(400).json({ success: false, message: 'Invalid status' });
         }
 
+        // Find restaurant owned by user
+        const restaurant = await Restaurant.findOne({ owner: req.user._id });
+        if (!restaurant) {
+            return res.status(404).json({ success: false, message: 'Restaurant not found' });
+        }
+
         const order = await Order.findOne({
             _id: req.params.orderId,
-            restaurant: req.user._id
+            restaurant: restaurant._id
         });
 
         if (!order) {
@@ -321,7 +371,7 @@ router.put('/:orderId/accept', auth, requireRole(['rider']), async (req, res) =>
 
         order.rider = req.user._id;
         order.status = 'out_for_delivery';
-        order.estimatedDelivery = new Date(Date.now() + 30 * 60000); // 30 minutes from now
+        order.estimatedDelivery = new Date(Date.now() + 30 * 60000);
 
         await order.save();
 
@@ -461,7 +511,7 @@ router.get('/:orderId', auth, async (req, res) => {
         const canView = 
             req.user.role === 'admin' ||
             order.user._id.toString() === req.user._id.toString() ||
-            (req.user.role === 'restaurant' && order.restaurant._id.toString() === req.user._id.toString()) ||
+            (req.user.role === 'restaurant' && order.restaurant._id.toString() === req.user.restaurantId?.toString()) ||
             (req.user.role === 'rider' && order.rider && order.rider._id.toString() === req.user._id.toString());
 
         if (!canView) {
