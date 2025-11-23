@@ -54,39 +54,38 @@ const RiderDashboard = () => {
     }
   };
 
-  // ✅ ACCEPT ORDER - FIXED!
-  const acceptOrder = async (orderId) => {
-    try {
-      const riderId = getUserId();
-      
-      if (!riderId) {
-        alert('❌ Error: Rider ID not found.');
-        return;
-      }
+  // ✅ ACCEPT ORDER – bullet-proof rider id
+const acceptOrder = async (orderId) => {
+  const riderId = user?._id || user?.id;   // either spelling works
+  if (!riderId) {
+    alert('❌ Rider ID not found – make sure you are logged in as a rider.');
+    return;
+  }
 
-      const res = await fetch(`${API_URL}/orders/${orderId}/accept`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`
-        },
-        body: JSON.stringify({ riderId }) // DITO ANG FIX - kasama ang riderId
-      });
+  try {
+    const res = await fetch(`${API_URL}/orders/${orderId}/accept`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ riderId }),
+    });
 
-      const data = await res.json();
+    const data = await res.json();
 
-      if (res.ok && data.success) {
-        alert('✅ Order assigned to you!');
-        await fetchAvailable();
-        await fetchMyDeliveries();
-      } else {
-        alert(`❌ Failed: ${data.message || 'Unknown error'}`);
-      }
-    } catch (error) {
-      console.error('❌ Error accepting order:', error);
-      alert('❌ Failed to accept order. Please try again.');
+    if (res.ok && data.success) {
+      alert('✅ Order assigned to you!');
+      await fetchAvailable();
+      await fetchMyDeliveries();
+    } else {
+      alert(`❌ Failed: ${data.message || 'Unknown error'}`);
     }
-  };
+  } catch (err) {
+    console.error(err);
+    alert('❌ Network error while accepting order.');
+  }
+};
 
   // ✅ Update delivery status
   const updateStatus = async (orderId, status) => {
