@@ -56,13 +56,13 @@ const RiderDashboard = () => {
     }
   };
 
-  // ✅ ACCEPT ORDER - COMPLETELY FIXED!
+  // ✅ ACCEPT ORDER - FIXED!
   const acceptOrder = async (orderId) => {
     try {
       console.log('🔄 Accepting order:', orderId);
       console.log('👤 Current user:', user);
       
-      // DITO ANG FIX - Gamitin ang user._id directly
+      // Gamitin ang user._id directly
       const riderId = user?._id;
       
       if (!riderId) {
@@ -70,12 +70,7 @@ const RiderDashboard = () => {
         return;
       }
 
-      if (!token) {
-        alert('❌ Error: No authentication token found.');
-        return;
-      }
-
-      console.log('📤 Sending request with:', { riderId, orderId });
+      console.log('📤 Sending request with riderId:', riderId);
 
       const res = await fetch(`${API_URL}/orders/${orderId}/accept`, {
         method: 'PUT',
@@ -83,7 +78,7 @@ const RiderDashboard = () => {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`
         },
-        body: JSON.stringify({ riderId }) // CRITICAL FIX - kasama ang riderId
+        body: JSON.stringify({ riderId }) // Kasama ang riderId sa request body
       });
 
       console.log('📡 Response status:', res.status);
@@ -93,7 +88,6 @@ const RiderDashboard = () => {
 
       if (res.ok && data.success) {
         alert('✅ Order assigned to you!');
-        // Refresh both lists
         await fetchAvailable();
         await fetchMyDeliveries();
       } else {
@@ -108,8 +102,6 @@ const RiderDashboard = () => {
   // ✅ Update delivery status
   const updateStatus = async (orderId, status) => {
     try {
-      console.log('🔄 Updating order status:', { orderId, status });
-      
       const res = await fetch(`${API_URL}/orders/${orderId}/delivery-status`, {
         method: 'PUT',
         headers: {
@@ -137,10 +129,6 @@ const RiderDashboard = () => {
   const loadData = async () => {
     setLoading(true);
     try {
-      console.log('🚀 Loading rider data...');
-      console.log('👤 Current user:', user);
-      console.log('🔑 Token exists:', !!token);
-      
       await Promise.all([fetchAvailable(), fetchMyDeliveries()]);
     } catch (error) {
       console.error('❌ Error loading data:', error);
@@ -237,7 +225,6 @@ const RiderDashboard = () => {
                 <p className="text-xs text-gray-400">
                   Available: {stats.availableOrders} | My Deliveries: {stats.myDeliveries}
                 </p>
-                <p className="text-xs text-green-600">Rider ID: {user._id}</p>
               </div>
             </div>
 

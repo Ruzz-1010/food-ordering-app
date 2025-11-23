@@ -8,8 +8,8 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
   const [authChecked, setAuthChecked] = useState(false);
 
-  const API_URL = 'https://food-ordering-app-production-35eb.up.railway.app/api';
-
+  // ✅ FIXED – no trailing space
+const API_URL = 'https://food-ordering-app-production-35eb.up.railway.app/api';
   // Function to fetch restaurant data
   const fetchRestaurantData = async (userId, userEmail) => {
     try {
@@ -49,6 +49,36 @@ export const AuthProvider = ({ children }) => {
         }
       }
 
+      // Method 3: Get all restaurants and find by owner or email
+      console.log('🔄 Method 3: Searching in all restaurants...');
+      const allResponse = await fetch(`${API_URL}/restaurants`);
+      if (allResponse.ok) {
+        const allData = await allResponse.json();
+        console.log('📊 All restaurants count:', allData.restaurants?.length);
+        
+        if (allData.success && allData.restaurants) {
+          // Find by owner
+          const byOwner = allData.restaurants.find(r => r.owner === userId || r.owner?._id === userId);
+          if (byOwner) {
+            console.log('✅ Restaurant found in all list by owner:', byOwner._id);
+            return {
+              restaurantId: byOwner._id,
+              restaurantData: byOwner
+            };
+          }
+
+          // Find by email
+          const byEmail = allData.restaurants.find(r => r.email === userEmail);
+          if (byEmail) {
+            console.log('✅ Restaurant found in all list by email:', byEmail._id);
+            return {
+              restaurantId: byEmail._id,
+              restaurantData: byEmail
+            };
+          }
+        }
+      }
+
       console.log('❌ No restaurant found through any method');
       return null;
     } catch (error) {
@@ -57,7 +87,7 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  // Check auth status - FIXED
+  // Check auth status
   useEffect(() => {
     const checkAuthStatus = async () => {
       console.log('🔄 AuthContext - Checking authentication status...');
@@ -69,35 +99,27 @@ export const AuthProvider = ({ children }) => {
           const userObj = JSON.parse(userData);
           console.log('👤 User from localStorage:', userObj);
 
-          // Validate user data has _id
-          if (!userObj._id) {
-            console.error('❌ Invalid user data: missing _id');
-            localStorage.removeItem('token');
-            localStorage.removeItem('user');
-            setUser(null);
-          } else {
-            // For restaurant users, ensure we have restaurant data
-            if (userObj.role === 'restaurant' && !userObj.restaurantId) {
-              console.log('🏪 Restaurant user detected, fetching restaurant data...');
-              const restaurantInfo = await fetchRestaurantData(userObj._id, userObj.email);
-              
-              if (restaurantInfo) {
-                const updatedUser = {
-                  ...userObj,
-                  restaurantId: restaurantInfo.restaurantId,
-                  restaurantData: restaurantInfo.restaurantData
-                };
-                console.log('✅ User updated with restaurant data');
-                setUser(updatedUser);
-                localStorage.setItem('user', JSON.stringify(updatedUser));
-              } else {
-                console.log('❌ No restaurant data found');
-                setUser(userObj);
-              }
+          // For restaurant users, ensure we have restaurant data
+          if (userObj.role === 'restaurant' && userObj._id && !userObj.restaurantId) {
+            console.log('🏪 Restaurant user detected, fetching restaurant data...');
+            const restaurantInfo = await fetchRestaurantData(userObj._id, userObj.email);
+            
+            if (restaurantInfo) {
+              const updatedUser = {
+                ...userObj,
+                restaurantId: restaurantInfo.restaurantId,
+                restaurantData: restaurantInfo.restaurantData
+              };
+              console.log('✅ User updated with restaurant data:', updatedUser);
+              setUser(updatedUser);
+              localStorage.setItem('user', JSON.stringify(updatedUser));
             } else {
-              console.log('✅ User loaded from localStorage');
+              console.log('❌ No restaurant data found, setting user without restaurant');
               setUser(userObj);
             }
+          } else {
+            console.log('✅ User loaded from localStorage:', userObj);
+            setUser(userObj);
           }
         } catch (error) {
           console.error('❌ Auth verification failed:', error);
@@ -117,7 +139,7 @@ export const AuthProvider = ({ children }) => {
     checkAuthStatus();
   }, []);
 
-  // Login function - FIXED
+  // Login function
   const login = async (email, password) => {
     setLoading(true);
     
@@ -136,26 +158,17 @@ export const AuthProvider = ({ children }) => {
       console.log('🔐 Login API Response:', data);
 
       if (response.ok && data.success) {
-        // VALIDATE CRITICAL FIELDS
-        if (!data.user || !data.user._id) {
-          console.error('❌ Server returned invalid user data');
-          return { 
-            success: false, 
-            message: 'Server error: Invalid user data received' 
-          };
-        }
-
         const userData = {
           _id: data.user._id,
           name: data.user.name,
           email: data.user.email,
           role: data.user.role,
           isApproved: data.user.isApproved !== false,
-          phone: data.user.phone || '',
-          address: data.user.address || ''
+          phone: data.user.phone,
+          address: data.user.address
         };
         
-        console.log('✅ Login successful, user ID:', userData._id);
+        console.log('✅ Login successful, user:', userData);
         
         // For restaurant owners, fetch restaurant data
         if (userData.role === 'restaurant') {
@@ -165,7 +178,9 @@ export const AuthProvider = ({ children }) => {
           if (restaurantInfo) {
             userData.restaurantId = restaurantInfo.restaurantId;
             userData.restaurantData = restaurantInfo.restaurantData;
-            console.log('✅ Restaurant data added to user');
+            console.log('✅ Restaurant data added to user:', userData.restaurantId);
+          } else {
+            console.log('❌ No restaurant data found for this user');
           }
         }
         
@@ -219,21 +234,14 @@ export const AuthProvider = ({ children }) => {
       const data = await response.json();
 
       if (response.ok && data.success) {
-        if (!data.user || !data.user._id) {
-          return { 
-            success: false, 
-            message: 'Server error: Invalid user data received' 
-          };
-        }
-
         const userInfo = {
           _id: data.user._id,
           name: data.user.name,
           email: data.user.email,
           role: data.user.role,
           isApproved: data.user.isApproved !== false,
-          phone: data.user.phone || '',
-          address: data.user.address || ''
+          phone: data.user.phone,
+          address: data.user.address
         };
         
         if ((userInfo.role === 'rider' || userInfo.role === 'restaurant') && !userInfo.isApproved) {
@@ -317,8 +325,8 @@ export const AuthProvider = ({ children }) => {
             email: data.user.email,
             role: data.user.role,
             isApproved: data.user.isApproved,
-            phone: data.user.phone || '',
-            address: data.user.address || ''
+            phone: data.user.phone,
+            address: data.user.address
           };
           
           if (userData.role === 'restaurant') {
@@ -354,15 +362,11 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  // Utility functions - FIXED getUserId
+  // Utility functions
   const hasRole = (role) => user?.role === role;
   const isApproved = () => user?.isApproved === true;
   const isAuthenticated = () => !!user && !!localStorage.getItem('token');
-  const getUserId = () => {
-    console.log('🆔 getUserId called - user:', user);
-    console.log('🆔 user._id:', user?._id);
-    return user?._id;
-  };
+  const getUserId = () => user?._id;
   const getRestaurantId = () => user?.restaurantId;
   const getRestaurantData = () => user?.restaurantData;
   const isAuthChecked = () => authChecked;
