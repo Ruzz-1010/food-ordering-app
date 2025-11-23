@@ -16,110 +16,224 @@ const RestaurantDashboard = () => {
   const [showAddProduct, setShowAddProduct] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [showOrderDetails, setShowOrderDetails] = useState(false);
-  const [showProfile, setShowProfile] = useState(false);
+  const [error, setError] = useState(null);
 
   const [restaurantId, setRestaurantId] = useState(null);
   const [restaurant, setRestaurant] = useState({});
-
   const [menuItems, setMenuItems] = useState([]);
   const [orders, setOrders] = useState([]);
+  
   const [newProduct, setNewProduct] = useState({
     name: '', price: '', description: '', category: 'main course', preparationTime: '', ingredients: '', image: ''
   });
 
-  const [profileData, setProfileData] = useState({
-    description: '', openingHours: { open: '08:00', close: '22:00' },
-    deliveryTime: '25-35 min', deliveryFee: 35, image: '', bannerImage: ''
-  });
-
-  // 🔍 1. Get restaurant ID (with token)
+  // 🔍 1. Get restaurant ID (with token) - UPDATED FOR YOUR BACKEND
   const initializeRestaurantData = async () => {
     const token = localStorage.getItem('token');
     let currentRestaurantId = getRestaurantId();
     let restaurantData = getRestaurantData();
 
+    console.log('🏪 Initializing restaurant data...');
+    console.log('📝 Current restaurant ID:', currentRestaurantId);
+    console.log('📝 Current restaurant data:', restaurantData);
+
     if (currentRestaurantId && restaurantData) {
       setRestaurantId(currentRestaurantId);
       setRestaurant(restaurantData);
+      console.log('✅ Using existing restaurant data');
       return currentRestaurantId;
     }
 
+    // Try to fetch restaurant data using YOUR backend routes
     if (user?._id) {
       try {
+        console.log('🔄 Fetching restaurant by owner ID:', user._id);
         const res = await fetch(`${API_URL}/restaurants/owner/${user._id}`, {
-          headers: { Authorization: `Bearer ${token}` }
+          headers: { 
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
         });
-        const data = await res.json();
-        if (data.success && data.restaurant) {
-          currentRestaurantId = data.restaurant._id;
-          setRestaurantId(currentRestaurantId);
-          setRestaurant(data.restaurant);
-          refreshRestaurantData();
-          return currentRestaurantId;
+        
+        console.log('📊 Restaurant by owner response status:', res.status);
+        
+        if (res.ok) {
+          const data = await res.json();
+          console.log('📊 Restaurant by owner response:', data);
+          
+          if (data.success && data.restaurant) {
+            currentRestaurantId = data.restaurant._id;
+            setRestaurantId(currentRestaurantId);
+            setRestaurant(data.restaurant);
+            refreshRestaurantData();
+            console.log('✅ Restaurant found by owner ID:', currentRestaurantId);
+            return currentRestaurantId;
+          }
+        } else {
+          console.log('❌ Restaurant by owner not found:', res.status);
         }
-      } catch (e) { console.error(e); }
+      } catch (e) { 
+        console.error('❌ Error fetching restaurant by owner:', e);
+      }
     }
 
     if (user?.email) {
       try {
+        console.log('🔄 Fetching restaurant by email:', user.email);
         const res = await fetch(`${API_URL}/restaurants/email/${user.email}`, {
-          headers: { Authorization: `Bearer ${token}` }
+          headers: { 
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
         });
-        const data = await res.json();
-        if (data.success && data.restaurant) {
-          currentRestaurantId = data.restaurant._id;
-          setRestaurantId(currentRestaurantId);
-          setRestaurant(data.restaurant);
-          refreshRestaurantData();
-          return currentRestaurantId;
+        
+        console.log('📊 Restaurant by email response status:', res.status);
+        
+        if (res.ok) {
+          const data = await res.json();
+          console.log('📊 Restaurant by email response:', data);
+          
+          if (data.success && data.restaurant) {
+            currentRestaurantId = data.restaurant._id;
+            setRestaurantId(currentRestaurantId);
+            setRestaurant(data.restaurant);
+            refreshRestaurantData();
+            console.log('✅ Restaurant found by email:', currentRestaurantId);
+            return currentRestaurantId;
+          }
+        } else {
+          console.log('❌ Restaurant by email not found:', res.status);
         }
-      } catch (e) { console.error(e); }
+      } catch (e) { 
+        console.error('❌ Error fetching restaurant by email:', e);
+      }
     }
+
+    console.log('❌ No restaurant found through any method');
     return null;
   };
 
-  // 📦 2. Fetch orders (with token)
-  const fetchOrders = async (restaurantId) => {
+  // 📦 2. Fetch orders (with token) - UPDATED FOR YOUR BACKEND
+  const fetchOrders = async () => {
     const token = localStorage.getItem('token');
-    const res = await fetch(`${API_URL}/orders/restaurant/${restaurantId}`, {
-      headers: { Authorization: `Bearer ${token}` }
-    });
-    const data = await res.json();
-    if (data.success) setOrders(data.orders);
+    try {
+      console.log('📦 Fetching restaurant orders...');
+      
+      // Use your restaurant orders endpoint
+      const res = await fetch(`${API_URL}/orders/restaurant`, {
+        headers: { 
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      console.log('📦 Orders API Response status:', res.status);
+      
+      if (res.ok) {
+        const data = await res.json();
+        console.log('📦 Orders API Response:', data);
+        
+        if (data.success) {
+          setOrders(data.orders || []);
+          console.log(`✅ Loaded ${data.orders?.length || 0} orders`);
+        } else {
+          setOrders([]);
+        }
+      } else {
+        console.log('📦 Orders API error:', res.status);
+        setOrders([]);
+      }
+    } catch (error) {
+      console.error('❌ Error fetching orders:', error);
+      setOrders([]);
+    }
   };
 
-  // 🍽️ 3. Fetch menu (with token)
+  // 🍽️ 3. Fetch menu (with token) - UPDATED FOR YOUR BACKEND
   const fetchMenu = async (restaurantId) => {
     const token = localStorage.getItem('token');
-    const res = await fetch(`${API_URL}/products/restaurant/${restaurantId}`, {
-      headers: { Authorization: `Bearer ${token}` }
-    });
-    const data = await res.json();
-    if (data.success) setMenuItems(data.products || []);
+    try {
+      console.log('🍽️ Fetching menu for restaurant:', restaurantId);
+      
+      // Use your products endpoint
+      const res = await fetch(`${API_URL}/products/restaurant/${restaurantId}`, {
+        headers: { 
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      console.log('🍽️ Menu API Response status:', res.status);
+      
+      if (res.ok) {
+        const data = await res.json();
+        console.log('🍽️ Menu API Response:', data);
+        
+        if (data.success) {
+          setMenuItems(data.products || []);
+          console.log(`✅ Loaded ${data.products?.length || 0} menu items`);
+        } else {
+          setMenuItems([]);
+        }
+      } else {
+        console.log('🍽️ Menu API error:', res.status);
+        setMenuItems([]);
+      }
+    } catch (error) {
+      console.error('❌ Error fetching menu:', error);
+      setMenuItems([]);
+    }
   };
 
-  // 🔄 4. Load everything
+  // 🔄 4. Load everything - UPDATED
   const fetchData = async () => {
     setLoading(true);
-    const id = await initializeRestaurantData();
-    if (id) {
-      await Promise.all([fetchOrders(id), fetchMenu(id)]);
+    setError(null);
+    
+    try {
+      console.log('🔄 Starting data fetch...');
+      const id = await initializeRestaurantData();
+      
+      if (id) {
+        console.log('✅ Restaurant ID found:', id);
+        // Fetch data sequentially
+        await fetchMenu(id);
+        await fetchOrders(); // No need to pass ID, uses auth token
+        console.log('✅ All data fetched successfully');
+      } else {
+        console.log('❌ No restaurant ID found');
+        setError(new Error('No restaurant data found. Please contact support.'));
+      }
+    } catch (error) {
+      console.error('❌ Error in fetchData:', error);
+      setError(error);
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   useEffect(() => {
-    if (user && user.role === 'restaurant') fetchData();
+    if (user && user.role === 'restaurant') {
+      console.log('🎯 Restaurant user detected, fetching data...');
+      fetchData();
+    }
   }, [user]);
 
-  // 💰 Stats
+  // 💰 Stats - UPDATED
   const stats = {
     totalOrders: orders.length,
     pendingOrders: orders.filter(o => o.status === 'pending').length,
     completedOrders: orders.filter(o => ['delivered', 'completed'].includes(o.status)).length,
     todayRevenue: orders
-      .filter(o => new Date(o.createdAt).toDateString() === new Date().toDateString() && ['delivered', 'completed'].includes(o.status))
-      .reduce((sum, o) => sum + (o.total || 0), 0),
+      .filter(o => {
+        const orderDate = new Date(o.createdAt).toDateString();
+        const today = new Date().toDateString();
+        return orderDate === today && ['delivered', 'completed'].includes(o.status);
+      })
+      .reduce((sum, o) => sum + (o.total || o.totalAmount || 0), 0),
+    totalRevenue: orders
+      .filter(o => ['delivered', 'completed'].includes(o.status))
+      .reduce((sum, o) => sum + (o.total || o.totalAmount || 0), 0)
   };
 
   const formatCurrency = (amount) => {
@@ -128,73 +242,162 @@ const RestaurantDashboard = () => {
   };
 
   const formatDate = (dateString) => {
+    if (!dateString) return 'No date';
     return new Date(dateString).toLocaleDateString('en-PH', {
       year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
     });
   };
 
-  // Earnings array (build-safe)
-  const earnings = orders
-    .filter(order => order.status === 'completed' || order.status === 'delivered')
-    .reduce((groups, order) => {
-      const date = new Date(order.createdAt).toLocaleDateString();
-      if (!groups[date]) groups[date] = { revenue: 0, orders: 0 };
-      groups[date].revenue += order.total || 0;
-      groups[date].orders += 1;
-      return groups;
-    }, {});
-
-  const earningsArray = Object.entries(earnings)
-    .map(([date, data]) => ({ date, ...data }))
-    .slice(0, 7);
-
-  // ✅ Add product
+  // ✅ Add product - UPDATED FOR YOUR BACKEND
   const handleAddProduct = async (e) => {
     e.preventDefault();
-    if (!restaurantId) return alert('Restaurant not found');
+    if (!restaurantId) {
+      alert('❌ Restaurant not found');
+      return;
+    }
+    
     const token = localStorage.getItem('token');
-    const res = await fetch(`${API_URL}/products`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`
-      },
-      body: JSON.stringify({ ...newProduct, restaurantId })
-    });
-    const data = await res.json();
-    if (res.ok) {
-      alert('✅ Product added successfully!');
-      setShowAddProduct(false);
-      setNewProduct({ name: '', price: '', description: '', category: 'main course', preparationTime: '', ingredients: '', image: '' });
-      fetchData();
-    } else alert(`❌ Failed: ${data.message || 'Error adding product'}`);
+    setLoading(true);
+    
+    try {
+      console.log('➕ Adding new product...', newProduct);
+      
+      const res = await fetch(`${API_URL}/products`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ 
+          ...newProduct, 
+          restaurant: restaurantId, // Use 'restaurant' instead of 'restaurantId'
+          price: parseFloat(newProduct.price),
+          preparationTime: parseInt(newProduct.preparationTime) || 15
+        })
+      });
+      
+      const data = await res.json();
+      console.log('➕ Add product response:', data);
+      
+      if (res.ok) {
+        alert('✅ Product added successfully!');
+        setShowAddProduct(false);
+        setNewProduct({ 
+          name: '', price: '', description: '', category: 'main course', 
+          preparationTime: '', ingredients: '', image: '' 
+        });
+        // Refresh menu data
+        await fetchMenu(restaurantId);
+      } else {
+        alert(`❌ Failed: ${data.message || 'Error adding product'}`);
+      }
+    } catch (error) {
+      console.error('❌ Error adding product:', error);
+      alert('❌ Network error. Please try again.');
+    } finally {
+      setLoading(false);
+    }
   };
 
-  // ✅ Update order status
+  // ✅ Update order status - UPDATED FOR YOUR BACKEND
   const handleUpdateOrderStatus = async (orderId, newStatus) => {
     const token = localStorage.getItem('token');
-    const res = await fetch(`${API_URL}/orders/${orderId}/status`, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`
-      },
-      body: JSON.stringify({ status: newStatus })
-    });
-    const data = await res.json();
-    if (res.ok) {
-      await fetchData();
-      alert(`✅ Order status updated to ${newStatus}`);
-    } else alert(`❌ Failed to update status: ${data.message || 'Unknown error'}`);
+    
+    try {
+      console.log('🔄 Updating order status:', orderId, newStatus);
+      
+      const res = await fetch(`${API_URL}/orders/${orderId}/status`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ status: newStatus })
+      });
+      
+      const data = await res.json();
+      console.log('🔄 Update status response:', data);
+      
+      if (res.ok) {
+        await fetchData(); // Refresh all data
+        alert(`✅ Order status updated to ${newStatus}`);
+      } else {
+        alert(`❌ Failed to update status: ${data.message || 'Unknown error'}`);
+      }
+    } catch (error) {
+      console.error('❌ Error updating order status:', error);
+      alert('❌ Network error. Please try again.');
+    }
   };
 
-  // 🖥️ UI
+  // QUICK FIX: Add sample products
+  const handleQuickFix = async () => {
+    const token = localStorage.getItem('token');
+    if (!restaurantId) return;
+    
+    try {
+      console.log('🚀 Running quick fix...');
+      const res = await fetch(`${API_URL}/products/quick-fix/${restaurantId}`, {
+        headers: { 
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      const data = await res.json();
+      console.log('🚀 Quick fix response:', data);
+      
+      if (res.ok) {
+        alert('✅ Sample products added!');
+        await fetchMenu(restaurantId);
+      } else {
+        alert('❌ Quick fix failed');
+      }
+    } catch (error) {
+      console.error('❌ Quick fix error:', error);
+    }
+  };
+
+  // Earnings array - UPDATED
+  const earningsArray = Object.entries(
+    orders
+      .filter(order => order.status === 'completed' || order.status === 'delivered')
+      .reduce((groups, order) => {
+        const date = new Date(order.createdAt).toLocaleDateString();
+        if (!groups[date]) groups[date] = { revenue: 0, orders: 0 };
+        groups[date].revenue += order.total || order.totalAmount || 0;
+        groups[date].orders += 1;
+        return groups;
+      }, {})
+  ).map(([date, data]) => ({ date, ...data }))
+   .slice(0, 7);
+
+  // 🖥️ UI - UPDATED WITH ERROR HANDLING
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <X className="text-red-600" size={32} />
+          </div>
+          <h2 className="text-xl font-bold text-gray-900 mb-2">Something went wrong</h2>
+          <p className="text-gray-600 mb-4">{error.message}</p>
+          <div className="space-y-2">
+            <button onClick={() => { setError(null); fetchData(); }} className="bg-orange-600 text-white px-6 py-2 rounded-lg hover:bg-orange-700 block mx-auto">Try Again</button>
+            <button onClick={logout} className="bg-gray-600 text-white px-6 py-2 rounded-lg hover:bg-gray-700 block mx-auto">Logout</button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
           <div className="w-12 h-12 border-4 border-orange-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
           <p className="text-gray-600">Loading Restaurant Data...</p>
+          <p className="text-sm text-gray-500 mt-2">This may take a few moments</p>
         </div>
       </div>
     );
@@ -247,10 +450,22 @@ const RestaurantDashboard = () => {
             </div>
 
             <div className="flex items-center space-x-3">
-              <button onClick={() => {}} className="flex items-center space-x-2 bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700"><Package size={16} /><span>Test API</span></button>
-              <button onClick={() => setShowProfile(true)} className="flex items-center space-x-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"><User size={16} /><span>Profile</span></button>
-              <button onClick={fetchData} className="flex items-center space-x-2 bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700"><RefreshCw size={16} /><span>Refresh</span></button>
-              <button onClick={logout} className="flex items-center space-x-2 bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700"><LogOut size={16} /><span>Logout</span></button>
+              <button onClick={handleQuickFix} className="flex items-center space-x-2 bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700">
+                <Plus size={16} />
+                <span>Quick Add Products</span>
+              </button>
+              <button onClick={() => setShowProfile(true)} className="flex items-center space-x-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">
+                <User size={16} />
+                <span>Profile</span>
+              </button>
+              <button onClick={fetchData} className="flex items-center space-x-2 bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700">
+                <RefreshCw size={16} />
+                <span>Refresh</span>
+              </button>
+              <button onClick={logout} className="flex items-center space-x-2 bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700">
+                <LogOut size={16} />
+                <span>Logout</span>
+              </button>
             </div>
           </div>
         </div>
@@ -259,10 +474,26 @@ const RestaurantDashboard = () => {
       <div className="max-w-7xl mx-auto px-4 py-6">
         {/* Stats */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-          <div className="bg-white p-4 rounded-lg shadow-sm border"><p className="text-sm text-gray-600">Today's Revenue</p><p className="text-2xl font-bold text-gray-900">{formatCurrency(stats.todayRevenue)}</p><p className="text-xs text-gray-500">from {stats.completedOrders} completed orders</p></div>
-          <div className="bg-white p-4 rounded-lg shadow-sm border"><p className="text-sm text-gray-600">Total Orders</p><p className="text-2xl font-bold text-gray-900">{stats.totalOrders}</p><p className="text-xs text-blue-600">all time</p></div>
-          <div className="bg-white p-4 rounded-lg shadow-sm border"><p className="text-sm text-gray-600">Pending Orders</p><p className="text-2xl font-bold text-orange-600">{stats.pendingOrders}</p><p className="text-xs text-orange-600">need attention</p></div>
-          <div className="bg-white p-4 rounded-lg shadow-sm border"><p className="text-sm text-gray-600">Menu Items</p><p className="text-2xl font-bold text-green-600">{menuItems.length}</p><p className="text-xs text-green-600">available</p></div>
+          <div className="bg-white p-4 rounded-lg shadow-sm border">
+            <p className="text-sm text-gray-600">Today's Revenue</p>
+            <p className="text-2xl font-bold text-gray-900">{formatCurrency(stats.todayRevenue)}</p>
+            <p className="text-xs text-gray-500">from {stats.completedOrders} completed orders</p>
+          </div>
+          <div className="bg-white p-4 rounded-lg shadow-sm border">
+            <p className="text-sm text-gray-600">Total Orders</p>
+            <p className="text-2xl font-bold text-gray-900">{stats.totalOrders}</p>
+            <p className="text-xs text-blue-600">all time</p>
+          </div>
+          <div className="bg-white p-4 rounded-lg shadow-sm border">
+            <p className="text-sm text-gray-600">Pending Orders</p>
+            <p className="text-2xl font-bold text-orange-600">{stats.pendingOrders}</p>
+            <p className="text-xs text-orange-600">need attention</p>
+          </div>
+          <div className="bg-white p-4 rounded-lg shadow-sm border">
+            <p className="text-sm text-gray-600">Menu Items</p>
+            <p className="text-2xl font-bold text-green-600">{menuItems.length}</p>
+            <p className="text-xs text-green-600">available</p>
+          </div>
         </div>
 
         {/* Main Content */}
@@ -273,8 +504,14 @@ const RestaurantDashboard = () => {
             <div className="bg-white rounded-lg shadow-sm border p-4">
               <h3 className="font-semibold text-gray-900 mb-3">Quick Actions</h3>
               <div className="space-y-2">
-                <button onClick={() => setShowAddProduct(true)} className="w-full flex items-center space-x-2 bg-orange-600 text-white px-3 py-2 rounded hover:bg-orange-700"><Plus size={16} /><span>Add Product</span></button>
-                <button onClick={() => setActiveTab('orders')} className="w-full flex items-center space-x-2 bg-green-600 text-white px-3 py-2 rounded hover:bg-green-700"><Package size={16} /><span>View Orders ({orders.length})</span></button>
+                <button onClick={() => setShowAddProduct(true)} className="w-full flex items-center space-x-2 bg-orange-600 text-white px-3 py-2 rounded hover:bg-orange-700">
+                  <Plus size={16} />
+                  <span>Add Product</span>
+                </button>
+                <button onClick={() => setActiveTab('orders')} className="w-full flex items-center space-x-2 bg-green-600 text-white px-3 py-2 rounded hover:bg-green-700">
+                  <Package size={16} />
+                  <span>View Orders ({orders.length})</span>
+                </button>
               </div>
             </div>
 
@@ -318,16 +555,24 @@ const RestaurantDashboard = () => {
                                 <p className="text-sm text-gray-600">{order.user?.name || order.customerId?.name || 'Customer'}</p>
                                 <p className="text-xs text-gray-500">{formatDate(order.createdAt)}</p>
                               </div>
-                              <span className={`px-2 py-1 text-xs rounded ${order.status === 'delivered' || order.status === 'completed' ? 'bg-green-100 text-green-800' : order.status === 'pending' ? 'bg-yellow-100 text-yellow-800' : order.status === 'cancelled' ? 'bg-red-100 text-red-800' : 'bg-blue-100 text-blue-800'}`}>{order.status}</span>
+                              <span className={`px-2 py-1 text-xs rounded ${order.status === 'delivered' || order.status === 'completed' ? 'bg-green-100 text-green-800' : order.status === 'pending' ? 'bg-yellow-100 text-yellow-800' : order.status === 'cancelled' ? 'bg-red-100 text-red-800' : 'bg-blue-100 text-blue-800'}`}>
+                                {order.status}
+                              </span>
                             </div>
                             <div className="flex justify-between items-center mt-2">
                               <span className="text-green-600 font-semibold">{formatCurrency(order.total || order.totalAmount)}</span>
-                              <button onClick={() => { setSelectedOrder(order); setShowOrderDetails(true); }} className="text-orange-600 hover:text-orange-700"><Eye size={16} /></button>
+                              <button onClick={() => { setSelectedOrder(order); setShowOrderDetails(true); }} className="text-orange-600 hover:text-orange-700">
+                                <Eye size={16} />
+                              </button>
                             </div>
                           </div>
                         ))
                       ) : (
-                        <div className="text-center py-8"><Package size={48} className="mx-auto text-gray-300 mb-4" /><p className="text-gray-500">No orders yet</p><p className="text-sm text-gray-400 mt-2">When customers place orders, they will appear here</p></div>
+                        <div className="text-center py-8">
+                          <Package size={48} className="mx-auto text-gray-300 mb-4" />
+                          <p className="text-gray-500">No orders yet</p>
+                          <p className="text-sm text-gray-400 mt-2">When customers place orders, they will appear here</p>
+                        </div>
                       )}
                     </div>
                   </div>
@@ -338,7 +583,13 @@ const RestaurantDashboard = () => {
                   <div>
                     <h2 className="text-xl font-bold text-gray-900 mb-6">All Orders ({orders.length})</h2>
                     {orders.length === 0 ? (
-                      <div className="text-center py-8"><Package size={48} className="mx-auto text-gray-300 mb-4" /><p className="text-gray-500">No orders yet</p><div className="mt-4 space-y-2"><button onClick={fetchData} className="bg-orange-600 text-white px-6 py-2 rounded-lg hover:bg-orange-700 block mx-auto">Refresh Data</button></div></div>
+                      <div className="text-center py-8">
+                        <Package size={48} className="mx-auto text-gray-300 mb-4" />
+                        <p className="text-gray-500">No orders yet</p>
+                        <div className="mt-4 space-y-2">
+                          <button onClick={fetchData} className="bg-orange-600 text-white px-6 py-2 rounded-lg hover:bg-orange-700 block mx-auto">Refresh Data</button>
+                        </div>
+                      </div>
                     ) : (
                       <div className="space-y-4">
                         {orders.map((order) => (
@@ -348,7 +599,9 @@ const RestaurantDashboard = () => {
                                 <h3 className="font-semibold text-gray-900">Order #{order.orderId || order._id}</h3>
                                 <p className="text-sm text-gray-600">{order.user?.name || order.customerId?.name || 'Customer'} • {formatDate(order.createdAt)}</p>
                               </div>
-                              <span className={`px-2 py-1 text-xs rounded ${order.status === 'delivered' || order.status === 'completed' ? 'bg-green-100 text-green-800' : order.status === 'pending' ? 'bg-yellow-100 text-yellow-800' : order.status === 'cancelled' ? 'bg-red-100 text-red-800' : 'bg-blue-100 text-blue-800'}`}>{order.status}</span>
+                              <span className={`px-2 py-1 text-xs rounded ${order.status === 'delivered' || order.status === 'completed' ? 'bg-green-100 text-green-800' : order.status === 'pending' ? 'bg-yellow-100 text-yellow-800' : order.status === 'cancelled' ? 'bg-red-100 text-red-800' : 'bg-blue-100 text-blue-800'}`}>
+                                {order.status}
+                              </span>
                             </div>
                             <div className="flex justify-between items-center">
                               <div>
@@ -374,10 +627,20 @@ const RestaurantDashboard = () => {
                   <div>
                     <div className="flex justify-between items-center mb-6">
                       <h2 className="text-xl font-bold text-gray-900">Menu Items ({menuItems.length})</h2>
-                      <button onClick={() => setShowAddProduct(true)} className="flex items-center space-x-2 bg-orange-600 text-white px-4 py-2 rounded-lg hover:bg-orange-700"><Plus size={16} /><span>Add Item</span></button>
+                      <button onClick={() => setShowAddProduct(true)} className="flex items-center space-x-2 bg-orange-600 text-white px-4 py-2 rounded-lg hover:bg-orange-700">
+                        <Plus size={16} />
+                        <span>Add Item</span>
+                      </button>
                     </div>
                     {menuItems.length === 0 ? (
-                      <div className="text-center py-8"><Package size={48} className="mx-auto text-gray-300 mb-4" /><p className="text-gray-500">No menu items yet</p><button onClick={() => setShowAddProduct(true)} className="mt-4 bg-orange-600 text-white px-6 py-2 rounded-lg hover:bg-orange-700">Add Your First Item</button></div>
+                      <div className="text-center py-8">
+                        <Package size={48} className="mx-auto text-gray-300 mb-4" />
+                        <p className="text-gray-500">No menu items yet</p>
+                        <div className="mt-4 space-y-2">
+                          <button onClick={() => setShowAddProduct(true)} className="bg-orange-600 text-white px-6 py-2 rounded-lg hover:bg-orange-700">Add Your First Item</button>
+                          <button onClick={handleQuickFix} className="bg-purple-600 text-white px-6 py-2 rounded-lg hover:bg-purple-700">Add Sample Products</button>
+                        </div>
+                      </div>
                     ) : (
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         {menuItems.map((item) => (
@@ -386,12 +649,16 @@ const RestaurantDashboard = () => {
                               {item.image ? (
                                 <img src={item.image} alt={item.name} className="w-16 h-16 object-cover rounded-lg" />
                               ) : (
-                                <div className="w-16 h-16 bg-gray-200 rounded-lg flex items-center justify-center"><Image size={20} className="text-gray-400" /></div>
+                                <div className="w-16 h-16 bg-gray-200 rounded-lg flex items-center justify-center">
+                                  <Image size={20} className="text-gray-400" />
+                                </div>
                               )}
                               <div className="flex-1">
                                 <div className="flex justify-between items-start">
                                   <h3 className="font-semibold text-gray-900">{item.name}</h3>
-                                  <span className={`px-2 py-1 text-xs rounded ${item.isAvailable !== false ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>{item.isAvailable !== false ? 'Available' : 'Unavailable'}</span>
+                                  <span className={`px-2 py-1 text-xs rounded ${item.isAvailable !== false ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+                                    {item.isAvailable !== false ? 'Available' : 'Unavailable'}
+                                  </span>
                                 </div>
                                 <p className="text-sm text-gray-600 capitalize">{item.category}</p>
                               </div>
@@ -416,7 +683,11 @@ const RestaurantDashboard = () => {
                   <div>
                     <h2 className="text-xl font-bold text-gray-900 mb-6">Earnings Overview</h2>
                     {earningsArray.length === 0 ? (
-                      <div className="text-center py-8"><DollarSign size={48} className="mx-auto text-gray-300 mb-4" /><p className="text-gray-500">No earnings data available</p></div>
+                      <div className="text-center py-8">
+                        <DollarSign size={48} className="mx-auto text-gray-300 mb-4" />
+                        <p className="text-gray-500">No earnings data available</p>
+                        <p className="text-sm text-gray-400 mt-2">Complete some orders to see earnings data</p>
+                      </div>
                     ) : (
                       <div className="space-y-6">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -450,7 +721,9 @@ const RestaurantDashboard = () => {
             <div className="p-6">
               <div className="flex justify-between items-center mb-4">
                 <h3 className="text-lg font-bold text-gray-900">Add Menu Item</h3>
-                <button onClick={() => setShowAddProduct(false)} className="text-gray-500 hover:text-gray-700"><X size={20} /></button>
+                <button onClick={() => setShowAddProduct(false)} className="text-gray-500 hover:text-gray-700">
+                  <X size={20} />
+                </button>
               </div>
               <form onSubmit={handleAddProduct} className="space-y-4">
                 <div>
@@ -489,7 +762,10 @@ const RestaurantDashboard = () => {
                 </div>
                 <div className="flex space-x-3 pt-4">
                   <button type="button" onClick={() => setShowAddProduct(false)} className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50">Cancel</button>
-                  <button type="submit" className="flex-1 px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 flex items-center justify-center space-x-2"><Save size={16} /><span>Add Item</span></button>
+                  <button type="submit" disabled={loading} className="flex-1 px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 flex items-center justify-center space-x-2 disabled:opacity-50">
+                    <Save size={16} />
+                    <span>{loading ? 'Adding...' : 'Add Item'}</span>
+                  </button>
                 </div>
               </form>
             </div>
@@ -504,7 +780,9 @@ const RestaurantDashboard = () => {
             <div className="p-6">
               <div className="flex justify-between items-center mb-6">
                 <h3 className="text-xl font-bold text-gray-900">Order Details</h3>
-                <button onClick={() => setShowOrderDetails(false)} className="text-gray-500 hover:text-gray-700"><X size={24} /></button>
+                <button onClick={() => setShowOrderDetails(false)} className="text-gray-500 hover:text-gray-700">
+                  <X size={24} />
+                </button>
               </div>
               <div className="space-y-4">
                 <div>
