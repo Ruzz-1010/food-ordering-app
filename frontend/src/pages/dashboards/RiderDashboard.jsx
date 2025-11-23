@@ -8,7 +8,7 @@ import { useAuth } from '../../context/AuthContext';
 const API_URL = 'https://food-ordering-app-production-35eb.up.railway.app/api';
 
 const RiderDashboard = () => {
-  const { user, logout, getUserId } = useAuth();
+  const { user, logout } = useAuth();
   const [loading, setLoading] = useState(true);
   const [available, setAvailable] = useState([]);
   const [myDeliveries, setMyDeliveries] = useState([]);
@@ -29,6 +29,7 @@ const RiderDashboard = () => {
       });
       
       const data = await res.json();
+      console.log('📦 Available orders:', data);
       if (data.success) setAvailable(data.orders || []);
     } catch (error) {
       console.error('Error fetching available orders:', error);
@@ -47,6 +48,7 @@ const RiderDashboard = () => {
       });
       
       const data = await res.json();
+      console.log('🚚 My deliveries:', data);
       if (data.success) setMyDeliveries(data.orders || []);
     } catch (error) {
       console.error('Error fetching my deliveries:', error);
@@ -54,42 +56,60 @@ const RiderDashboard = () => {
     }
   };
 
-  // ✅ ACCEPT ORDER – bullet-proof rider id
-const acceptOrder = async (orderId) => {
-  const riderId = user?._id || user?.id;   // either spelling works
-  if (!riderId) {
-    alert('❌ Rider ID not found – make sure you are logged in as a rider.');
-    return;
-  }
+  // ✅ ACCEPT ORDER - COMPLETELY FIXED!
+  const acceptOrder = async (orderId) => {
+    try {
+      console.log('🔄 Accepting order:', orderId);
+      console.log('👤 Current user:', user);
+      
+      // DITO ANG FIX - Gamitin ang user._id directly
+      const riderId = user?._id;
+      
+      if (!riderId) {
+        alert('❌ Error: Rider ID not found. Please make sure you are logged in.');
+        return;
+      }
 
-  try {
-    const res = await fetch(`${API_URL}/orders/${orderId}/accept`, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify({ riderId }),
-    });
+      if (!token) {
+        alert('❌ Error: No authentication token found.');
+        return;
+      }
 
-    const data = await res.json();
+      console.log('📤 Sending request with:', { riderId, orderId });
 
-    if (res.ok && data.success) {
-      alert('✅ Order assigned to you!');
-      await fetchAvailable();
-      await fetchMyDeliveries();
-    } else {
-      alert(`❌ Failed: ${data.message || 'Unknown error'}`);
+      const res = await fetch(`${API_URL}/orders/${orderId}/accept`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({ riderId }) // CRITICAL FIX - kasama ang riderId
+      });
+
+      console.log('📡 Response status:', res.status);
+      
+      const data = await res.json();
+      console.log('📦 Response data:', data);
+
+      if (res.ok && data.success) {
+        alert('✅ Order assigned to you!');
+        // Refresh both lists
+        await fetchAvailable();
+        await fetchMyDeliveries();
+      } else {
+        alert(`❌ Failed: ${data.message || 'Unknown error'}`);
+      }
+    } catch (error) {
+      console.error('❌ Error accepting order:', error);
+      alert('❌ Failed to accept order. Please try again.');
     }
-  } catch (err) {
-    console.error(err);
-    alert('❌ Network error while accepting order.');
-  }
-};
+  };
 
   // ✅ Update delivery status
   const updateStatus = async (orderId, status) => {
     try {
+      console.log('🔄 Updating order status:', { orderId, status });
+      
       const res = await fetch(`${API_URL}/orders/${orderId}/delivery-status`, {
         method: 'PUT',
         headers: {
@@ -117,6 +137,10 @@ const acceptOrder = async (orderId) => {
   const loadData = async () => {
     setLoading(true);
     try {
+      console.log('🚀 Loading rider data...');
+      console.log('👤 Current user:', user);
+      console.log('🔑 Token exists:', !!token);
+      
       await Promise.all([fetchAvailable(), fetchMyDeliveries()]);
     } catch (error) {
       console.error('❌ Error loading data:', error);
@@ -127,8 +151,7 @@ const acceptOrder = async (orderId) => {
 
   // 🔄 Load on mount
   useEffect(() => {
-    // TANGGAPIN ANG BOTH "rider" AT "restaurant" ROLES
-    if (user && (user.role === 'rider' || user.role === 'restaurant')) {
+    if (user && user.role === 'rider') {
       loadData();
     }
   }, [user]);
@@ -184,8 +207,7 @@ const acceptOrder = async (orderId) => {
     );
   }
 
-  // TANGGAPIN ANG BOTH ROLES - FIXED!
-  if (user.role !== 'rider' && user.role !== 'restaurant') {
+  if (user.role !== 'rider') {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
@@ -215,10 +237,7 @@ const acceptOrder = async (orderId) => {
                 <p className="text-xs text-gray-400">
                   Available: {stats.availableOrders} | My Deliveries: {stats.myDeliveries}
                 </p>
-                {/* SHOW ROLE INFO */}
-                <p className="text-xs text-orange-600">
-                  Role: {user.role} {user.role === 'restaurant' && '(Rider Account)'}
-                </p>
+                <p className="text-xs text-green-600">Rider ID: {user._id}</p>
               </div>
             </div>
 
