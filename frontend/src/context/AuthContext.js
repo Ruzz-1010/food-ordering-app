@@ -8,8 +8,8 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
   const [authChecked, setAuthChecked] = useState(false);
 
-  // ✅ FIXED – no trailing space
-const API_URL = 'https://food-ordering-app-production-35eb.up.railway.app/api';
+  const API_URL = 'https://food-ordering-app-production-35eb.up.railway.app/api';
+
   // Function to fetch restaurant data
   const fetchRestaurantData = async (userId, userEmail) => {
     try {
@@ -139,7 +139,7 @@ const API_URL = 'https://food-ordering-app-production-35eb.up.railway.app/api';
     checkAuthStatus();
   }, []);
 
-  // Login function
+  // Login function - FIXED VERSION (REMOVED APPROVAL CHECK)
   const login = async (email, password) => {
     setLoading(true);
     
@@ -184,13 +184,14 @@ const API_URL = 'https://food-ordering-app-production-35eb.up.railway.app/api';
           }
         }
         
-        if ((userData.role === 'rider' || userData.role === 'restaurant') && !userData.isApproved) {
-          console.log('🚫 Account not approved');
-          return { 
-            success: false, 
-            message: 'Your account is pending admin approval.' 
-          };
-        }
+        // ✅ FIXED: REMOVED APPROVAL CHECK - Allow all users to login
+        // if ((userData.role === 'rider' || userData.role === 'restaurant') && !userData.isApproved) {
+        //   console.log('🚫 Account not approved');
+        //   return { 
+        //     success: false, 
+        //     message: 'Your account is pending admin approval.' 
+        //   };
+        // }
         
         setUser(userData);
         localStorage.setItem('token', data.token);
@@ -218,7 +219,7 @@ const API_URL = 'https://food-ordering-app-production-35eb.up.railway.app/api';
     }
   };
 
-  // Register function
+  // Register function - FIXED VERSION
   const register = async (userData) => {
     setLoading(true);
     
@@ -244,10 +245,26 @@ const API_URL = 'https://food-ordering-app-production-35eb.up.railway.app/api';
           address: data.user.address
         };
         
+        // ✅ FIXED: Always allow registration, just show message if needs approval
         if ((userInfo.role === 'rider' || userInfo.role === 'restaurant') && !userInfo.isApproved) {
+          console.log('📝 Account registered but needs approval');
+          
+          // For restaurant owners, still try to get restaurant data
+          if (userInfo.role === 'restaurant') {
+            const restaurantInfo = await fetchRestaurantData(userInfo._id, userInfo.email);
+            if (restaurantInfo) {
+              userInfo.restaurantId = restaurantInfo.restaurantId;
+              userInfo.restaurantData = restaurantInfo.restaurantData;
+            }
+          }
+          
+          setUser(userInfo);
+          localStorage.setItem('token', data.token);
+          localStorage.setItem('user', JSON.stringify(userInfo));
+          
           return { 
             success: true, 
-            message: 'Registration successful! Your account is pending approval.', 
+            message: 'Registration successful! Your account is pending admin approval.', 
             user: userInfo,
             needsApproval: true
           };
