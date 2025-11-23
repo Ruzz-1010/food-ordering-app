@@ -1,12 +1,11 @@
+// routes/orders.js
 const express = require('express');
 const router = express.Router();
 const { auth, requireRole } = require('../middleware/auth');
 const Order = require('../models/Order');
 const Restaurant = require('../models/Restaurant');
 
-// ======================= CUSTOMER ROUTES =======================
-
-// Get customer's orders
+// ---------- CUSTOMER ----------
 router.get('/user', auth, async (req, res) => {
   try {
     const orders = await Order.find({ user: req.user._id })
@@ -21,7 +20,6 @@ router.get('/user', auth, async (req, res) => {
   }
 });
 
-// Track order by ID
 router.get('/track/:orderId', auth, async (req, res) => {
   try {
     const order = await Order.findOne({ orderId: req.params.orderId })
@@ -32,7 +30,8 @@ router.get('/track/:orderId', auth, async (req, res) => {
 
     if (!order) return res.status(404).json({ success: false, message: 'Order not found' });
 
-    const canView = req.user.role === 'admin' ||
+    const canView =
+      req.user.role === 'admin' ||
       order.user._id.toString() === req.user._id.toString() ||
       (req.user.role === 'restaurant' && order.restaurant._id.toString() === req.user.restaurantId?.toString()) ||
       (req.user.role === 'rider' && order.rider && order.rider._id.toString() === req.user._id.toString());
@@ -45,7 +44,6 @@ router.get('/track/:orderId', auth, async (req, res) => {
   }
 });
 
-// Create new order (Checkout)
 router.post('/create', auth, async (req, res) => {
   try {
     const { restaurantId, items, deliveryAddress, paymentMethod = 'cash', specialInstructions = '', orderId } = req.body;
@@ -71,7 +69,7 @@ router.post('/create', auth, async (req, res) => {
     await order.save();
     await order.populate('restaurant', 'name image cuisine address');
     await order.populate('items.product', 'name price image');
-    res.status(201).json({ success: true, message: 'Order placed successfully!', order: { _id: order._id, orderId: order.orderId, status: order.status, total: order.total, estimatedDelivery: order.estimatedDelivery, restaurant: order.restaurant, items: order.items } });
+    res.status(201).json({ success: true, message: 'Order placed successfully!', order });
   } catch (error) {
     console.error('Create order error', error);
     if (error.code === 11000) return res.status(400).json({ success: false, message: 'Order ID already exists' });
@@ -79,7 +77,6 @@ router.post('/create', auth, async (req, res) => {
   }
 });
 
-// Cancel order (Customer)
 router.put('/:orderId/cancel', auth, async (req, res) => {
   try {
     const order = await Order.findOne({ _id: req.params.orderId, user: req.user._id });
@@ -94,9 +91,7 @@ router.put('/:orderId/cancel', auth, async (req, res) => {
   }
 });
 
-// ======================= RESTAURANT ROUTES =======================
-
-// Get restaurant's orders
+// ---------- RESTAURANT ----------
 router.get('/restaurant', auth, requireRole(['restaurant']), async (req, res) => {
   try {
     const restaurant = await Restaurant.findOne({ owner: req.user._id });
@@ -113,22 +108,6 @@ router.get('/restaurant', auth, requireRole(['restaurant']), async (req, res) =>
   }
 });
 
-// Get restaurant orders by restaurant ID
-router.get('/restaurant/:restaurantId', auth, async (req, res) => {
-  try {
-    const orders = await Order.find({ restaurant: req.params.restaurantId })
-      .populate('user', 'name phone email')
-      .populate('items.product', 'name price category')
-      .populate('rider', 'name phone vehicleType')
-      .sort({ createdAt: -1 });
-    res.json({ success: true, orders });
-  } catch (error) {
-    console.error('Get restaurant orders by ID error', error);
-    res.status(500).json({ success: false, message: 'Server error' });
-  }
-});
-
-// Update order status (Restaurant)
 router.put('/:orderId/status', auth, requireRole(['restaurant']), async (req, res) => {
   try {
     const { status } = req.body;
@@ -147,9 +126,7 @@ router.put('/:orderId/status', auth, requireRole(['restaurant']), async (req, re
   }
 });
 
-// ======================= RIDER ROUTES =======================
-
-// Get available orders for riders
+// ---------- RIDER ----------
 router.get('/rider/available', auth, requireRole(['rider']), async (req, res) => {
   try {
     const orders = await Order.find({ status: 'ready', rider: { $exists: false } })
@@ -163,7 +140,6 @@ router.get('/rider/available', auth, requireRole(['rider']), async (req, res) =>
   }
 });
 
-// Get rider's assigned orders
 router.get('/rider/my-deliveries', auth, requireRole(['rider']), async (req, res) => {
   try {
     const orders = await Order.find({ rider: req.user._id })
@@ -178,7 +154,7 @@ router.get('/rider/my-deliveries', auth, requireRole(['rider']), async (req, res
   }
 });
 
-// ✅ NEW: Rider Accept Order (fixes "accept then nothing")
+// ✅ Rider Accept Order (moves order from "ready" → "assigned")
 router.put('/:orderId/accept', auth, requireRole(['rider']), async (req, res) => {
   try {
     const order = await Order.findOne({
@@ -189,7 +165,7 @@ router.put('/:orderId/accept', auth, requireRole(['rider']), async (req, res) =>
     if (!order) return res.status(404).json({ success: false, message: 'Order not available' });
 
     order.rider = req.user._id;
-    order.status = 'assigned';          // ← moves it to rider's list
+    order.status = 'assigned';   // valid enum value
     order.estimatedDelivery = new Date(Date.now() + 30 * 60000);
     await order.save();
 
@@ -197,22 +173,6 @@ router.put('/:orderId/accept', auth, requireRole(['rider']), async (req, res) =>
   } catch (error) {
     console.error('Accept order error', error);
     res.status(500).json({ success: false, message: 'Server error' });
-  }
-});
-
-// Accept delivery (Rider) – legacy route, kept for compatibility
-router.put('/:orderId/accept', auth, requireRole(['rider']), async (req, res) => {
-  try {
-    const order = await Order.findOne({ _id: req.params.orderId, status: 'ready', rider: { $exists: false } });
-    if (!order) return res.status(404).json({ success: false, message: 'Order not available' });
-    order.rider = req.user._id;
-    order.status = 'out_for_delivery';
-    order.estimatedDelivery = new Date(Date.now() + 30 * 60000);
-    await order.save();
-    res.json({ success: true, message: 'Delivery accepted successfully', order });
-  } catch (error) {
-    console.error('Accept delivery error', error);
-    res.status(500).json({ success: false, message: 'Failed to accept delivery' });
   }
 });
 
@@ -234,9 +194,7 @@ router.put('/:orderId/delivery-status', auth, requireRole(['rider']), async (req
   }
 });
 
-// ======================= ADMIN ROUTES =======================
-
-// Get all orders (Admin)
+// ---------- ADMIN ----------
 router.get('/admin/all', auth, requireRole(['admin']), async (req, res) => {
   try {
     const { page = 1, limit = 20, status } = req.query;
@@ -257,15 +215,13 @@ router.get('/admin/all', auth, requireRole(['admin']), async (req, res) => {
   }
 });
 
-// Get order statistics (Admin)
 router.get('/admin/stats', auth, requireRole(['admin']), async (req, res) => {
   try {
     const totalOrders = await Order.countDocuments();
     const pendingOrders = await Order.countDocuments({ status: 'pending' });
     const deliveredOrders = await Order.countDocuments({ status: 'delivered' });
     const totalRevenue = await Order.aggregate([{ $match: { status: 'delivered' } }, { $group: { _id: null, total: { $sum: '$total' } } }]);
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
+    const today = new Date(); today.setHours(0, 0, 0, 0);
     const todaysOrders = await Order.countDocuments({ createdAt: { $gte: today } });
     res.json({ success: true, stats: { totalOrders, pendingOrders, deliveredOrders, todaysOrders, totalRevenue: totalRevenue[0]?.total || 0 } });
   } catch (error) {
@@ -274,7 +230,7 @@ router.get('/admin/stats', auth, requireRole(['admin']), async (req, res) => {
   }
 });
 
-// Get single order by ID (All authenticated users)
+// ---------- SINGLE ORDER (ANY AUTH USER) ----------
 router.get('/:orderId', auth, async (req, res) => {
   try {
     const order = await Order.findById(req.params.orderId)
@@ -283,6 +239,7 @@ router.get('/:orderId', auth, async (req, res) => {
       .populate('rider', 'name phone vehicleType')
       .populate('items.product', 'name price image category description');
     if (!order) return res.status(404).json({ success: false, message: 'Order not found' });
+
     const canView = req.user.role === 'admin' ||
       order.user._id.toString() === req.user._id.toString() ||
       (req.user.role === 'restaurant' && order.restaurant._id.toString() === req.user.restaurantId?.toString()) ||
