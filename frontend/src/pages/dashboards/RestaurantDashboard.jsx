@@ -1,556 +1,156 @@
 import React, { useState, useEffect } from 'react';
 import {
-  Store, Plus, Package, DollarSign, Clock, Star, Eye, X, Save,
-  LogOut, RefreshCw, Image, MapPin, Navigation, ChefHat,
-  CheckCircle, Users, TrendingUp, Phone, MessageCircle, Settings,
-  User, Edit, Camera, Upload
+  Navigation, Package, DollarSign, Clock, CheckCircle, Phone, X, LogOut, RefreshCw
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 
 const API_URL = 'https://food-ordering-app-production-35eb.up.railway.app/api';
 
-const RestaurantDashboard = () => {
-  const { user, logout, getRestaurantId, getRestaurantData, refreshRestaurantData } = useAuth();
-  const [activeTab, setActiveTab] = useState('dashboard');
-  const [loading, setLoading] = useState(false);
-  const [showAddProduct, setShowAddProduct] = useState(false);
-  const [selectedOrder, setSelectedOrder] = useState(null);
-  const [showOrderDetails, setShowOrderDetails] = useState(false);
-  const [showProfile, setShowProfile] = useState(false);
+const RiderDashboard = () => {
+  const { user, logout } = useAuth();
+  const [loading, setLoading] = useState(true);
+  const [available, setAvailable] = useState([]);
+  const [myDeliveries, setMyDeliveries] = useState([]);
+  const [activeTab, setActiveTab] = useState('available');
 
-  const [restaurantId, setRestaurantId] = useState(null);
-  const [restaurant, setRestaurant] = useState({});
+  const token = localStorage.getItem('token');
 
-  const [menuItems, setMenuItems] = useState([]);
-  const [orders, setOrders] = useState([]);
-  const [newProduct, setNewProduct] = useState({
-    name: '', price: '', description: '', category: 'main course', preparationTime: '', ingredients: '', image: ''
-  });
-
-  const [profileData, setProfileData] = useState({
-    description: '', openingHours: { open: '08:00', close: '22:00' },
-    deliveryTime: '25-35 min', deliveryFee: 35, image: '', bannerImage: ''
-  });
-
-  // 🔍 1. Get restaurant ID (with token)
-  const initializeRestaurantData = async () => {
-    const token = localStorage.getItem('token');
-    let currentRestaurantId = getRestaurantId();
-    let restaurantData = getRestaurantData();
-
-    if (currentRestaurantId && restaurantData) {
-      setRestaurantId(currentRestaurantId);
-      setRestaurant(restaurantData);
-      return currentRestaurantId;
-    }
-
-    if (user?._id) {
-      try {
-        const res = await fetch(`${API_URL}/restaurants/owner/${user._id}`, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-        const data = await res.json();
-        if (data.success && data.restaurant) {
-          currentRestaurantId = data.restaurant._id;
-          setRestaurantId(currentRestaurantId);
-          setRestaurant(data.restaurant);
-          refreshRestaurantData();
-          return currentRestaurantId;
-        }
-      } catch (e) { console.error(e); }
-    }
-
-    if (user?.email) {
-      try {
-        const res = await fetch(`${API_URL}/restaurants/email/${user.email}`, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-        const data = await res.json();
-        if (data.success && data.restaurant) {
-          currentRestaurantId = data.restaurant._id;
-          setRestaurantId(currentRestaurantId);
-          setRestaurant(data.restaurant);
-          refreshRestaurantData();
-          return currentRestaurantId;
-        }
-      } catch (e) { console.error(e); }
-    }
-    return null;
-  };
-
-  // 📦 2. Fetch orders (with token)
-  const fetchOrders = async (restaurantId) => {
-    const token = localStorage.getItem('token');
-    const res = await fetch(`${API_URL}/orders/restaurant/${restaurantId}`, {
+  // ✅ Fetch available orders
+  const fetchAvailable = async () => {
+    const res = await fetch(`${API_URL}/orders/rider/available`, {
       headers: { Authorization: `Bearer ${token}` }
     });
     const data = await res.json();
-    if (data.success) setOrders(data.orders);
+    if (data.success) setAvailable(data.orders);
   };
 
-  // 🍽️ 3. Fetch menu (with token)
-  const fetchMenu = async (restaurantId) => {
-    const token = localStorage.getItem('token');
-    const res = await fetch(`${API_URL}/products/restaurant/${restaurantId}`, {
+  // ✅ Fetch my deliveries
+  const fetchMyDeliveries = async () => {
+    const res = await fetch(`${API_URL}/orders/rider/my-deliveries`, {
       headers: { Authorization: `Bearer ${token}` }
     });
     const data = await res.json();
-    if (data.success) setMenuItems(data.products || []);
+    if (data.success) setMyDeliveries(data.orders);
   };
 
-  // 🔄 4. Load everything
-  const fetchData = async () => {
-    setLoading(true);
-    const id = await initializeRestaurantData();
-    if (id) {
-      await Promise.all([fetchOrders(id), fetchMenu(id)]);
-    }
-    setLoading(false);
-  };
-
-  useEffect(() => {
-    if (user && user.role === 'restaurant') fetchData();
-  }, [user]);
-
-  // 💰 Stats
-  const stats = {
-    totalOrders: orders.length,
-    pendingOrders: orders.filter(o => o.status === 'pending').length,
-    completedOrders: orders.filter(o => ['delivered', 'completed'].includes(o.status)).length,
-    todayRevenue: orders
-      .filter(o => new Date(o.createdAt).toDateString() === new Date().toDateString() && ['delivered', 'completed'].includes(o.status))
-      .reduce((sum, o) => sum + (o.total || 0), 0),
-  };
-
-  const formatCurrency = (amount) => {
-    if (!amount && amount !== 0) return '₱0';
-    return `₱${parseFloat(amount).toLocaleString('en-PH', { minimumFractionDigits: 2 })}`;
-  };
-
-  const formatDate = (dateString) => {
-    return new Date(dateString).toLocaleDateString('en-PH', {
-      year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
-    });
-  };
-
-  // Earnings array (build-safe)
-  const earnings = orders
-    .filter(order => order.status === 'completed' || order.status === 'delivered')
-    .reduce((groups, order) => {
-      const date = new Date(order.createdAt).toLocaleDateString();
-      if (!groups[date]) groups[date] = { revenue: 0, orders: 0 };
-      groups[date].revenue += order.total || 0;
-      groups[date].orders += 1;
-      return groups;
-    }, {});
-
-  const earningsArray = Object.entries(earnings)
-    .map(([date, data]) => ({ date, ...data }))
-    .slice(0, 7);
-
-  // ✅ Add product
-  const handleAddProduct = async (e) => {
-    e.preventDefault();
-    if (!restaurantId) return alert('Restaurant not found');
-    const token = localStorage.getItem('token');
-    const res = await fetch(`${API_URL}/products`, {
-      method: 'POST',
+  // ✅ Accept order
+  const acceptOrder = async (orderId) => {
+    const res = await fetch(`${API_URL}/orders/${orderId}/accept`, {
+      method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${token}`
-      },
-      body: JSON.stringify({ ...newProduct, restaurantId })
+      }
     });
     const data = await res.json();
     if (res.ok) {
-      alert('✅ Product added successfully!');
-      setShowAddProduct(false);
-      setNewProduct({ name: '', price: '', description: '', category: 'main course', preparationTime: '', ingredients: '', image: '' });
-      fetchData();
-    } else alert(`❌ Failed: ${data.message || 'Error adding product'}`);
+      alert('✅ Order assigned to you!');
+      fetchAvailable();
+      fetchMyDeliveries();
+    } else {
+      alert(`❌ Failed: ${data.message || 'Unknown error'}`);
+    }
   };
 
-  // ✅ Update order status
-  const handleUpdateOrderStatus = async (orderId, newStatus) => {
-    const token = localStorage.getItem('token');
-    const res = await fetch(`${API_URL}/orders/${orderId}/status`, {
+  // ✅ Update delivery status
+  const updateStatus = async (orderId, status) => {
+    const res = await fetch(`${API_URL}/orders/${orderId}/delivery-status`, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${token}`
       },
-      body: JSON.stringify({ status: newStatus })
+      body: JSON.stringify({ status })
     });
     const data = await res.json();
     if (res.ok) {
-      await fetchData();
-      alert(`✅ Order status updated to ${newStatus}`);
-    } else alert(`❌ Failed to update status: ${data.message || 'Unknown error'}`);
+      alert(`✅ Status updated to ${status}`);
+      fetchMyDeliveries();
+    } else {
+      alert(`❌ Failed: ${data.message || 'Unknown error'}`);
+    }
   };
 
-  // 🖥️ UI
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-12 h-12 border-4 border-orange-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading Restaurant Data...</p>
-        </div>
-      </div>
-    );
-  }
+  // 🔄 Load on mount
+  useEffect(() => {
+    if (user && user.role === 'rider') {
+      Promise.all([fetchAvailable(), fetchMyDeliveries()]).then(() => setLoading(false));
+    }
+  }, [user]);
 
-  if (!user) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <h2 className="text-xl font-bold text-gray-900 mb-2">Not Logged In</h2>
-          <p className="text-gray-600">Please login to access the restaurant dashboard.</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (!restaurantId) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-16 h-16 bg-yellow-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <Store className="text-yellow-600" size={32} />
-          </div>
-          <h2 className="text-xl font-bold text-gray-900 mb-2">Restaurant Setup Required</h2>
-          <p className="text-gray-600 mb-4">Your restaurant account needs to be set up.</p>
-          <div className="space-y-2">
-            <button onClick={fetchData} className="bg-orange-600 text-white px-6 py-2 rounded-lg hover:bg-orange-700 block mx-auto">Retry</button>
-            <button onClick={logout} className="bg-gray-600 text-white px-6 py-2 rounded-lg hover:bg-gray-700 block mx-auto">Logout</button>
-          </div>
-        </div>
-      </div>
-    );
-  }
+  if (loading) return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
+  if (!user || user.role !== 'rider') return <div className="min-h-screen flex items-center justify-center">Access Denied</div>;
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header */}
       <header className="bg-white shadow-sm border-b">
-        <div className="max-w-7xl mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-3">
-              <div className="w-10 h-10 bg-orange-600 rounded-lg flex items-center justify-center">
-                <Store className="text-white" size={20} />
-              </div>
-              <div>
-                <h1 className="text-xl font-bold text-gray-900">Restaurant Dashboard</h1>
-                <p className="text-sm text-gray-500">{restaurant.name || 'Your Restaurant'} - {user?.name}</p>
-                <p className="text-xs text-gray-400">Orders: {stats.totalOrders} | Products: {menuItems.length}</p>
-              </div>
+        <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
+          <div className="flex items-center space-x-3">
+            <Navigation className="text-orange-600" size={24} />
+            <div>
+              <h1 className="text-xl font-bold text-gray-900">Rider Dashboard</h1>
+              <p className="text-sm text-gray-500">{user.name} • {user.email}</p>
             </div>
-
-            <div className="flex items-center space-x-3">
-              <button onClick={() => {}} className="flex items-center space-x-2 bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700"><Package size={16} /><span>Test API</span></button>
-              <button onClick={() => setShowProfile(true)} className="flex items-center space-x-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"><User size={16} /><span>Profile</span></button>
-              <button onClick={fetchData} className="flex items-center space-x-2 bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700"><RefreshCw size={16} /><span>Refresh</span></button>
-              <button onClick={logout} className="flex items-center space-x-2 bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700"><LogOut size={16} /><span>Logout</span></button>
-            </div>
+          </div>
+          <div className="flex items-center space-x-3">
+            <button onClick={() => { fetchAvailable(); fetchMyDeliveries(); }} className="flex items-center space-x-2 bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700"><RefreshCw size={16} /><span>Refresh</span></button>
+            <button onClick={logout} className="flex items-center space-x-2 bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700"><LogOut size={16} /><span>Logout</span></button>
           </div>
         </div>
       </header>
 
       <div className="max-w-7xl mx-auto px-4 py-6">
-        {/* Stats */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-          <div className="bg-white p-4 rounded-lg shadow-sm border"><p className="text-sm text-gray-600">Today's Revenue</p><p className="text-2xl font-bold text-gray-900">{formatCurrency(stats.todayRevenue)}</p><p className="text-xs text-gray-500">from {stats.completedOrders} completed orders</p></div>
-          <div className="bg-white p-4 rounded-lg shadow-sm border"><p className="text-sm text-gray-600">Total Orders</p><p className="text-2xl font-bold text-gray-900">{stats.totalOrders}</p><p className="text-xs text-blue-600">all time</p></div>
-          <div className="bg-white p-4 rounded-lg shadow-sm border"><p className="text-sm text-gray-600">Pending Orders</p><p className="text-2xl font-bold text-orange-600">{stats.pendingOrders}</p><p className="text-xs text-orange-600">need attention</p></div>
-          <div className="bg-white p-4 rounded-lg shadow-sm border"><p className="text-sm text-gray-600">Menu Items</p><p className="text-2xl font-bold text-green-600">{menuItems.length}</p><p className="text-xs text-green-600">available</p></div>
+        <div className="flex space-x-4 mb-6">
+          <button onClick={() => setActiveTab('available')} className={`px-4 py-2 rounded-lg ${activeTab === 'available' ? 'bg-orange-600 text-white' : 'bg-white text-gray-700 border'}`}>Available ({available.length})</button>
+          <button onClick={() => setActiveTab('my-deliveries')} className={`px-4 py-2 rounded-lg ${activeTab === 'my-deliveries' ? 'bg-orange-600 text-white' : 'bg-white text-gray-700 border'}`}>My Deliveries ({myDeliveries.length})</button>
         </div>
 
-        {/* Main Content */}
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-          {/* Sidebar */}
-          <div className="lg:col-span-1 space-y-6">
-            {/* Quick Actions */}
-            <div className="bg-white rounded-lg shadow-sm border p-4">
-              <h3 className="font-semibold text-gray-900 mb-3">Quick Actions</h3>
-              <div className="space-y-2">
-                <button onClick={() => setShowAddProduct(true)} className="w-full flex items-center space-x-2 bg-orange-600 text-white px-3 py-2 rounded hover:bg-orange-700"><Plus size={16} /><span>Add Product</span></button>
-                <button onClick={() => setActiveTab('orders')} className="w-full flex items-center space-x-2 bg-green-600 text-white px-3 py-2 rounded hover:bg-green-700"><Package size={16} /><span>View Orders ({orders.length})</span></button>
+        {activeTab === 'available' && (
+          <div className="grid gap-4">
+            {available.length === 0 && <div className="text-center py-8 text-gray-500">No available orders right now.</div>}
+            {available.map(order => (
+              <div key={order._id} className="bg-white rounded-lg shadow p-4 flex items-center justify-between">
+                <div>
+                  <p className="font-semibold">Order #{order.orderId}</p>
+                  <p className="text-sm text-gray-600">{order.restaurant.name} • {order.restaurant.address}</p>
+                  <p className="text-sm text-gray-500">{order.deliveryAddress}</p>
+                  <p className="text-green-600 font-bold">₱{order.total?.toFixed(2)}</p>
+                </div>
+                <button onClick={() => acceptOrder(order._id)} className="bg-orange-600 text-white px-4 py-2 rounded-lg hover:bg-orange-700">Accept</button>
               </div>
-            </div>
-
-            {/* Restaurant Info */}
-            <div className="bg-white rounded-lg shadow-sm border p-4">
-              <h3 className="font-semibold text-gray-900 mb-3">Restaurant Info</h3>
-              <div className="space-y-2 text-sm">
-                <p><strong>Name:</strong> {restaurant.name || 'Your Restaurant'}</p>
-                <p><strong>Cuisine:</strong> {restaurant.cuisine || 'Not set'}</p>
-                <p><strong>Status:</strong> <span className={`ml-1 ${restaurant.isApproved ? 'text-green-600' : 'text-yellow-600'}`}>{restaurant.isApproved ? 'Approved' : 'Pending Approval'}</span></p>
-                <p><strong>Address:</strong> {restaurant.address || 'Not set'}</p>
-                <p><strong>Phone:</strong> {restaurant.phone || 'Not set'}</p>
-              </div>
-            </div>
+            ))}
           </div>
+        )}
 
-          {/* Main Content */}
-          <div className="lg:col-span-3">
-            <div className="bg-white rounded-lg shadow-sm border">
-              {/* Tabs */}
-              <div className="flex border-b">
-                <button onClick={() => setActiveTab('dashboard')} className={`flex-1 py-4 font-medium ${activeTab === 'dashboard' ? 'text-orange-600 border-b-2 border-orange-600' : 'text-gray-600'}`}>📊 Dashboard</button>
-                <button onClick={() => setActiveTab('orders')} className={`flex-1 py-4 font-medium ${activeTab === 'orders' ? 'text-orange-600 border-b-2 border-orange-600' : 'text-gray-600'}`}>📦 Orders ({orders.length})</button>
-                <button onClick={() => setActiveTab('menu')} className={`flex-1 py-4 font-medium ${activeTab === 'menu' ? 'text-orange-600 border-b-2 border-orange-600' : 'text-gray-600'}`}>🍽️ Menu ({menuItems.length})</button>
-                <button onClick={() => setActiveTab('earnings')} className={`flex-1 py-4 font-medium ${activeTab === 'earnings' ? 'text-orange-600 border-b-2 border-orange-600' : 'text-gray-600'}`}>💰 Earnings</button>
+        {activeTab === 'my-deliveries' && (
+          <div className="grid gap-4">
+            {myDeliveries.length === 0 && <div className="text-center py-8 text-gray-500">You haven't accepted any deliveries yet.</div>}
+            {myDeliveries.map(order => (
+              <div key={order._id} className="bg-white rounded-lg shadow p-4">
+                <div className="flex items-start justify-between mb-2">
+                  <div>
+                    <p className="font-semibold">Order #{order.orderId}</p>
+                    <p className="text-sm text-gray-600">{order.restaurant.name} → {order.deliveryAddress}</p>
+                    <p className="text-green-600 font-bold">₱{order.total?.toFixed(2)}</p>
+                  </div>
+                  <span className={`px-2 py-1 text-xs rounded ${order.status === 'delivered' ? 'bg-green-100 text-green-800' : 'bg-blue-100 text-blue-800'}`}>{order.status}</span>
+                </div>
+                <div className="flex items-center space-x-2 mt-3">
+                  {order.status === 'assigned' && (
+                    <button onClick={() => updateStatus(order._id, 'out_for_delivery')} className="bg-blue-600 text-white px-3 py-1 rounded text-sm hover:bg-blue-700">Mark Out for Delivery</button>
+                  )}
+                  {order.status === 'out_for_delivery' && (
+                    <button onClick={() => updateStatus(order._id, 'delivered')} className="bg-green-600 text-white px-3 py-1 rounded text-sm hover:bg-green-700">Mark Delivered</button>
+                  )}
+                  <a href={`tel:${order.user.phone}`} className="px-3 py-1 bg-gray-600 text-white rounded text-sm hover:bg-gray-700 flex items-center space-x-1"><Phone size={14} /><span>Call</span></a>
+                </div>
               </div>
-
-              <div className="p-6">
-                {/* Dashboard Tab */}
-                {activeTab === 'dashboard' && (
-                  <div className="space-y-6">
-                    <h2 className="text-xl font-bold text-gray-900">Overview</h2>
-                    <div>
-                      <h3 className="font-semibold text-gray-900 mb-4">Recent Orders</h3>
-                      {orders.slice(0, 5).length > 0 ? (
-                        orders.slice(0, 5).map((order) => (
-                          <div key={order._id} className="border rounded-lg p-4 mb-3">
-                            <div className="flex justify-between items-start">
-                              <div>
-                                <p className="font-medium">Order #{order.orderId || order._id}</p>
-                                <p className="text-sm text-gray-600">{order.user?.name || order.customerId?.name || 'Customer'}</p>
-                                <p className="text-xs text-gray-500">{formatDate(order.createdAt)}</p>
-                              </div>
-                              <span className={`px-2 py-1 text-xs rounded ${order.status === 'delivered' || order.status === 'completed' ? 'bg-green-100 text-green-800' : order.status === 'pending' ? 'bg-yellow-100 text-yellow-800' : order.status === 'cancelled' ? 'bg-red-100 text-red-800' : 'bg-blue-100 text-blue-800'}`}>{order.status}</span>
-                            </div>
-                            <div className="flex justify-between items-center mt-2">
-                              <span className="text-green-600 font-semibold">{formatCurrency(order.total || order.totalAmount)}</span>
-                              <button onClick={() => { setSelectedOrder(order); setShowOrderDetails(true); }} className="text-orange-600 hover:text-orange-700"><Eye size={16} /></button>
-                            </div>
-                          </div>
-                        ))
-                      ) : (
-                        <div className="text-center py-8"><Package size={48} className="mx-auto text-gray-300 mb-4" /><p className="text-gray-500">No orders yet</p><p className="text-sm text-gray-400 mt-2">When customers place orders, they will appear here</p></div>
-                      )}
-                    </div>
-                  </div>
-                )}
-
-                {/* Orders Tab */}
-                {activeTab === 'orders' && (
-                  <div>
-                    <h2 className="text-xl font-bold text-gray-900 mb-6">All Orders ({orders.length})</h2>
-                    {orders.length === 0 ? (
-                      <div className="text-center py-8"><Package size={48} className="mx-auto text-gray-300 mb-4" /><p className="text-gray-500">No orders yet</p><div className="mt-4 space-y-2"><button onClick={fetchData} className="bg-orange-600 text-white px-6 py-2 rounded-lg hover:bg-orange-700 block mx-auto">Refresh Data</button></div></div>
-                    ) : (
-                      <div className="space-y-4">
-                        {orders.map((order) => (
-                          <div key={order._id} className="border rounded-lg p-4">
-                            <div className="flex justify-between items-start mb-3">
-                              <div>
-                                <h3 className="font-semibold text-gray-900">Order #{order.orderId || order._id}</h3>
-                                <p className="text-sm text-gray-600">{order.user?.name || order.customerId?.name || 'Customer'} • {formatDate(order.createdAt)}</p>
-                              </div>
-                              <span className={`px-2 py-1 text-xs rounded ${order.status === 'delivered' || order.status === 'completed' ? 'bg-green-100 text-green-800' : order.status === 'pending' ? 'bg-yellow-100 text-yellow-800' : order.status === 'cancelled' ? 'bg-red-100 text-red-800' : 'bg-blue-100 text-blue-800'}`}>{order.status}</span>
-                            </div>
-                            <div className="flex justify-between items-center">
-                              <div>
-                                <p className="text-sm text-gray-600">{order.deliveryAddress || 'No address provided'}</p>
-                                <p className="text-lg font-bold text-green-600">{formatCurrency(order.total || order.totalAmount)}</p>
-                              </div>
-                              <div className="flex space-x-2">
-                                <button onClick={() => { setSelectedOrder(order); setShowOrderDetails(true); }} className="bg-orange-600 text-white px-3 py-1 rounded text-sm hover:bg-orange-700">Details</button>
-                                {order.status === 'pending' && <button onClick={() => handleUpdateOrderStatus(order._id, 'confirmed')} className="bg-blue-600 text-white px-3 py-1 rounded text-sm hover:bg-blue-700">Accept</button>}
-                                {order.status === 'confirmed' && <button onClick={() => handleUpdateOrderStatus(order._id, 'preparing')} className="bg-purple-600 text-white px-3 py-1 rounded text-sm hover:bg-purple-700">Start Preparing</button>}
-                                {order.status === 'preparing' && <button onClick={() => handleUpdateOrderStatus(order._id, 'ready')} className="bg-green-600 text-white px-3 py-1 rounded text-sm hover:bg-green-700">Mark Ready</button>}
-                              </div>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {/* Menu Tab */}
-                {activeTab === 'menu' && (
-                  <div>
-                    <div className="flex justify-between items-center mb-6">
-                      <h2 className="text-xl font-bold text-gray-900">Menu Items ({menuItems.length})</h2>
-                      <button onClick={() => setShowAddProduct(true)} className="flex items-center space-x-2 bg-orange-600 text-white px-4 py-2 rounded-lg hover:bg-orange-700"><Plus size={16} /><span>Add Item</span></button>
-                    </div>
-                    {menuItems.length === 0 ? (
-                      <div className="text-center py-8"><Package size={48} className="mx-auto text-gray-300 mb-4" /><p className="text-gray-500">No menu items yet</p><button onClick={() => setShowAddProduct(true)} className="mt-4 bg-orange-600 text-white px-6 py-2 rounded-lg hover:bg-orange-700">Add Your First Item</button></div>
-                    ) : (
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {menuItems.map((item) => (
-                          <div key={item._id} className="border rounded-lg p-4 hover:shadow-md transition-shadow">
-                            <div className="flex items-center space-x-3 mb-3">
-                              {item.image ? (
-                                <img src={item.image} alt={item.name} className="w-16 h-16 object-cover rounded-lg" />
-                              ) : (
-                                <div className="w-16 h-16 bg-gray-200 rounded-lg flex items-center justify-center"><Image size={20} className="text-gray-400" /></div>
-                              )}
-                              <div className="flex-1">
-                                <div className="flex justify-between items-start">
-                                  <h3 className="font-semibold text-gray-900">{item.name}</h3>
-                                  <span className={`px-2 py-1 text-xs rounded ${item.isAvailable !== false ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>{item.isAvailable !== false ? 'Available' : 'Unavailable'}</span>
-                                </div>
-                                <p className="text-sm text-gray-600 capitalize">{item.category}</p>
-                              </div>
-                            </div>
-                            {item.description && <p className="text-sm text-gray-600 mb-2">{item.description}</p>}
-                            {item.ingredients && <p className="text-xs text-gray-500 mb-3">Ingredients: {item.ingredients}</p>}
-                            <div className="flex justify-between items-center">
-                              <div>
-                                <p className="text-lg font-bold text-green-600">{formatCurrency(item.price)}</p>
-                                {item.preparationTime && <p className="text-xs text-gray-500">{item.preparationTime} min prep</p>}
-                              </div>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {/* Earnings Tab */}
-                {activeTab === 'earnings' && (
-                  <div>
-                    <h2 className="text-xl font-bold text-gray-900 mb-6">Earnings Overview</h2>
-                    {earningsArray.length === 0 ? (
-                      <div className="text-center py-8"><DollarSign size={48} className="mx-auto text-gray-300 mb-4" /><p className="text-gray-500">No earnings data available</p></div>
-                    ) : (
-                      <div className="space-y-6">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          {earningsArray.map((earning, index) => (
-                            <div key={index} className="bg-gray-50 rounded-lg p-4">
-                              <p className="text-sm font-medium text-gray-600">{earning.date}</p>
-                              <p className="text-xl font-bold text-gray-900">{formatCurrency(earning.revenue)}</p>
-                              <p className="text-xs text-gray-500">{earning.orders} orders</p>
-                            </div>
-                          ))}
-                        </div>
-                        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                          <h4 className="font-semibold text-blue-900 mb-2">💰 Total Revenue</h4>
-                          <p className="text-2xl font-bold text-blue-900">{formatCurrency(stats.totalRevenue)}</p>
-                          <p className="text-sm text-blue-700">From {stats.completedOrders} completed orders</p>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-            </div>
+            ))}
           </div>
-        </div>
+        )}
       </div>
-
-      {/* Add Product Modal */}
-      {showAddProduct && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg shadow-lg max-w-md w-full max-h-[90vh] overflow-y-auto">
-            <div className="p-6">
-              <div className="flex justify-between items-center mb-4">
-                <h3 className="text-lg font-bold text-gray-900">Add Menu Item</h3>
-                <button onClick={() => setShowAddProduct(false)} className="text-gray-500 hover:text-gray-700"><X size={20} /></button>
-              </div>
-              <form onSubmit={handleAddProduct} className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Product Image URL</label>
-                  <input type="url" value={newProduct.image} onChange={(e) => setNewProduct({...newProduct, image: e.target.value})} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500" placeholder="https://example.com/image.jpg" />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Product Name *</label>
-                  <input type="text" required value={newProduct.name} onChange={(e) => setNewProduct({...newProduct, name: e.target.value})} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500" placeholder="e.g., Chicken Burger" />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Price *</label>
-                  <input type="number" required value={newProduct.price} onChange={(e) => setNewProduct({...newProduct, price: e.target.value})} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500" placeholder="₱ 0.00" step="0.01" min="0" />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
-                  <select value={newProduct.category} onChange={(e) => setNewProduct({...newProduct, category: e.target.value})} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500">
-                    <option value="main course">Main Course</option>
-                    <option value="appetizer">Appetizer</option>
-                    <option value="dessert">Dessert</option>
-                    <option value="beverage">Beverage</option>
-                    <option value="side dish">Side Dish</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Preparation Time (minutes)</label>
-                  <input type="number" value={newProduct.preparationTime} onChange={(e) => setNewProduct({...newProduct, preparationTime: e.target.value})} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500" placeholder="15" />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Ingredients</label>
-                  <textarea value={newProduct.ingredients} onChange={(e) => setNewProduct({...newProduct, ingredients: e.target.value})} rows="2" className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500" placeholder="List main ingredients..." />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
-                  <textarea value={newProduct.description} onChange={(e) => setNewProduct({...newProduct, description: e.target.value})} rows="2" className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500" placeholder="Describe your menu item..." />
-                </div>
-                <div className="flex space-x-3 pt-4">
-                  <button type="button" onClick={() => setShowAddProduct(false)} className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50">Cancel</button>
-                  <button type="submit" className="flex-1 px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 flex items-center justify-center space-x-2"><Save size={16} /><span>Add Item</span></button>
-                </div>
-              </form>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Order Details Modal */}
-      {showOrderDetails && selectedOrder && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg shadow-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="p-6">
-              <div className="flex justify-between items-center mb-6">
-                <h3 className="text-xl font-bold text-gray-900">Order Details</h3>
-                <button onClick={() => setShowOrderDetails(false)} className="text-gray-500 hover:text-gray-700"><X size={24} /></button>
-              </div>
-              <div className="space-y-4">
-                <div>
-                  <h4 className="font-semibold text-gray-900 mb-2">Order Information</h4>
-                  <p><strong>Order ID:</strong> {selectedOrder.orderId || selectedOrder._id}</p>
-                  <p><strong>Status:</strong> <span className={`ml-2 px-2 py-1 text-xs rounded ${selectedOrder.status === 'delivered' || selectedOrder.status === 'completed' ? 'bg-green-100 text-green-800' : selectedOrder.status === 'pending' ? 'bg-yellow-100 text-yellow-800' : selectedOrder.status === 'cancelled' ? 'bg-red-100 text-red-800' : 'bg-blue-100 text-blue-800'}`}>{selectedOrder.status}</span></p>
-                  <p><strong>Total Amount:</strong> {formatCurrency(selectedOrder.total || selectedOrder.totalAmount)}</p>
-                  <p><strong>Order Date:</strong> {formatDate(selectedOrder.createdAt)}</p>
-                </div>
-                <div>
-                  <h4 className="font-semibold text-gray-900 mb-2">Customer Information</h4>
-                  <p><strong>Name:</strong> {selectedOrder.user?.name || selectedOrder.customerId?.name || 'Customer'}</p>
-                  <p><strong>Phone:</strong> {selectedOrder.user?.phone || selectedOrder.customerId?.phone || 'No phone'}</p>
-                  <p><strong>Address:</strong> {selectedOrder.deliveryAddress || 'No address'}</p>
-                </div>
-                {selectedOrder.items && selectedOrder.items.length > 0 && (
-                  <div>
-                    <h4 className="font-semibold text-gray-900 mb-2">Order Items</h4>
-                    {selectedOrder.items.map((item, index) => (
-                      <div key={index} className="flex justify-between border-b py-2">
-                        <div>
-                          <span>{item.quantity}x {item.product?.name || item.productName}</span>
-                          {item.product?.category && <span className="text-xs text-gray-500 ml-2">({item.product.category})</span>}
-                        </div>
-                        <span>{formatCurrency(item.price)}</span>
-                      </div>
-                    ))}
-                    <div className="flex justify-between border-t pt-2 mt-2 font-semibold">
-                      <span>Total:</span>
-                      <span>{formatCurrency(selectedOrder.total || selectedOrder.totalAmount)}</span>
-                    </div>
-                  </div>
-                )}
-                <div className="flex space-x-3 pt-4">
-                  {selectedOrder.status === 'pending' && <button onClick={() => { handleUpdateOrderStatus(selectedOrder._id, 'confirmed'); setShowOrderDetails(false); }} className="flex-1 bg-blue-600 text-white py-2 rounded hover:bg-blue-700">Accept Order</button>}
-                  {selectedOrder.status === 'confirmed' && <button onClick={() => { handleUpdateOrderStatus(selectedOrder._id, 'preparing'); setShowOrderDetails(false); }} className="flex-1 bg-purple-600 text-white py-2 rounded hover:bg-purple-700">Start Preparing</button>}
-                  {selectedOrder.status === 'preparing' && <button onClick={() => { handleUpdateOrderStatus(selectedOrder._id, 'ready'); setShowOrderDetails(false); }} className="flex-1 bg-green-600 text-white py-2 rounded hover:bg-green-700">Mark Ready</button>}
-                  {(selectedOrder.user?.phone || selectedOrder.customerId?.phone) && <a href={`tel:${selectedOrder.user?.phone || selectedOrder.customerId?.phone}`} className="px-4 bg-gray-600 text-white py-2 rounded hover:bg-gray-700 flex items-center justify-center"><Phone size={16} /></a>}
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 };
 
-export default RestaurantDashboard;
+export default RiderDashboard;
