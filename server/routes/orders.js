@@ -4,7 +4,7 @@ const router = express.Router();
 const { auth, requireRole } = require('../middleware/auth');
 const Order = require('../models/Order');
 const Restaurant = require('../models/Restaurant');
-console.log('🔎 Restaurant search owner:', req.user._id);
+
 // ---------- CUSTOMER ----------
 router.get('/user', auth, async (req, res) => {
   try {
@@ -94,6 +94,10 @@ router.put('/:orderId/cancel', auth, async (req, res) => {
 // ---------- RESTAURANT ----------
 router.get('/restaurant', auth, requireRole(['restaurant']), async (req, res) => {
   try {
+    console.log('🔎 Restaurant search owner:', req.user._id);   // ← DITO ilagay
+
+
+
     const restaurant = await Restaurant.findOne({ owner: req.user._id });
     if (!restaurant) return res.status(404).json({ success: false, message: 'Restaurant not found for this user' });
     const orders = await Order.find({ restaurant: restaurant._id })
