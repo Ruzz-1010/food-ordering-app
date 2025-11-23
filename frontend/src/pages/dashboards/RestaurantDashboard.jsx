@@ -16,7 +16,7 @@ const RestaurantDashboard = () => {
   const [showAddProduct, setShowAddProduct] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [showOrderDetails, setShowOrderDetails] = useState(false);
-  const [showProfile, setShowProfile] = useState(false); // ✅ ADDED THIS LINE
+  const [showProfile, setShowProfile] = useState(false);
   const [error, setError] = useState(null);
 
   const [restaurantId, setRestaurantId] = useState(null);
@@ -249,7 +249,7 @@ const RestaurantDashboard = () => {
     });
   };
 
-  // ✅ Add product - UPDATED FOR YOUR BACKEND
+  // ✅ Add product - FIXED VERSION
   const handleAddProduct = async (e) => {
     e.preventDefault();
     if (!restaurantId) {
@@ -262,19 +262,29 @@ const RestaurantDashboard = () => {
     
     try {
       console.log('➕ Adding new product...', newProduct);
+      console.log('🏪 Restaurant ID:', restaurantId);
       
+      // FIXED: Use 'restaurant' field instead of 'restaurantId'
+      const productData = {
+        name: newProduct.name.trim(),
+        price: parseFloat(newProduct.price),
+        description: newProduct.description?.trim() || '',
+        category: newProduct.category,
+        restaurant: restaurantId, // ✅ CHANGED: 'restaurant' not 'restaurantId'
+        preparationTime: parseInt(newProduct.preparationTime) || 15,
+        ingredients: newProduct.ingredients?.trim() || '',
+        image: newProduct.image?.trim() || ''
+      };
+
+      console.log('📦 Sending product data:', productData);
+
       const res = await fetch(`${API_URL}/products`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
-        body: JSON.stringify({ 
-          ...newProduct, 
-          restaurant: restaurantId, // Use 'restaurant' instead of 'restaurantId'
-          price: parseFloat(newProduct.price),
-          preparationTime: parseInt(newProduct.preparationTime) || 15
-        })
+        body: JSON.stringify(productData)
       });
       
       const data = await res.json();
