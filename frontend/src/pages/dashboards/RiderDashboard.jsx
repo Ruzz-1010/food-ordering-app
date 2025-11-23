@@ -11,7 +11,6 @@ const RiderDashboard = () => {
   const [loading, setLoading] = useState(true);
   const [available, setAvailable] = useState([]);
   const [myDeliveries, setMyDeliveries] = useState([]);
-  const [activeTab, setActiveTab] = useState('available');
 
   const token = localStorage.getItem('token');
 
@@ -33,7 +32,7 @@ const RiderDashboard = () => {
     if (data.success) setMyDeliveries(data.orders);
   };
 
-  // ✅ Accept order
+  // ✅ Accept order (old working version)
   const acceptOrder = async (orderId) => {
     const res = await fetch(`${API_URL}/orders/${orderId}/accept`, {
       method: 'PUT',
@@ -46,25 +45,6 @@ const RiderDashboard = () => {
     if (res.ok) {
       alert('✅ Order assigned to you!');
       fetchAvailable();
-      fetchMyDeliveries();
-    } else {
-      alert(`❌ Failed: ${data.message || 'Unknown error'}`);
-    }
-  };
-
-  // ✅ Update delivery status
-  const updateStatus = async (orderId, status) => {
-    const res = await fetch(`${API_URL}/orders/${orderId}/delivery-status`, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`
-      },
-      body: JSON.stringify({ status })
-    });
-    const data = await res.json();
-    if (res.ok) {
-      alert(`✅ Status updated to ${status}`);
       fetchMyDeliveries();
     } else {
       alert(`❌ Failed: ${data.message || 'Unknown error'}`);
@@ -100,54 +80,45 @@ const RiderDashboard = () => {
       </header>
 
       <div className="max-w-7xl mx-auto px-4 py-6">
-        <div className="flex space-x-4 mb-6">
-          <button onClick={() => setActiveTab('available')} className={`px-4 py-2 rounded-lg ${activeTab === 'available' ? 'bg-orange-600 text-white' : 'bg-white text-gray-700 border'}`}>Available ({available.length})</button>
-          <button onClick={() => setActiveTab('my-deliveries')} className={`px-4 py-2 rounded-lg ${activeTab === 'my-deliveries' ? 'bg-orange-600 text-white' : 'bg-white text-gray-700 border'}`}>My Deliveries ({myDeliveries.length})</button>
-        </div>
-
-        {activeTab === 'available' && (
-          <div className="grid gap-4">
-            {available.length === 0 && <div className="text-center py-8 text-gray-500">No available orders right now.</div>}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Available Orders */}
+          <div className="bg-white rounded-lg shadow p-4">
+            <h2 className="font-bold text-lg mb-4">Available Orders ({available.length})</h2>
+            {available.length === 0 && <p className="text-gray-500 text-sm">No available orders.</p>}
             {available.map(order => (
-              <div key={order._id} className="bg-white rounded-lg shadow p-4 flex items-center justify-between">
-                <div>
-                  <p className="font-semibold">Order #{order.orderId}</p>
-                  <p className="text-sm text-gray-600">{order.restaurant.name} • {order.restaurant.address}</p>
-                  <p className="text-sm text-gray-500">{order.deliveryAddress}</p>
-                  <p className="text-green-600 font-bold">₱{order.total?.toFixed(2)}</p>
-                </div>
-                <button onClick={() => acceptOrder(order._id)} className="bg-orange-600 text-white px-4 py-2 rounded-lg hover:bg-orange-700">Accept</button>
+              <div key={order._id} className="border rounded-lg p-3 mb-3">
+                <p className="font-semibold">Order #{order.orderId}</p>
+                <p className="text-sm text-gray-600">{order.restaurant.name} → {order.deliveryAddress}</p>
+                <p className="text-green-600 font-bold">₱{order.total?.toFixed(2)}</p>
+                <button onClick={() => acceptOrder(order._id)} className="mt-2 bg-orange-600 text-white px-3 py-1 rounded text-sm hover:bg-orange-700">Accept</button>
               </div>
             ))}
           </div>
-        )}
 
-        {activeTab === 'my-deliveries' && (
-          <div className="grid gap-4">
-            {myDeliveries.length === 0 && <div className="text-center py-8 text-gray-500">You haven't accepted any deliveries yet.</div>}
+          {/* My Deliveries */}
+          <div className="bg-white rounded-lg shadow p-4">
+            <h2 className="font-bold text-lg mb-4">My Deliveries ({myDeliveries.length})</h2>
+            {myDeliveries.length === 0 && <p className="text-gray-500 text-sm">No deliveries yet.</p>}
             {myDeliveries.map(order => (
-              <div key={order._id} className="bg-white rounded-lg shadow p-4">
-                <div className="flex items-start justify-between mb-2">
-                  <div>
-                    <p className="font-semibold">Order #{order.orderId}</p>
-                    <p className="text-sm text-gray-600">{order.restaurant.name} → {order.deliveryAddress}</p>
-                    <p className="text-green-600 font-bold">₱{order.total?.toFixed(2)}</p>
-                  </div>
-                  <span className={`px-2 py-1 text-xs rounded ${order.status === 'delivered' ? 'bg-green-100 text-green-800' : 'bg-blue-100 text-blue-800'}`}>{order.status}</span>
-                </div>
-                <div className="flex items-center space-x-2 mt-3">
+              <div key={order._id} className="border rounded-lg p-3 mb-3">
+                <p className="font-semibold">Order #{order.orderId}</p>
+                <p className="text-sm text-gray-600">{order.restaurant.name} → {order.deliveryAddress}</p>
+                <p className="text-green-600 font-bold">₱{order.total?.toFixed(2)}</p>
+                <p className="text-xs text-gray-500">Status: {order.status}</p>
+
+                <div className="flex space-x-2 mt-2">
                   {order.status === 'assigned' && (
-                    <button onClick={() => updateStatus(order._id, 'out_for_delivery')} className="bg-blue-600 text-white px-3 py-1 rounded text-sm hover:bg-blue-700">Mark Out for Delivery</button>
+                    <button onClick={() => updateStatus(order._id, 'out_for_delivery')} className="bg-blue-600 text-white px-3 py-1 rounded text-sm hover:bg-blue-700">Out for Delivery</button>
                   )}
                   {order.status === 'out_for_delivery' && (
                     <button onClick={() => updateStatus(order._id, 'delivered')} className="bg-green-600 text-white px-3 py-1 rounded text-sm hover:bg-green-700">Mark Delivered</button>
                   )}
-                  <a href={`tel:${order.user.phone}`} className="px-3 py-1 bg-gray-600 text-white rounded text-sm hover:bg-gray-700 flex items-center space-x-1"><Phone size={14} /><span>Call</span></a>
+                  <a href={`tel:${order.user.phone}`} className="px-3 py-1 bg-gray-600 text-white rounded text-sm hover:bg-gray-700">Call</a>
                 </div>
               </div>
             ))}
           </div>
-        )}
+        </div>
       </div>
     </div>
   );
