@@ -55,34 +55,33 @@ const RiderDashboard = () => {
     }
   };
 
- // ✅ FIXED - gamitin ang "ready" imbes na "assigned"
-const acceptOrder = async (orderId) => {
-  const riderId = user?._id;
-  if (!riderId) { alert('❌ Rider ID not found'); return; }
-
-  try {
-    const res = await fetch(`${API_URL}/orders/${orderId}/status`, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`
-      },
-      body: JSON.stringify({ status: 'ready' })   // ← "ready" lang, hindi "assigned"
-    });
-
-    const data = await res.json();
-    if (res.ok && data.success) {
-      alert('✅ Order assigned to you!');
-      await fetchAvailable();
-      await fetchMyDeliveries();
-    } else {
-      alert(`❌ Failed: ${data.message}`);
+  const acceptOrder = async (orderId) => {
+    const riderId = user?._id;
+    if (!riderId) { alert('❌ Rider ID not found'); return; }
+  
+    try {
+      const res = await fetch(`${API_URL}/orders/${orderId}/accept`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({ riderId })
+      });
+  
+      const data = await res.json();
+      if (res.ok && data.success) {
+        alert('✅ Order assigned to you!');
+        await fetchAvailable();
+        await fetchMyDeliveries();
+      } else {
+        alert(`❌ Failed: ${data.message}`);
+      }
+    } catch (err) {
+      console.error(err);
+      alert('❌ Network error');
     }
-  } catch (err) {
-    console.error(err);
-    alert('❌ Network error');
-  }
-};
+  };
 
   // ✅ Update delivery status
   const updateStatus = async (orderId, status) => {
