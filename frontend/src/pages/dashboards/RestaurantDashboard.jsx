@@ -16,6 +16,7 @@ const RestaurantDashboard = () => {
   const [showAddProduct, setShowAddProduct] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [showOrderDetails, setShowOrderDetails] = useState(false);
+  const [showProfile, setShowProfile] = useState(false); // ✅ ADDED THIS LINE
   const [error, setError] = useState(null);
 
   const [restaurantId, setRestaurantId] = useState(null);
