@@ -21,7 +21,6 @@ const RiderDashboard = () => {
   // ✅ Fetch available orders
   const fetchAvailable = async () => {
     try {
-      console.log('🔄 Fetching available orders...');
       const res = await fetch(`${API_URL}/orders/rider/available`, {
         headers: { 
           'Content-Type': 'application/json',
@@ -29,21 +28,10 @@ const RiderDashboard = () => {
         }
       });
       
-      if (!res.ok) {
-        throw new Error(`HTTP ${res.status}: ${res.statusText}`);
-      }
-      
       const data = await res.json();
-      console.log('📦 Available orders response:', data);
-      
-      if (data.success) {
-        setAvailable(data.orders || []);
-      } else {
-        console.error('❌ Failed to fetch available orders:', data.message);
-        setAvailable([]);
-      }
+      if (data.success) setAvailable(data.orders || []);
     } catch (error) {
-      console.error('❌ Error fetching available orders:', error);
+      console.error('Error fetching available orders:', error);
       setAvailable([]);
     }
   };
@@ -51,7 +39,6 @@ const RiderDashboard = () => {
   // ✅ Fetch my deliveries
   const fetchMyDeliveries = async () => {
     try {
-      console.log('🔄 Fetching my deliveries...');
       const res = await fetch(`${API_URL}/orders/rider/my-deliveries`, {
         headers: { 
           'Content-Type': 'application/json',
@@ -59,33 +46,21 @@ const RiderDashboard = () => {
         }
       });
       
-      if (!res.ok) {
-        throw new Error(`HTTP ${res.status}: ${res.statusText}`);
-      }
-      
       const data = await res.json();
-      console.log('🚚 My deliveries response:', data);
-      
-      if (data.success) {
-        setMyDeliveries(data.orders || []);
-      } else {
-        console.error('❌ Failed to fetch my deliveries:', data.message);
-        setMyDeliveries([]);
-      }
+      if (data.success) setMyDeliveries(data.orders || []);
     } catch (error) {
-      console.error('❌ Error fetching my deliveries:', error);
+      console.error('Error fetching my deliveries:', error);
       setMyDeliveries([]);
     }
   };
 
-  // ✅ Accept order - FIXED VERSION
+  // ✅ ACCEPT ORDER - FIXED!
   const acceptOrder = async (orderId) => {
     try {
       const riderId = getUserId();
-      console.log('🔄 Accepting order:', { orderId, riderId });
       
       if (!riderId) {
-        alert('❌ Error: Rider ID not found. Please log out and log in again.');
+        alert('❌ Error: Rider ID not found.');
         return;
       }
 
@@ -95,13 +70,10 @@ const RiderDashboard = () => {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`
         },
-        body: JSON.stringify({ riderId }) // Include riderId in request body
+        body: JSON.stringify({ riderId }) // DITO ANG FIX - kasama ang riderId
       });
 
-      console.log('📡 Accept order response status:', res.status);
-      
       const data = await res.json();
-      console.log('📦 Accept order response data:', data);
 
       if (res.ok && data.success) {
         alert('✅ Order assigned to you!');
@@ -116,11 +88,9 @@ const RiderDashboard = () => {
     }
   };
 
-  // ✅ Update delivery status - FIXED VERSION
+  // ✅ Update delivery status
   const updateStatus = async (orderId, status) => {
     try {
-      console.log('🔄 Updating order status:', { orderId, status });
-      
       const res = await fetch(`${API_URL}/orders/${orderId}/delivery-status`, {
         method: 'PUT',
         headers: {
@@ -130,10 +100,7 @@ const RiderDashboard = () => {
         body: JSON.stringify({ status })
       });
 
-      console.log('📡 Update status response status:', res.status);
-      
       const data = await res.json();
-      console.log('📦 Update status response data:', data);
 
       if (res.ok && data.success) {
         alert(`✅ Status updated to ${status}`);
@@ -151,11 +118,6 @@ const RiderDashboard = () => {
   const loadData = async () => {
     setLoading(true);
     try {
-      console.log('🚀 Loading rider data...');
-      console.log('👤 Current user:', user);
-      console.log('🆔 User ID:', getUserId());
-      console.log('🔑 Token exists:', !!token);
-      
       await Promise.all([fetchAvailable(), fetchMyDeliveries()]);
     } catch (error) {
       console.error('❌ Error loading data:', error);
@@ -562,169 +524,6 @@ const RiderDashboard = () => {
           </div>
         )}
       </div>
-
-      {/* Order Details Modal */}
-      {showOrderDetails && selectedOrder && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg shadow-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="p-6">
-              <div className="flex justify-between items-center mb-6">
-                <h3 className="text-xl font-bold text-gray-900">Order Details</h3>
-                <button 
-                  onClick={() => setShowOrderDetails(false)} 
-                  className="text-gray-500 hover:text-gray-700"
-                >
-                  <X size={24} />
-                </button>
-              </div>
-
-              <div className="space-y-6">
-                {/* Order Information */}
-                <div>
-                  <h4 className="font-semibold text-gray-900 mb-3">Order Information</h4>
-                  <div className="grid grid-cols-2 gap-4 text-sm">
-                    <div>
-                      <p className="text-gray-600">Order ID:</p>
-                      <p className="font-medium">{selectedOrder.orderId || selectedOrder._id}</p>
-                    </div>
-                    <div>
-                      <p className="text-gray-600">Status:</p>
-                      <span className={`px-2 py-1 text-xs rounded ${
-                        selectedOrder.status === 'delivered' ? 'bg-green-100 text-green-800' : 
-                        selectedOrder.status === 'out_for_delivery' ? 'bg-blue-100 text-blue-800' :
-                        selectedOrder.status === 'assigned' ? 'bg-orange-100 text-orange-800' :
-                        'bg-yellow-100 text-yellow-800'
-                      }`}>
-                        {selectedOrder.status}
-                      </span>
-                    </div>
-                    <div>
-                      <p className="text-gray-600">Total Amount:</p>
-                      <p className="font-medium text-green-600">
-                        {formatCurrency(selectedOrder.total || selectedOrder.totalAmount)}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-gray-600">Order Date:</p>
-                      <p className="font-medium">{formatDate(selectedOrder.createdAt)}</p>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Restaurant Information */}
-                <div>
-                  <h4 className="font-semibold text-gray-900 mb-3">Restaurant Information</h4>
-                  <div className="flex items-start space-x-3">
-                    <Store size={20} className="text-gray-400 mt-1" />
-                    <div>
-                      <p className="font-medium">{selectedOrder.restaurant?.name || 'Unknown Restaurant'}</p>
-                      <p className="text-gray-600">{selectedOrder.restaurant?.address || 'No address'}</p>
-                      {selectedOrder.restaurant?.phone && (
-                        <p className="text-gray-500">{selectedOrder.restaurant.phone}</p>
-                      )}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Customer Information */}
-                <div>
-                  <h4 className="font-semibold text-gray-900 mb-3">Customer Information</h4>
-                  <div className="flex items-start space-x-3">
-                    <User size={20} className="text-gray-400 mt-1" />
-                    <div>
-                      <p className="font-medium">{selectedOrder.user?.name || 'Customer'}</p>
-                      {selectedOrder.user?.phone && (
-                        <p className="text-gray-600">{selectedOrder.user.phone}</p>
-                      )}
-                      <p className="text-gray-500">{selectedOrder.deliveryAddress || 'No address provided'}</p>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Order Items */}
-                {selectedOrder.items && selectedOrder.items.length > 0 && (
-                  <div>
-                    <h4 className="font-semibold text-gray-900 mb-3">Order Items</h4>
-                    <div className="space-y-2">
-                      {selectedOrder.items.map((item, index) => (
-                        <div key={index} className="flex justify-between items-center border-b pb-2">
-                          <div>
-                            <span className="font-medium">
-                              {item.quantity}x {item.product?.name || item.productName}
-                            </span>
-                            {item.product?.category && (
-                              <span className="text-xs text-gray-500 ml-2">
-                                ({item.product.category})
-                              </span>
-                            )}
-                          </div>
-                          <span>{formatCurrency(item.price)}</span>
-                        </div>
-                      ))}
-                      <div className="flex justify-between items-center pt-2 font-semibold">
-                        <span>Total:</span>
-                        <span>{formatCurrency(selectedOrder.total || selectedOrder.totalAmount)}</span>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {/* Action Buttons */}
-                <div className="flex space-x-3 pt-4">
-                  {selectedOrder.user?.phone && (
-                    <a 
-                      href={`tel:${selectedOrder.user.phone}`}
-                      className="flex-1 flex items-center justify-center space-x-2 bg-gray-600 text-white py-3 rounded-lg hover:bg-gray-700"
-                    >
-                      <Phone size={16} />
-                      <span>Call Customer</span>
-                    </a>
-                  )}
-                  
-                  {activeTab === 'available' && (
-                    <button 
-                      onClick={() => {
-                        acceptOrder(selectedOrder._id);
-                        setShowOrderDetails(false);
-                      }}
-                      className="flex-1 flex items-center justify-center space-x-2 bg-orange-600 text-white py-3 rounded-lg hover:bg-orange-700"
-                    >
-                      <CheckCircle size={16} />
-                      <span>Accept Order</span>
-                    </button>
-                  )}
-                  
-                  {activeTab === 'my-deliveries' && selectedOrder.status === 'assigned' && (
-                    <button 
-                      onClick={() => {
-                        updateStatus(selectedOrder._id, 'out_for_delivery');
-                        setShowOrderDetails(false);
-                      }}
-                      className="flex-1 flex items-center justify-center space-x-2 bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700"
-                    >
-                      <Navigation size={16} />
-                      <span>Start Delivery</span>
-                    </button>
-                  )}
-                  
-                  {activeTab === 'my-deliveries' && selectedOrder.status === 'out_for_delivery' && (
-                    <button 
-                      onClick={() => {
-                        updateStatus(selectedOrder._id, 'delivered');
-                        setShowOrderDetails(false);
-                      }}
-                      className="flex-1 flex items-center justify-center space-x-2 bg-green-600 text-white py-3 rounded-lg hover:bg-green-700"
-                    >
-                      <CheckCircle size={16} />
-                      <span>Mark Delivered</span>
-                    </button>
-                  )}
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 };
