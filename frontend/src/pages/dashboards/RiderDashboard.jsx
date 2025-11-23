@@ -55,22 +55,19 @@ const RiderDashboard = () => {
     }
   };
 
- // 2.  Bullet-proof acceptOrder (keep your existing logic, just add fallback)
+ // ✅ FIXED - gamitin ang "ready" imbes na "assigned"
 const acceptOrder = async (orderId) => {
-  const riderId = user?._id || user?.id;   // either spelling
-  if (!riderId) {
-    alert('❌ Rider ID not found – make sure you are logged in as a rider.');
-    return;
-  }
+  const riderId = user?._id;
+  if (!riderId) { alert('❌ Rider ID not found'); return; }
 
   try {
-    const res = await fetch(`${API_URL}/orders/${orderId}/accept`, {
+    const res = await fetch(`${API_URL}/orders/${orderId}/status`, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${token}`
       },
-      body: JSON.stringify({ riderId })
+      body: JSON.stringify({ status: 'ready' })   // ← "ready" lang, hindi "assigned"
     });
 
     const data = await res.json();
@@ -79,11 +76,11 @@ const acceptOrder = async (orderId) => {
       await fetchAvailable();
       await fetchMyDeliveries();
     } else {
-      alert(`❌ Failed: ${data.message || 'Unknown error'}`);
+      alert(`❌ Failed: ${data.message}`);
     }
   } catch (err) {
     console.error(err);
-    alert('❌ Network error while accepting order.');
+    alert('❌ Network error');
   }
 };
 
