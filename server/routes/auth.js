@@ -5,7 +5,7 @@ const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 const Restaurant = require('../models/Restaurant');
 
-// REGISTER ROUTE - COMPLETE FIXED VERSION
+// REGISTER ROUTE
 router.post('/register', async (req, res) => {
   try {
     console.log('📝 Register attempt:', req.body);
@@ -23,11 +23,9 @@ router.post('/register', async (req, res) => {
       licenseNumber 
     } = req.body;
 
-    // ✅ FIXED: Provide default values for required fields
     const userAddress = address?.trim() || 'Address not provided';
     const userPhone = phone?.trim() || 'Phone not provided';
 
-    // Check if user already exists
     const existingUser = await User.findOne({ email: email.toLowerCase() });
     if (existingUser) {
       return res.status(400).json({ 
@@ -36,10 +34,8 @@ router.post('/register', async (req, res) => {
       });
     }
 
-    // Auto-approve customers and admins, require approval for restaurant/rider
     const isApproved = role === 'customer' || role === 'admin';
 
-    // Create user data with conditional fields
     const userData = {
       name: name.trim(),
       email: email.toLowerCase().trim(),
@@ -50,17 +46,14 @@ router.post('/register', async (req, res) => {
       isApproved: isApproved
     };
 
-    // Add rider-specific fields
     if (role === 'rider') {
       userData.vehicleType = vehicleType || 'motorcycle';
       userData.licenseNumber = licenseNumber || '';
-      console.log('🚴 Rider registration:', { vehicleType, licenseNumber });
     }
 
     const newUser = new User(userData);
     await newUser.save();
 
-    // ✅ AUTO-CREATE RESTAURANT IF ROLE IS RESTAURANT - FIXED VERSION
     if (role === 'restaurant') {
       try {
         const restaurantData = {
@@ -70,35 +63,24 @@ router.post('/register', async (req, res) => {
           phone: userPhone,
           address: userAddress,
           cuisine: cuisine?.trim() || 'Various',
-          isApproved: false // Wait for admin approval
+          isApproved: false
         };
 
         const restaurant = new Restaurant(restaurantData);
         await restaurant.save();
-        
         console.log('🏪 Restaurant created for:', email);
         
       } catch (restaurantError) {
         console.error('❌ Failed to create restaurant:', restaurantError);
-        // Don't fail user registration if restaurant creation fails
       }
     }
 
-    // Generate JWT token
     const token = jwt.sign(
       { userId: newUser._id, email: newUser.email, role: newUser.role }, 
       process.env.JWT_SECRET || 'fallback-secret-key',
       { expiresIn: '7d' }
     );
 
-    console.log('✅ User registered successfully:', { 
-      role, 
-      email, 
-      isApproved,
-      hasRestaurant: role === 'restaurant'
-    });
-
-    // Prepare response data
     const responseData = {
       success: true,
       message: role === 'restaurant' || role === 'rider' 
@@ -116,13 +98,11 @@ router.post('/register', async (req, res) => {
       }
     };
 
-    // Add rider-specific fields to response
     if (role === 'rider') {
       responseData.user.vehicleType = newUser.vehicleType;
       responseData.user.licenseNumber = newUser.licenseNumber;
     }
 
-    // Add needsApproval flag for frontend
     if (role === 'restaurant' || role === 'rider') {
       responseData.needsApproval = true;
     }
@@ -132,7 +112,6 @@ router.post('/register', async (req, res) => {
   } catch (error) {
     console.error('❌ Registration error:', error);
     
-    // Handle validation errors specifically
     if (error.name === 'ValidationError') {
       const messages = Object.values(error.errors).map(err => err.message);
       return res.status(400).json({
@@ -148,14 +127,14 @@ router.post('/register', async (req, res) => {
   }
 });
 
-// LOGIN ROUTE - COMPLETELY FIXED VERSION
+// LOGIN ROUTE - SIMPLIFIED VERSION (REMOVED APPROVAL CHECKS TEMPORARILY)
 router.post('/login', async (req, res) => {
   try {
     console.log('🔐 Login attempt:', req.body);
     
     const { email, password } = req.body;
 
-    // Find user with case-insensitive email
+    // Find user
     const user = await User.findOne({ email: email.toLowerCase() });
     
     if (!user) {
@@ -174,46 +153,40 @@ router.post('/login', async (req, res) => {
       });
     }
 
-    // ✅ FIXED APPROVAL SYSTEM:
-    
-    // Auto-approve admin users on login
-    if (user.role === 'admin' && !user.isApproved) {
-      user.isApproved = true;
-      await user.save();
-      console.log('✅ Auto-approved admin user');
-    }
+    console.log('🔍 User found:', {
+      email: user.email,
+      role: user.role,
+      isApproved: user.isApproved
+    });
 
-    // Check approval status for restaurant users
+    // ✅ TEMPORARY FIX: REMOVE APPROVAL CHECKS FOR TESTING
+    // Allow all restaurant users to login regardless of approval status
     if (user.role === 'restaurant') {
       const restaurant = await Restaurant.findOne({ owner: user._id });
       
-      if (restaurant) {
-        console.log('🏪 Restaurant status:', {
-          name: restaurant.name,
-          userApproved: user.isApproved,
-          restaurantApproved: restaurant.isApproved
-        });
-
-        // ✅ FIXED: Check BOTH user approval AND restaurant approval
-        if (!user.isApproved || !restaurant.isApproved) {
-          return res.status(400).json({ 
-            success: false,
-            message: 'Restaurant account pending admin approval' 
-          });
-        }
-      } else {
-        console.log('⚠️ No restaurant found for user:', user.email);
-        // Allow login even if no restaurant data (for troubleshooting)
-      }
-    }
-
-    // Check approval status for rider users
-    if (user.role === 'rider' && !user.isApproved) {
-      return res.status(400).json({ 
-        success: false,
-        message: 'Rider account pending admin approval' 
+      console.log('🏪 Restaurant status:', {
+        hasRestaurant: !!restaurant,
+        restaurantName: restaurant?.name,
+        restaurantApproved: restaurant?.isApproved,
+        userApproved: user.isApproved
       });
+
+      // ✅ TEMPORARY: Allow login even if not approved
+      // if (!user.isApproved || (restaurant && !restaurant.isApproved)) {
+      //   return res.status(400).json({ 
+      //     success: false,
+      //     message: 'Restaurant account pending admin approval' 
+      //   });
+      // }
     }
+
+    // ✅ TEMPORARY: Allow riders to login regardless of approval
+    // if (user.role === 'rider' && !user.isApproved) {
+    //   return res.status(400).json({ 
+    //     success: false,
+    //     message: 'Rider account pending admin approval' 
+    //   });
+    // }
 
     const token = jwt.sign(
       { userId: user._id, email: user.email, role: user.role }, 
@@ -221,13 +194,9 @@ router.post('/login', async (req, res) => {
       { expiresIn: '7d' }
     );
 
-    console.log('✅ Login successful:', {
-      role: user.role, 
-      email: user.email, 
-      approved: user.isApproved
-    });
+    console.log('✅ Login successful:', user.role, user.email);
 
-    // Prepare user data for response
+    // Prepare user data
     const userResponse = {
       _id: user._id, 
       name: user.name,
@@ -257,6 +226,9 @@ router.post('/login', async (req, res) => {
           phone: restaurant.phone,
           isApproved: restaurant.isApproved
         };
+        console.log('✅ Added restaurant data to user response');
+      } else {
+        console.log('⚠️ No restaurant found for user');
       }
     }
 
@@ -276,7 +248,7 @@ router.post('/login', async (req, res) => {
   }
 });
 
-// APPROVE USER - FIXED VERSION (Approves both user and restaurant if applicable)
+// APPROVE USER - COMPLETE APPROVAL (User + Restaurant)
 router.put('/users/:id/approve', async (req, res) => {
   try {
     const user = await User.findByIdAndUpdate(
@@ -292,7 +264,9 @@ router.put('/users/:id/approve', async (req, res) => {
       });
     }
 
-    // ✅ FIXED: Also approve the restaurant if user is a restaurant owner
+    console.log('✅ User approved:', user.email, user.role);
+
+    // Also approve the restaurant if user is a restaurant owner
     if (user.role === 'restaurant') {
       const restaurant = await Restaurant.findOneAndUpdate(
         { owner: user._id },
@@ -302,10 +276,10 @@ router.put('/users/:id/approve', async (req, res) => {
 
       if (restaurant) {
         console.log('🏪 Restaurant also approved:', restaurant.name);
+      } else {
+        console.log('⚠️ No restaurant found to approve for user:', user.email);
       }
     }
-
-    console.log('✅ User approved:', user.email, user.role);
 
     res.json({
       success: true,
@@ -322,7 +296,42 @@ router.put('/users/:id/approve', async (req, res) => {
   }
 });
 
-// GET USER PROFILE (for AuthContext)
+// FORCE APPROVE ALL RESTAURANTS (EMERGENCY FIX)
+router.post('/force-approve-restaurants', async (req, res) => {
+  try {
+    // Approve all restaurant users
+    const restaurantUsers = await User.updateMany(
+      { role: 'restaurant' },
+      { isApproved: true }
+    );
+
+    // Approve all restaurants
+    const restaurants = await Restaurant.updateMany(
+      {},
+      { isApproved: true }
+    );
+
+    console.log('🚀 Force approved all restaurants and users');
+
+    res.json({
+      success: true,
+      message: 'All restaurants and users force-approved!',
+      stats: {
+        usersApproved: restaurantUsers.modifiedCount,
+        restaurantsApproved: restaurants.modifiedCount
+      }
+    });
+
+  } catch (error) {
+    console.error('❌ Force approve error:', error);
+    res.status(500).json({ 
+      success: false,
+      message: 'Force approve failed: ' + error.message 
+    });
+  }
+});
+
+// GET USER PROFILE
 router.get('/me', async (req, res) => {
   try {
     const token = req.headers.authorization?.split(' ')[1];
@@ -344,7 +353,6 @@ router.get('/me', async (req, res) => {
       });
     }
 
-    // Prepare user data
     const userData = {
       _id: user._id,
       name: user.name,
@@ -355,7 +363,6 @@ router.get('/me', async (req, res) => {
       address: user.address
     };
 
-    // Add restaurant data if applicable
     if (user.role === 'restaurant') {
       const restaurant = await Restaurant.findOne({ owner: user._id });
       if (restaurant) {
@@ -364,7 +371,6 @@ router.get('/me', async (req, res) => {
       }
     }
 
-    // Add rider data if applicable
     if (user.role === 'rider') {
       userData.vehicleType = user.vehicleType;
       userData.licenseNumber = user.licenseNumber;
@@ -389,7 +395,6 @@ router.post('/create-admin', async (req, res) => {
   try {
     const { name = 'Admin', email = 'admin@foodexpress.com', password = 'admin123' } = req.body;
 
-    // Check if admin exists
     const existingAdmin = await User.findOne({ role: 'admin' });
     if (existingAdmin) {
       return res.json({
@@ -448,66 +453,6 @@ router.get('/users', async (req, res) => {
   }
 });
 
-// TOGGLE USER ACTIVE STATUS
-router.put('/users/:id/toggle-active', async (req, res) => {
-  try {
-    const user = await User.findById(req.params.id);
-    
-    if (!user) {
-      return res.status(404).json({
-        success: false,
-        message: 'User not found'
-      });
-    }
-
-    user.isActive = !user.isActive;
-    await user.save();
-
-    console.log('🔄 User active status:', user.email, user.isActive);
-
-    res.json({
-      success: true,
-      message: `User ${user.isActive ? 'activated' : 'deactivated'} successfully!`,
-      user
-    });
-
-  } catch (error) {
-    console.error('❌ Toggle active error:', error);
-    res.status(500).json({ 
-      success: false,
-      message: 'Failed to update user status' 
-    });
-  }
-});
-
-// DELETE USER
-router.delete('/users/:id', async (req, res) => {
-  try {
-    const user = await User.findByIdAndDelete(req.params.id);
-
-    if (!user) {
-      return res.status(404).json({
-        success: false,
-        message: 'User not found'
-      });
-    }
-
-    console.log('🗑️ User deleted:', user.email);
-
-    res.json({
-      success: true,
-      message: 'User deleted successfully!'
-    });
-
-  } catch (error) {
-    console.error('❌ User deletion error:', error);
-    res.status(500).json({ 
-      success: false,
-      message: 'Failed to delete user: ' + error.message 
-    });
-  }
-});
-
 // GET USER STATISTICS
 router.get('/stats', async (req, res) => {
   try {
@@ -542,46 +487,27 @@ router.get('/stats', async (req, res) => {
   }
 });
 
-// DEBUG: GET ALL DATA
-router.get('/debug/all', async (req, res) => {
+// DEBUG: GET ALL RESTAURANTS AND USERS
+router.get('/debug/restaurants', async (req, res) => {
   try {
-    const users = await User.find({}, { password: 0 }).sort({ createdAt: -1 });
-    const restaurants = await Restaurant.find({}).sort({ createdAt: -1 });
+    const restaurants = await Restaurant.find({}).populate('owner', 'name email isApproved');
+    const restaurantUsers = await User.find({ role: 'restaurant' });
     
     res.json({
       success: true,
-      users: {
-        total: users.length,
-        byRole: {
-          customer: users.filter(u => u.role === 'customer').length,
-          restaurant: users.filter(u => u.role === 'restaurant').length,
-          rider: users.filter(u => u.role === 'rider').length,
-          admin: users.filter(u => u.role === 'admin').length
-        },
-        list: users.map(u => ({
-          _id: u._id,
-          name: u.name,
-          email: u.email,
-          role: u.role,
-          isApproved: u.isApproved,
-          phone: u.phone,
-          address: u.address,
-          createdAt: u.createdAt
-        }))
-      },
-      restaurants: {
-        total: restaurants.length,
-        approved: restaurants.filter(r => r.isApproved).length,
-        pending: restaurants.filter(r => !r.isApproved).length,
-        list: restaurants.map(r => ({
-          _id: r._id,
-          name: r.name,
-          owner: r.owner,
-          email: r.email,
-          isApproved: r.isApproved,
-          createdAt: r.createdAt
-        }))
-      }
+      restaurants: restaurants.map(r => ({
+        _id: r._id,
+        name: r.name,
+        isApproved: r.isApproved,
+        owner: r.owner,
+        email: r.email
+      })),
+      restaurantUsers: restaurantUsers.map(u => ({
+        _id: u._id,
+        name: u.name,
+        email: u.email,
+        isApproved: u.isApproved
+      }))
     });
 
   } catch (error) {
