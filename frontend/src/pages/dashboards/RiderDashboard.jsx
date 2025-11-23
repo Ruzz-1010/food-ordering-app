@@ -4,9 +4,8 @@ import {
   X, LogOut, RefreshCw, MapPin, Store, User, Eye
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
-
+// 1.  FIXED – no trailing space
 const API_URL = 'https://food-ordering-app-production-35eb.up.railway.app/api';
-
 const RiderDashboard = () => {
   const { user, logout } = useAuth();
   const [loading, setLoading] = useState(true);
@@ -56,48 +55,37 @@ const RiderDashboard = () => {
     }
   };
 
-  // ✅ ACCEPT ORDER - FIXED!
-  const acceptOrder = async (orderId) => {
-    try {
-      console.log('🔄 Accepting order:', orderId);
-      console.log('👤 Current user:', user);
-      
-      // Gamitin ang user._id directly
-      const riderId = user?._id;
-      
-      if (!riderId) {
-        alert('❌ Error: Rider ID not found. Please make sure you are logged in.');
-        return;
-      }
+ // 2.  Bullet-proof acceptOrder (keep your existing logic, just add fallback)
+const acceptOrder = async (orderId) => {
+  const riderId = user?._id || user?.id;   // either spelling
+  if (!riderId) {
+    alert('❌ Rider ID not found – make sure you are logged in as a rider.');
+    return;
+  }
 
-      console.log('📤 Sending request with riderId:', riderId);
+  try {
+    const res = await fetch(`${API_URL}/orders/${orderId}/accept`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`
+      },
+      body: JSON.stringify({ riderId })
+    });
 
-      const res = await fetch(`${API_URL}/orders/${orderId}/accept`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`
-        },
-        body: JSON.stringify({ riderId }) // Kasama ang riderId sa request body
-      });
-
-      console.log('📡 Response status:', res.status);
-      
-      const data = await res.json();
-      console.log('📦 Response data:', data);
-
-      if (res.ok && data.success) {
-        alert('✅ Order assigned to you!');
-        await fetchAvailable();
-        await fetchMyDeliveries();
-      } else {
-        alert(`❌ Failed: ${data.message || 'Unknown error'}`);
-      }
-    } catch (error) {
-      console.error('❌ Error accepting order:', error);
-      alert('❌ Failed to accept order. Please try again.');
+    const data = await res.json();
+    if (res.ok && data.success) {
+      alert('✅ Order assigned to you!');
+      await fetchAvailable();
+      await fetchMyDeliveries();
+    } else {
+      alert(`❌ Failed: ${data.message || 'Unknown error'}`);
     }
-  };
+  } catch (err) {
+    console.error(err);
+    alert('❌ Network error while accepting order.');
+  }
+};
 
   // ✅ Update delivery status
   const updateStatus = async (orderId, status) => {
