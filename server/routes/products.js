@@ -29,18 +29,18 @@ router.get('/restaurant/:restaurantId', async (req, res) => {
   }
 });
 
-// ADD PRODUCT
+// ADD PRODUCT - FIXED VERSION
 router.post('/', async (req, res) => {
   try {
     console.log('📝 Adding product:', req.body);
     
-    const { name, price, description, category, restaurantId, preparationTime, ingredients, image } = req.body;
+    const { name, price, description, category, restaurant, preparationTime, ingredients, image } = req.body;
 
-    // Basic validation
-    if (!name || !price || !restaurantId) {
+    // ✅ FIXED: Use 'restaurant' instead of 'restaurantId'
+    if (!name || !price || !restaurant) {
       return res.status(400).json({
         success: false,
-        message: 'Product name, price, and restaurantId are required'
+        message: 'Product name, price, and restaurant are required'
       });
     }
 
@@ -49,7 +49,7 @@ router.post('/', async (req, res) => {
       price: parseFloat(price),
       description: description?.trim() || '',
       category: category || 'main course',
-      restaurant: restaurantId,
+      restaurant: restaurant, // ✅ CORRECT FIELD NAME
       preparationTime: preparationTime || 15,
       ingredients: ingredients?.trim() || '',
       image: image || '',

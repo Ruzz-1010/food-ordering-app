@@ -250,65 +250,65 @@ const RestaurantDashboard = () => {
   };
 
   // ✅ Add product - FIXED VERSION
-  const handleAddProduct = async (e) => {
-    e.preventDefault();
-    if (!restaurantId) {
-      alert('❌ Restaurant not found');
-      return;
-    }
+const handleAddProduct = async (e) => {
+  e.preventDefault();
+  if (!restaurantId) {
+    alert('❌ Restaurant not found');
+    return;
+  }
+  
+  const token = localStorage.getItem('token');
+  setLoading(true);
+  
+  try {
+    console.log('➕ Adding new product...', newProduct);
+    console.log('🏪 Restaurant ID:', restaurantId);
     
-    const token = localStorage.getItem('token');
-    setLoading(true);
+    // FIXED: Use 'restaurant' field to match backend
+    const productData = {
+      name: newProduct.name.trim(),
+      price: parseFloat(newProduct.price),
+      description: newProduct.description?.trim() || '',
+      category: newProduct.category,
+      restaurant: restaurantId, // ✅ CORRECT FIELD NAME
+      preparationTime: parseInt(newProduct.preparationTime) || 15,
+      ingredients: newProduct.ingredients?.trim() || '',
+      image: newProduct.image?.trim() || ''
+    };
+
+    console.log('📦 Sending product data:', productData);
+
+    const res = await fetch(`${API_URL}/products`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify(productData)
+    });
     
-    try {
-      console.log('➕ Adding new product...', newProduct);
-      console.log('🏪 Restaurant ID:', restaurantId);
-      
-      // FIXED: Use 'restaurant' field instead of 'restaurantId'
-      const productData = {
-        name: newProduct.name.trim(),
-        price: parseFloat(newProduct.price),
-        description: newProduct.description?.trim() || '',
-        category: newProduct.category,
-        restaurant: restaurantId, // ✅ CHANGED: 'restaurant' not 'restaurantId'
-        preparationTime: parseInt(newProduct.preparationTime) || 15,
-        ingredients: newProduct.ingredients?.trim() || '',
-        image: newProduct.image?.trim() || ''
-      };
-
-      console.log('📦 Sending product data:', productData);
-
-      const res = await fetch(`${API_URL}/products`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify(productData)
+    const data = await res.json();
+    console.log('➕ Add product response:', data);
+    
+    if (res.ok) {
+      alert('✅ Product added successfully!');
+      setShowAddProduct(false);
+      setNewProduct({ 
+        name: '', price: '', description: '', category: 'main course', 
+        preparationTime: '', ingredients: '', image: '' 
       });
-      
-      const data = await res.json();
-      console.log('➕ Add product response:', data);
-      
-      if (res.ok) {
-        alert('✅ Product added successfully!');
-        setShowAddProduct(false);
-        setNewProduct({ 
-          name: '', price: '', description: '', category: 'main course', 
-          preparationTime: '', ingredients: '', image: '' 
-        });
-        // Refresh menu data
-        await fetchMenu(restaurantId);
-      } else {
-        alert(`❌ Failed: ${data.message || 'Error adding product'}`);
-      }
-    } catch (error) {
-      console.error('❌ Error adding product:', error);
-      alert('❌ Network error. Please try again.');
-    } finally {
-      setLoading(false);
+      // Refresh menu data
+      await fetchMenu(restaurantId);
+    } else {
+      alert(`❌ Failed: ${data.message || 'Error adding product'}`);
     }
-  };
+  } catch (error) {
+    console.error('❌ Error adding product:', error);
+    alert('❌ Network error. Please try again.');
+  } finally {
+    setLoading(false);
+  }
+};
 
   // ✅ Update order status - UPDATED FOR YOUR BACKEND
   const handleUpdateOrderStatus = async (orderId, newStatus) => {
