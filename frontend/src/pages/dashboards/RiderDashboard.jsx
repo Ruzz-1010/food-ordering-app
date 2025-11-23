@@ -34,16 +34,16 @@ const RiderDashboard = () => {
       }
       
       const data = await res.json();
-      console.log('📦 Available orders response:', data);
+      console.log('📦 Available orders:', data);
       
       if (data.success) {
         setAvailable(data.orders || []);
       } else {
-        console.error('❌ Failed to fetch available orders:', data.message);
+        console.error('Failed to fetch available orders:', data.message);
         setAvailable([]);
       }
     } catch (error) {
-      console.error('❌ Error fetching available orders:', error);
+      console.error('Error fetching available orders:', error);
       setAvailable([]);
     }
   };
@@ -64,16 +64,16 @@ const RiderDashboard = () => {
       }
       
       const data = await res.json();
-      console.log('🚚 My deliveries response:', data);
+      console.log('🚚 My deliveries:', data);
       
       if (data.success) {
         setMyDeliveries(data.orders || []);
       } else {
-        console.error('❌ Failed to fetch my deliveries:', data.message);
+        console.error('Failed to fetch my deliveries:', data.message);
         setMyDeliveries([]);
       }
     } catch (error) {
-      console.error('❌ Error fetching my deliveries:', error);
+      console.error('Error fetching my deliveries:', error);
       setMyDeliveries([]);
     }
   };
@@ -89,22 +89,28 @@ const RiderDashboard = () => {
         return;
       }
 
+      if (!token) {
+        alert('❌ Error: No authentication token found.');
+        return;
+      }
+
       const res = await fetch(`${API_URL}/orders/${orderId}/accept`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`
         },
-        body: JSON.stringify({ riderId }) // Include riderId in request body
+        body: JSON.stringify({ riderId }) // CRITICAL: Include riderId in request body
       });
 
       console.log('📡 Accept order response status:', res.status);
       
       const data = await res.json();
-      console.log('📦 Accept order response data:', data);
+      console.log('📦 Accept order response:', data);
 
       if (res.ok && data.success) {
         alert('✅ Order assigned to you!');
+        // Refresh both lists
         await fetchAvailable();
         await fetchMyDeliveries();
       } else {
@@ -116,7 +122,7 @@ const RiderDashboard = () => {
     }
   };
 
-  // ✅ Update delivery status - FIXED VERSION
+  // ✅ Update delivery status
   const updateStatus = async (orderId, status) => {
     try {
       console.log('🔄 Updating order status:', { orderId, status });
@@ -133,7 +139,7 @@ const RiderDashboard = () => {
       console.log('📡 Update status response status:', res.status);
       
       const data = await res.json();
-      console.log('📦 Update status response data:', data);
+      console.log('📦 Update status response:', data);
 
       if (res.ok && data.success) {
         alert(`✅ Status updated to ${status}`);
@@ -147,7 +153,7 @@ const RiderDashboard = () => {
     }
   };
 
-  // 🔄 Load data
+  // 🔄 Load all data
   const loadData = async () => {
     setLoading(true);
     try {
