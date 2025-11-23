@@ -148,72 +148,238 @@ router.post('/register', async (req, res) => {
   }
 });
 
-// QUICK REGISTER ROUTE - SIMPLIFIED FOR TESTING
-router.post('/quick-register', async (req, res) => {
+// LOGIN ROUTE - COMPLETELY FIXED VERSION
+router.post('/login', async (req, res) => {
   try {
-    const { name, email, password, role = 'customer' } = req.body;
+    console.log('🔐 Login attempt:', req.body);
+    
+    const { email, password } = req.body;
 
-    // Default values for quick registration
-    const userData = {
-      name: name.trim(),
-      email: email.toLowerCase().trim(),
-      password: password,
-      phone: '09123456789',
-      address: 'Default Address',
-      role: role,
-      isApproved: role === 'customer' || role === 'admin'
-    };
-
-    // Check if user exists
-    const existingUser = await User.findOne({ email: userData.email });
-    if (existingUser) {
-      return res.status(400).json({
+    // Find user with case-insensitive email
+    const user = await User.findOne({ email: email.toLowerCase() });
+    
+    if (!user) {
+      return res.status(400).json({ 
         success: false,
-        message: 'User already exists'
+        message: 'Invalid email or password' 
       });
     }
 
-    const newUser = new User(userData);
-    await newUser.save();
-
-    // Auto-create restaurant for restaurant role
-    if (role === 'restaurant') {
-      const restaurant = new Restaurant({
-        name: name.trim() + "'s Restaurant",
-        owner: newUser._id,
-        email: userData.email,
-        phone: userData.phone,
-        address: userData.address,
-        cuisine: 'Fast Food',
-        isApproved: false
+    const isPasswordValid = await user.comparePassword(password);
+    
+    if (!isPasswordValid) {
+      return res.status(400).json({ 
+        success: false,
+        message: 'Invalid email or password' 
       });
-      await restaurant.save();
+    }
+
+    // ✅ FIXED APPROVAL SYSTEM:
+    
+    // Auto-approve admin users on login
+    if (user.role === 'admin' && !user.isApproved) {
+      user.isApproved = true;
+      await user.save();
+      console.log('✅ Auto-approved admin user');
+    }
+
+    // Check approval status for restaurant users
+    if (user.role === 'restaurant') {
+      const restaurant = await Restaurant.findOne({ owner: user._id });
+      
+      if (restaurant) {
+        console.log('🏪 Restaurant status:', {
+          name: restaurant.name,
+          userApproved: user.isApproved,
+          restaurantApproved: restaurant.isApproved
+        });
+
+        // ✅ FIXED: Check BOTH user approval AND restaurant approval
+        if (!user.isApproved || !restaurant.isApproved) {
+          return res.status(400).json({ 
+            success: false,
+            message: 'Restaurant account pending admin approval' 
+          });
+        }
+      } else {
+        console.log('⚠️ No restaurant found for user:', user.email);
+        // Allow login even if no restaurant data (for troubleshooting)
+      }
+    }
+
+    // Check approval status for rider users
+    if (user.role === 'rider' && !user.isApproved) {
+      return res.status(400).json({ 
+        success: false,
+        message: 'Rider account pending admin approval' 
+      });
     }
 
     const token = jwt.sign(
-      { userId: newUser._id, role: newUser.role },
+      { userId: user._id, email: user.email, role: user.role }, 
       process.env.JWT_SECRET || 'fallback-secret-key',
       { expiresIn: '7d' }
     );
 
-    res.status(201).json({
-      success: true,
-      message: 'Quick registration successful!',
-      token,
-      user: {
-        _id: newUser._id,
-        name: newUser.name,
-        email: newUser.email,
-        role: newUser.role,
-        isApproved: newUser.isApproved
+    console.log('✅ Login successful:', {
+      role: user.role, 
+      email: user.email, 
+      approved: user.isApproved
+    });
+
+    // Prepare user data for response
+    const userResponse = {
+      _id: user._id, 
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      isApproved: user.isApproved,
+      phone: user.phone,
+      address: user.address
+    };
+
+    // Add rider-specific fields
+    if (user.role === 'rider') {
+      userResponse.vehicleType = user.vehicleType;
+      userResponse.licenseNumber = user.licenseNumber;
+    }
+
+    // Add restaurant data if available
+    if (user.role === 'restaurant') {
+      const restaurant = await Restaurant.findOne({ owner: user._id });
+      if (restaurant) {
+        userResponse.restaurantId = restaurant._id;
+        userResponse.restaurantData = {
+          _id: restaurant._id,
+          name: restaurant.name,
+          cuisine: restaurant.cuisine,
+          address: restaurant.address,
+          phone: restaurant.phone,
+          isApproved: restaurant.isApproved
+        };
       }
+    }
+
+    res.json({
+      success: true,
+      message: 'Login successful! 🎉',
+      token,
+      user: userResponse
     });
 
   } catch (error) {
-    console.error('❌ Quick register error:', error);
-    res.status(500).json({
+    console.error('❌ Login error:', error);
+    res.status(500).json({ 
       success: false,
-      message: 'Quick registration failed'
+      message: 'Login failed: ' + error.message 
+    });
+  }
+});
+
+// APPROVE USER - FIXED VERSION (Approves both user and restaurant if applicable)
+router.put('/users/:id/approve', async (req, res) => {
+  try {
+    const user = await User.findByIdAndUpdate(
+      req.params.id,
+      { isApproved: true },
+      { new: true }
+    );
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+
+    // ✅ FIXED: Also approve the restaurant if user is a restaurant owner
+    if (user.role === 'restaurant') {
+      const restaurant = await Restaurant.findOneAndUpdate(
+        { owner: user._id },
+        { isApproved: true },
+        { new: true }
+      );
+
+      if (restaurant) {
+        console.log('🏪 Restaurant also approved:', restaurant.name);
+      }
+    }
+
+    console.log('✅ User approved:', user.email, user.role);
+
+    res.json({
+      success: true,
+      message: 'User approved successfully!',
+      user
+    });
+
+  } catch (error) {
+    console.error('❌ User approval error:', error);
+    res.status(500).json({ 
+      success: false,
+      message: 'Failed to approve user: ' + error.message 
+    });
+  }
+});
+
+// GET USER PROFILE (for AuthContext)
+router.get('/me', async (req, res) => {
+  try {
+    const token = req.headers.authorization?.split(' ')[1];
+    
+    if (!token) {
+      return res.status(401).json({
+        success: false,
+        message: 'No token provided'
+      });
+    }
+
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'fallback-secret-key');
+    const user = await User.findById(decoded.userId);
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+
+    // Prepare user data
+    const userData = {
+      _id: user._id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      isApproved: user.isApproved,
+      phone: user.phone,
+      address: user.address
+    };
+
+    // Add restaurant data if applicable
+    if (user.role === 'restaurant') {
+      const restaurant = await Restaurant.findOne({ owner: user._id });
+      if (restaurant) {
+        userData.restaurantId = restaurant._id;
+        userData.restaurantData = restaurant;
+      }
+    }
+
+    // Add rider data if applicable
+    if (user.role === 'rider') {
+      userData.vehicleType = user.vehicleType;
+      userData.licenseNumber = user.licenseNumber;
+    }
+
+    res.json({
+      success: true,
+      user: userData
+    });
+
+  } catch (error) {
+    console.error('❌ Get user profile error:', error);
+    res.status(401).json({
+      success: false,
+      message: 'Invalid token'
     });
   }
 });
@@ -263,87 +429,6 @@ router.post('/create-admin', async (req, res) => {
   }
 });
 
-// LOGIN ROUTE
-router.post('/login', async (req, res) => {
-  try {
-    console.log('🔐 Login attempt:', req.body);
-    
-    const { email, password } = req.body;
-
-    const user = await User.findOne({ email: email.toLowerCase() });
-    
-    if (!user) {
-      return res.status(400).json({ 
-        success: false,
-        message: 'Invalid email or password' 
-      });
-    }
-
-    const isPasswordValid = await user.comparePassword(password);
-    
-    if (!isPasswordValid) {
-      return res.status(400).json({ 
-        success: false,
-        message: 'Invalid email or password' 
-      });
-    }
-
-    // Auto-approve admin users on login
-    if (user.role === 'admin' && !user.isApproved) {
-      user.isApproved = true;
-      await user.save();
-      console.log('✅ Auto-approved admin user');
-    }
-
-    // Block restaurant/rider if not approved
-    if (!user.isApproved && (user.role === 'restaurant' || user.role === 'rider')) {
-      return res.status(400).json({ 
-        success: false,
-        message: 'Account pending admin approval. Please wait for approval.' 
-      });
-    }
-
-    const token = jwt.sign(
-      { userId: user._id, email: user.email, role: user.role }, 
-      process.env.JWT_SECRET || 'fallback-secret-key',
-      { expiresIn: '7d' }
-    );
-
-    console.log('✅ Login successful:', user.role);
-
-    // Prepare user data for response
-    const userResponse = {
-      _id: user._id, 
-      name: user.name,
-      email: user.email,
-      role: user.role,
-      isApproved: user.isApproved,
-      phone: user.phone,
-      address: user.address
-    };
-
-    // Add rider-specific fields
-    if (user.role === 'rider') {
-      userResponse.vehicleType = user.vehicleType;
-      userResponse.licenseNumber = user.licenseNumber;
-    }
-
-    res.json({
-      success: true,
-      message: 'Login successful! 🎉',
-      token,
-      user: userResponse
-    });
-
-  } catch (error) {
-    console.error('❌ Login error:', error);
-    res.status(500).json({ 
-      success: false,
-      message: 'Login failed: ' + error.message 
-    });
-  }
-});
-
 // GET ALL USERS
 router.get('/users', async (req, res) => {
   try {
@@ -359,39 +444,6 @@ router.get('/users', async (req, res) => {
     res.status(500).json({ 
       success: false,
       message: 'Failed to get users' 
-    });
-  }
-});
-
-// APPROVE USER
-router.put('/users/:id/approve', async (req, res) => {
-  try {
-    const user = await User.findByIdAndUpdate(
-      req.params.id,
-      { isApproved: true },
-      { new: true }
-    );
-
-    if (!user) {
-      return res.status(404).json({
-        success: false,
-        message: 'User not found'
-      });
-    }
-
-    console.log('✅ User approved:', user.email, user.role);
-
-    res.json({
-      success: true,
-      message: 'User approved successfully!',
-      user
-    });
-
-  } catch (error) {
-    console.error('❌ User approval error:', error);
-    res.status(500).json({ 
-      success: false,
-      message: 'Failed to approve user: ' + error.message 
     });
   }
 });
