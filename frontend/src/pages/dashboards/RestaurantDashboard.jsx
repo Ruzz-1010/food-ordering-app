@@ -9,6 +9,7 @@ import { useAuth } from '../../context/AuthContext';
 
 const API_URL = 'https://food-ordering-app-production-35eb.up.railway.app/api';
 
+console.log('🔎 Fetching orders for restaurantId:', restaurantId);
 const RestaurantDashboard = () => {
   const { user, logout, getRestaurantId, getRestaurantData, refreshRestaurantData } = useAuth();
   const [activeTab, setActiveTab] = useState('dashboard');

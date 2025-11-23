@@ -4,7 +4,7 @@ const router = express.Router();
 const { auth, requireRole } = require('../middleware/auth');
 const Order = require('../models/Order');
 const Restaurant = require('../models/Restaurant');
-
+console.log('🔎 Restaurant search owner:', req.user._id);
 // ---------- CUSTOMER ----------
 router.get('/user', auth, async (req, res) => {
   try {
