@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const Restaurant = require('../models/Restaurant');
+const User = require('../models/User');
 const mongoose = require('mongoose');
 
 // GET ALL RESTAURANTS
@@ -113,7 +114,7 @@ router.post('/', async (req, res) => {
   }
 });
 
-// APPROVE RESTAURANT
+// APPROVE RESTAURANT - UPDATED TO ALSO APPROVE USER
 router.put('/:id/approve', async (req, res) => {
   try {
     const restaurant = await Restaurant.findByIdAndUpdate(
@@ -129,7 +130,13 @@ router.put('/:id/approve', async (req, res) => {
       });
     }
 
-    console.log('✅ Restaurant approved:', restaurant.name);
+    // ✅ ALSO APPROVE THE USER ACCOUNT
+    await User.findByIdAndUpdate(
+      restaurant.owner._id,
+      { isApproved: true }
+    );
+
+    console.log('✅ Restaurant AND User approved:', restaurant.name);
 
     res.json({
       success: true,
@@ -424,6 +431,50 @@ router.get('/email/:email', async (req, res) => {
     res.status(500).json({ 
       success: false,
       message: 'Failed to get restaurant by email' 
+    });
+  }
+});
+
+// EMERGENCY SYNC ALL RESTAURANT APPROVALS
+router.post('/emergency-sync-approvals', async (req, res) => {
+  try {
+    console.log('🚨 Emergency sync of all restaurant approvals...');
+    
+    // Get all restaurants
+    const restaurants = await Restaurant.find().populate('owner', 'name email isApproved');
+    
+    let syncedCount = 0;
+    
+    for (const restaurant of restaurants) {
+      if (restaurant.owner) {
+        // If restaurant is approved but owner isn't, approve owner
+        if (restaurant.isApproved && !restaurant.owner.isApproved) {
+          await User.findByIdAndUpdate(restaurant.owner._id, { isApproved: true });
+          console.log(`✅ Synced: Approved user ${restaurant.owner.email}`);
+          syncedCount++;
+        }
+        
+        // If owner is approved but restaurant isn't, approve restaurant
+        if (restaurant.owner.isApproved && !restaurant.isApproved) {
+          await Restaurant.findByIdAndUpdate(restaurant._id, { isApproved: true });
+          console.log(`✅ Synced: Approved restaurant ${restaurant.name}`);
+          syncedCount++;
+        }
+      }
+    }
+    
+    res.json({
+      success: true,
+      message: `Emergency sync completed! ${syncedCount} records updated.`,
+      syncedCount,
+      totalRestaurants: restaurants.length
+    });
+    
+  } catch (error) {
+    console.error('❌ Emergency sync error:', error);
+    res.status(500).json({ 
+      success: false,
+      message: 'Emergency sync failed: ' + error.message 
     });
   }
 });

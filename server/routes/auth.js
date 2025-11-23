@@ -102,52 +102,7 @@ router.post('/register', async (req, res) => {
   }
 });
 
-// EMERGENCY ADMIN CREATION
-router.post('/create-admin', async (req, res) => {
-  try {
-    const { name = 'Admin', email = 'admin@foodexpress.com', password = 'admin123' } = req.body;
-
-    // Check if admin exists
-    const existingAdmin = await User.findOne({ role: 'admin' });
-    if (existingAdmin) {
-      return res.json({
-        success: true,
-        message: 'Admin already exists',
-        admin: existingAdmin
-      });
-    }
-
-    const adminUser = new User({
-      name,
-      email,
-      password,
-      phone: '09123456789',
-      address: 'Admin Office',
-      role: 'admin',
-      isApproved: true
-    });
-
-    await adminUser.save();
-
-    console.log('✅ Emergency admin created:', adminUser.email);
-
-    res.json({
-      success: true,
-      message: 'Emergency admin created!',
-      credentials: { email, password },
-      user: adminUser
-    });
-
-  } catch (error) {
-    console.error('❌ Admin creation error:', error);
-    res.status(500).json({ 
-      success: false,
-      message: 'Failed to create admin: ' + error.message 
-    });
-  }
-});
-
-// LOGIN ROUTE
+// LOGIN ROUTE - UPDATED FOR RESTAURANT APPROVAL SYNC
 router.post('/login', async (req, res) => {
   try {
     console.log('🔐 Login attempt:', req.body);
@@ -170,6 +125,31 @@ router.post('/login', async (req, res) => {
         success: false,
         message: 'Invalid email or password' 
       });
+    }
+
+    // ✅ FIX: For restaurant users, sync approval status with restaurant
+    if (user.role === 'restaurant') {
+      const restaurant = await Restaurant.findOne({ owner: user._id });
+      if (restaurant) {
+        console.log('🔄 Syncing restaurant approval status:', {
+          userApproved: user.isApproved,
+          restaurantApproved: restaurant.isApproved
+        });
+        
+        // If restaurant is approved but user isn't, auto-approve user
+        if (restaurant.isApproved && !user.isApproved) {
+          user.isApproved = true;
+          await user.save();
+          console.log('✅ Auto-approved restaurant user based on restaurant status');
+        }
+        
+        // If restaurant isn't approved but user is, sync both
+        if (!restaurant.isApproved && user.isApproved) {
+          restaurant.isApproved = true;
+          await restaurant.save();
+          console.log('✅ Auto-approved restaurant based on user status');
+        }
+      }
     }
 
     // Auto-approve admin users on login
@@ -219,6 +199,122 @@ router.post('/login', async (req, res) => {
   }
 });
 
+// EMERGENCY ADMIN CREATION
+router.post('/create-admin', async (req, res) => {
+  try {
+    const { name = 'Admin', email = 'admin@foodexpress.com', password = 'admin123' } = req.body;
+
+    // Check if admin exists
+    const existingAdmin = await User.findOne({ role: 'admin' });
+    if (existingAdmin) {
+      return res.json({
+        success: true,
+        message: 'Admin already exists',
+        admin: existingAdmin
+      });
+    }
+
+    const adminUser = new User({
+      name,
+      email,
+      password,
+      phone: '09123456789',
+      address: 'Admin Office',
+      role: 'admin',
+      isApproved: true
+    });
+
+    await adminUser.save();
+
+    console.log('✅ Emergency admin created:', adminUser.email);
+
+    res.json({
+      success: true,
+      message: 'Emergency admin created!',
+      credentials: { email, password },
+      user: adminUser
+    });
+
+  } catch (error) {
+    console.error('❌ Admin creation error:', error);
+    res.status(500).json({ 
+      success: false,
+      message: 'Failed to create admin: ' + error.message 
+    });
+  }
+});
+
+// SYNC RESTAURANT APPROVAL STATUS - NEW ENDPOINT
+router.post('/sync-restaurant-approval', async (req, res) => {
+  try {
+    const { email } = req.body;
+    
+    const user = await User.findOne({ email, role: 'restaurant' });
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'Restaurant user not found'
+      });
+    }
+
+    // Find restaurant by owner
+    const restaurant = await Restaurant.findOne({ owner: user._id });
+    
+    if (!restaurant) {
+      return res.status(404).json({
+        success: false,
+        message: 'Restaurant not found for this user'
+      });
+    }
+
+    console.log('🔄 Current status:', {
+      user: { email: user.email, isApproved: user.isApproved },
+      restaurant: { name: restaurant.name, isApproved: restaurant.isApproved }
+    });
+
+    let updated = false;
+
+    // If restaurant is approved but user isn't, approve user
+    if (restaurant.isApproved && !user.isApproved) {
+      user.isApproved = true;
+      await user.save();
+      updated = true;
+      console.log('✅ User approved based on restaurant status');
+    }
+
+    // If user is approved but restaurant isn't, approve restaurant
+    if (user.isApproved && !restaurant.isApproved) {
+      restaurant.isApproved = true;
+      await restaurant.save();
+      updated = true;
+      console.log('✅ Restaurant approved based on user status');
+    }
+
+    res.json({
+      success: true,
+      message: updated ? 'Approval status synced successfully!' : 'No sync needed',
+      updated,
+      user: {
+        id: user._id,
+        email: user.email,
+        isApproved: user.isApproved
+      },
+      restaurant: {
+        id: restaurant._id,
+        name: restaurant.name,
+        isApproved: restaurant.isApproved
+      }
+    });
+
+  } catch (error) {
+    console.error('❌ Sync error:', error);
+    res.status(500).json({ 
+      success: false,
+      message: 'Failed to sync approval status: ' + error.message 
+    });
+  }
+});
+
 // GET ALL USERS
 router.get('/users', async (req, res) => {
   try {
@@ -238,7 +334,7 @@ router.get('/users', async (req, res) => {
   }
 });
 
-// APPROVE USER
+// APPROVE USER - UPDATED TO ALSO APPROVE RESTAURANT
 router.put('/users/:id/approve', async (req, res) => {
   try {
     const user = await User.findByIdAndUpdate(
@@ -252,6 +348,19 @@ router.put('/users/:id/approve', async (req, res) => {
         success: false,
         message: 'User not found'
       });
+    }
+
+    // ✅ ALSO APPROVE ASSOCIATED RESTAURANT IF EXISTS
+    if (user.role === 'restaurant') {
+      const restaurant = await Restaurant.findOneAndUpdate(
+        { owner: user._id },
+        { isApproved: true },
+        { new: true }
+      );
+      
+      if (restaurant) {
+        console.log('✅ Associated restaurant also approved:', restaurant.name);
+      }
     }
 
     console.log('✅ User approved:', user.email, user.role);

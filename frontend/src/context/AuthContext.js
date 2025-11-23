@@ -9,7 +9,8 @@ export const AuthProvider = ({ children }) => {
   const [authChecked, setAuthChecked] = useState(false);
 
   // ✅ FIXED – no trailing space
-const API_URL = 'https://food-ordering-app-production-35eb.up.railway.app/api';
+  const API_URL = 'https://food-ordering-app-production-35eb.up.railway.app/api';
+
   // Function to fetch restaurant data
   const fetchRestaurantData = async (userId, userEmail) => {
     try {
@@ -87,6 +88,27 @@ const API_URL = 'https://food-ordering-app-production-35eb.up.railway.app/api';
     }
   };
 
+  // EMERGENCY SYNC FUNCTION
+  const emergencySyncApproval = async (email) => {
+    try {
+      console.log('🔄 Emergency sync for:', email);
+      const response = await fetch(`${API_URL}/auth/sync-restaurant-approval`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email }),
+      });
+      
+      const data = await response.json();
+      console.log('🔄 Sync response:', data);
+      return data;
+    } catch (error) {
+      console.error('❌ Emergency sync error:', error);
+      return { success: false, message: 'Sync failed' };
+    }
+  };
+
   // Check auth status
   useEffect(() => {
     const checkAuthStatus = async () => {
@@ -139,7 +161,7 @@ const API_URL = 'https://food-ordering-app-production-35eb.up.railway.app/api';
     checkAuthStatus();
   }, []);
 
-  // Login function
+  // Login function - UPDATED WITH SYNC
   const login = async (email, password) => {
     setLoading(true);
     
@@ -181,6 +203,16 @@ const API_URL = 'https://food-ordering-app-production-35eb.up.railway.app/api';
             console.log('✅ Restaurant data added to user:', userData.restaurantId);
           } else {
             console.log('❌ No restaurant data found for this user');
+          }
+        }
+        
+        // Emergency sync if restaurant user is not approved but should be
+        if (userData.role === 'restaurant' && !userData.isApproved) {
+          console.log('🔄 Restaurant user not approved, attempting emergency sync...');
+          const syncResult = await emergencySyncApproval(userData.email);
+          if (syncResult.success && syncResult.updated) {
+            userData.isApproved = true;
+            console.log('✅ User approved via emergency sync');
           }
         }
         
@@ -362,6 +394,11 @@ const API_URL = 'https://food-ordering-app-production-35eb.up.railway.app/api';
     }
   };
 
+  // Emergency sync function
+  const syncRestaurantApproval = async (email) => {
+    return await emergencySyncApproval(email);
+  };
+
   // Utility functions
   const hasRole = (role) => user?.role === role;
   const isApproved = () => user?.isApproved === true;
@@ -382,6 +419,7 @@ const API_URL = 'https://food-ordering-app-production-35eb.up.railway.app/api';
       refreshUser,
       updateUser,
       refreshRestaurantData,
+      syncRestaurantApproval,
       hasRole,
       isApproved,
       isAuthenticated,
@@ -401,4 +439,4 @@ export const useAuth = () => {
     throw new Error('useAuth must be used within an AuthProvider');
   }
   return context;
-}; 
+};
