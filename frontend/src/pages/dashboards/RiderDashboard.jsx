@@ -128,7 +128,8 @@ const RiderDashboard = () => {
 
   // 🔄 Load on mount
   useEffect(() => {
-    if (user && user.role === 'rider') {
+    // TANGGAPIN ANG BOTH "rider" AT "restaurant" ROLES
+    if (user && (user.role === 'rider' || user.role === 'restaurant')) {
       loadData();
     }
   }, [user]);
@@ -184,7 +185,8 @@ const RiderDashboard = () => {
     );
   }
 
-  if (user.role !== 'rider') {
+  // TANGGAPIN ANG BOTH ROLES - FIXED!
+  if (user.role !== 'rider' && user.role !== 'restaurant') {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
@@ -213,6 +215,10 @@ const RiderDashboard = () => {
                 <p className="text-sm text-gray-500">{user.name} • {user.email}</p>
                 <p className="text-xs text-gray-400">
                   Available: {stats.availableOrders} | My Deliveries: {stats.myDeliveries}
+                </p>
+                {/* SHOW ROLE INFO */}
+                <p className="text-xs text-orange-600">
+                  Role: {user.role} {user.role === 'restaurant' && '(Rider Account)'}
                 </p>
               </div>
             </div>
