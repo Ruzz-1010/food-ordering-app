@@ -8,7 +8,7 @@ import { useAuth } from '../../context/AuthContext';
 const API_URL = 'https://food-ordering-app-production-35eb.up.railway.app/api';
 
 const RiderDashboard = () => {
-  const { user, logout } = useAuth();
+  const { user, logout, getUserId } = useAuth();
   const [loading, setLoading] = useState(true);
   const [available, setAvailable] = useState([]);
   const [myDeliveries, setMyDeliveries] = useState([]);
@@ -21,21 +21,29 @@ const RiderDashboard = () => {
   // ✅ Fetch available orders
   const fetchAvailable = async () => {
     try {
+      console.log('🔄 Fetching available orders...');
       const res = await fetch(`${API_URL}/orders/rider/available`, {
         headers: { 
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}` 
         }
       });
+      
+      if (!res.ok) {
+        throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+      }
+      
       const data = await res.json();
+      console.log('📦 Available orders response:', data);
+      
       if (data.success) {
         setAvailable(data.orders || []);
       } else {
-        console.error('Failed to fetch available orders:', data.message);
+        console.error('❌ Failed to fetch available orders:', data.message);
         setAvailable([]);
       }
     } catch (error) {
-      console.error('Error fetching available orders:', error);
+      console.error('❌ Error fetching available orders:', error);
       setAvailable([]);
     }
   };
@@ -43,36 +51,58 @@ const RiderDashboard = () => {
   // ✅ Fetch my deliveries
   const fetchMyDeliveries = async () => {
     try {
+      console.log('🔄 Fetching my deliveries...');
       const res = await fetch(`${API_URL}/orders/rider/my-deliveries`, {
         headers: { 
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}` 
         }
       });
+      
+      if (!res.ok) {
+        throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+      }
+      
       const data = await res.json();
+      console.log('🚚 My deliveries response:', data);
+      
       if (data.success) {
         setMyDeliveries(data.orders || []);
       } else {
-        console.error('Failed to fetch my deliveries:', data.message);
+        console.error('❌ Failed to fetch my deliveries:', data.message);
         setMyDeliveries([]);
       }
     } catch (error) {
-      console.error('Error fetching my deliveries:', error);
+      console.error('❌ Error fetching my deliveries:', error);
       setMyDeliveries([]);
     }
   };
 
-  // ✅ Accept order
+  // ✅ Accept order - FIXED VERSION
   const acceptOrder = async (orderId) => {
     try {
+      const riderId = getUserId();
+      console.log('🔄 Accepting order:', { orderId, riderId });
+      
+      if (!riderId) {
+        alert('❌ Error: Rider ID not found. Please log out and log in again.');
+        return;
+      }
+
       const res = await fetch(`${API_URL}/orders/${orderId}/accept`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`
-        }
+        },
+        body: JSON.stringify({ riderId }) // Include riderId in request body
       });
+
+      console.log('📡 Accept order response status:', res.status);
+      
       const data = await res.json();
+      console.log('📦 Accept order response data:', data);
+
       if (res.ok && data.success) {
         alert('✅ Order assigned to you!');
         await fetchAvailable();
@@ -81,14 +111,16 @@ const RiderDashboard = () => {
         alert(`❌ Failed: ${data.message || 'Unknown error'}`);
       }
     } catch (error) {
-      console.error('Error accepting order:', error);
+      console.error('❌ Error accepting order:', error);
       alert('❌ Failed to accept order. Please try again.');
     }
   };
 
-  // ✅ Update delivery status
+  // ✅ Update delivery status - FIXED VERSION
   const updateStatus = async (orderId, status) => {
     try {
+      console.log('🔄 Updating order status:', { orderId, status });
+      
       const res = await fetch(`${API_URL}/orders/${orderId}/delivery-status`, {
         method: 'PUT',
         headers: {
@@ -97,7 +129,12 @@ const RiderDashboard = () => {
         },
         body: JSON.stringify({ status })
       });
+
+      console.log('📡 Update status response status:', res.status);
+      
       const data = await res.json();
+      console.log('📦 Update status response data:', data);
+
       if (res.ok && data.success) {
         alert(`✅ Status updated to ${status}`);
         await fetchMyDeliveries();
@@ -105,7 +142,7 @@ const RiderDashboard = () => {
         alert(`❌ Failed: ${data.message || 'Unknown error'}`);
       }
     } catch (error) {
-      console.error('Error updating status:', error);
+      console.error('❌ Error updating status:', error);
       alert('❌ Failed to update status. Please try again.');
     }
   };
@@ -114,9 +151,14 @@ const RiderDashboard = () => {
   const loadData = async () => {
     setLoading(true);
     try {
+      console.log('🚀 Loading rider data...');
+      console.log('👤 Current user:', user);
+      console.log('🆔 User ID:', getUserId());
+      console.log('🔑 Token exists:', !!token);
+      
       await Promise.all([fetchAvailable(), fetchMyDeliveries()]);
     } catch (error) {
-      console.error('Error loading data:', error);
+      console.error('❌ Error loading data:', error);
     } finally {
       setLoading(false);
     }

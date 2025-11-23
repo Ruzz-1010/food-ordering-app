@@ -18,12 +18,9 @@ export const AuthProvider = ({ children }) => {
       console.log('📧 User Email:', userEmail);
 
       // Method 1: Try by owner ID
-      console.log('🔄 Method 1: Searching by owner ID...');
       const ownerResponse = await fetch(`${API_URL}/restaurants/owner/${userId}`);
       if (ownerResponse.ok) {
         const ownerData = await ownerResponse.json();
-        console.log('📊 Owner API Response:', ownerData);
-        
         if (ownerData.success && ownerData.restaurant) {
           console.log('✅ Restaurant found by owner ID:', ownerData.restaurant._id);
           return {
@@ -34,12 +31,9 @@ export const AuthProvider = ({ children }) => {
       }
 
       // Method 2: Try by email
-      console.log('🔄 Method 2: Searching by email...');
       const emailResponse = await fetch(`${API_URL}/restaurants/email/${userEmail}`);
       if (emailResponse.ok) {
         const emailData = await emailResponse.json();
-        console.log('📊 Email API Response:', emailData);
-        
         if (emailData.success && emailData.restaurant) {
           console.log('✅ Restaurant found by email:', emailData.restaurant._id);
           return {
@@ -49,37 +43,7 @@ export const AuthProvider = ({ children }) => {
         }
       }
 
-      // Method 3: Get all restaurants and find by owner or email
-      console.log('🔄 Method 3: Searching in all restaurants...');
-      const allResponse = await fetch(`${API_URL}/restaurants`);
-      if (allResponse.ok) {
-        const allData = await allResponse.json();
-        console.log('📊 All restaurants count:', allData.restaurants?.length);
-        
-        if (allData.success && allData.restaurants) {
-          // Find by owner
-          const byOwner = allData.restaurants.find(r => r.owner === userId || r.owner?._id === userId);
-          if (byOwner) {
-            console.log('✅ Restaurant found in all list by owner:', byOwner._id);
-            return {
-              restaurantId: byOwner._id,
-              restaurantData: byOwner
-            };
-          }
-
-          // Find by email
-          const byEmail = allData.restaurants.find(r => r.email === userEmail);
-          if (byEmail) {
-            console.log('✅ Restaurant found in all list by email:', byEmail._id);
-            return {
-              restaurantId: byEmail._id,
-              restaurantData: byEmail
-            };
-          }
-        }
-      }
-
-      console.log('❌ No restaurant found through any method');
+      console.log('❌ No restaurant found');
       return null;
     } catch (error) {
       console.error('❌ Error fetching restaurant data:', error);
@@ -87,7 +51,7 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  // Check auth status - UPDATED
+  // Check auth status - FIXED VERSION
   useEffect(() => {
     const checkAuthStatus = async () => {
       console.log('🔄 AuthContext - Checking authentication status...');
@@ -99,27 +63,35 @@ export const AuthProvider = ({ children }) => {
           const userObj = JSON.parse(userData);
           console.log('👤 User from localStorage:', userObj);
 
-          // For restaurant users, ensure we have restaurant data
-          if (userObj.role === 'restaurant' && userObj._id && !userObj.restaurantId) {
-            console.log('🏪 Restaurant user detected, fetching restaurant data...');
-            const restaurantInfo = await fetchRestaurantData(userObj._id, userObj.email);
-            
-            if (restaurantInfo) {
-              const updatedUser = {
-                ...userObj,
-                restaurantId: restaurantInfo.restaurantId,
-                restaurantData: restaurantInfo.restaurantData
-              };
-              console.log('✅ User updated with restaurant data:', updatedUser);
-              setUser(updatedUser);
-              localStorage.setItem('user', JSON.stringify(updatedUser));
+          // Validate that user has required fields
+          if (!userObj._id) {
+            console.error('❌ Invalid user data: missing _id');
+            localStorage.removeItem('token');
+            localStorage.removeItem('user');
+            setUser(null);
+          } else {
+            // For restaurant users, ensure we have restaurant data
+            if (userObj.role === 'restaurant' && !userObj.restaurantId) {
+              console.log('🏪 Restaurant user detected, fetching restaurant data...');
+              const restaurantInfo = await fetchRestaurantData(userObj._id, userObj.email);
+              
+              if (restaurantInfo) {
+                const updatedUser = {
+                  ...userObj,
+                  restaurantId: restaurantInfo.restaurantId,
+                  restaurantData: restaurantInfo.restaurantData
+                };
+                console.log('✅ User updated with restaurant data');
+                setUser(updatedUser);
+                localStorage.setItem('user', JSON.stringify(updatedUser));
+              } else {
+                console.log('❌ No restaurant data found');
+                setUser(userObj);
+              }
             } else {
-              console.log('❌ No restaurant data found, setting user without restaurant');
+              console.log('✅ User loaded from localStorage');
               setUser(userObj);
             }
-          } else {
-            console.log('✅ User loaded from localStorage:', userObj);
-            setUser(userObj);
           }
         } catch (error) {
           console.error('❌ Auth verification failed:', error);
@@ -139,7 +111,7 @@ export const AuthProvider = ({ children }) => {
     checkAuthStatus();
   }, []);
 
-  // Login function - UPDATED
+  // Login function - FIXED VERSION
   const login = async (email, password) => {
     setLoading(true);
     
@@ -158,8 +130,17 @@ export const AuthProvider = ({ children }) => {
       console.log('🔐 Login API Response:', data);
 
       if (response.ok && data.success) {
+        // CRITICAL FIX: Ensure we have the user _id
+        if (!data.user._id) {
+          console.error('❌ Server returned user without _id');
+          return { 
+            success: false, 
+            message: 'Server error: User ID missing' 
+          };
+        }
+
         const userData = {
-          _id: data.user._id,
+          _id: data.user._id, // This must be present
           name: data.user.name,
           email: data.user.email,
           role: data.user.role,
@@ -168,7 +149,7 @@ export const AuthProvider = ({ children }) => {
           address: data.user.address
         };
         
-        console.log('✅ Login successful, user:', userData);
+        console.log('✅ Login successful, user ID:', userData._id);
         
         // For restaurant owners, fetch restaurant data
         if (userData.role === 'restaurant') {
@@ -178,9 +159,7 @@ export const AuthProvider = ({ children }) => {
           if (restaurantInfo) {
             userData.restaurantId = restaurantInfo.restaurantId;
             userData.restaurantData = restaurantInfo.restaurantData;
-            console.log('✅ Restaurant data added to user:', userData.restaurantId);
-          } else {
-            console.log('❌ No restaurant data found for this user');
+            console.log('✅ Restaurant data added to user');
           }
         }
         
@@ -234,6 +213,14 @@ export const AuthProvider = ({ children }) => {
       const data = await response.json();
 
       if (response.ok && data.success) {
+        if (!data.user._id) {
+          console.error('❌ Server returned user without _id');
+          return { 
+            success: false, 
+            message: 'Server error: User ID missing' 
+          };
+        }
+
         const userInfo = {
           _id: data.user._id,
           name: data.user.name,
@@ -294,7 +281,6 @@ export const AuthProvider = ({ children }) => {
     setUser(null);
     localStorage.removeItem('token');
     localStorage.removeItem('user');
-    window.location.href = '/';
   };
 
   // Update user function
@@ -302,64 +288,6 @@ export const AuthProvider = ({ children }) => {
     const newUserData = { ...user, ...updatedUserData };
     setUser(newUserData);
     localStorage.setItem('user', JSON.stringify(newUserData));
-  };
-
-  // Refresh user data
-  const refreshUser = async () => {
-    const token = localStorage.getItem('token');
-    if (!token) return;
-
-    try {
-      const response = await fetch(`${API_URL}/auth/me`, {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        if (data.success && data.user) {
-          const userData = {
-            _id: data.user._id,
-            name: data.user.name,
-            email: data.user.email,
-            role: data.user.role,
-            isApproved: data.user.isApproved,
-            phone: data.user.phone,
-            address: data.user.address
-          };
-          
-          if (userData.role === 'restaurant') {
-            const restaurantInfo = await fetchRestaurantData(userData._id, userData.email);
-            if (restaurantInfo) {
-              userData.restaurantId = restaurantInfo.restaurantId;
-              userData.restaurantData = restaurantInfo.restaurantData;
-            }
-          }
-          
-          setUser(userData);
-          localStorage.setItem('user', JSON.stringify(userData));
-        }
-      }
-    } catch (error) {
-      console.error('❌ Error refreshing user data:', error);
-    }
-  };
-
-  // Refresh restaurant data
-  const refreshRestaurantData = async () => {
-    if (user?.role === 'restaurant' && user?._id) {
-      const restaurantInfo = await fetchRestaurantData(user._id, user.email);
-      if (restaurantInfo) {
-        const updatedUser = {
-          ...user,
-          restaurantId: restaurantInfo.restaurantId,
-          restaurantData: restaurantInfo.restaurantData
-        };
-        setUser(updatedUser);
-        localStorage.setItem('user', JSON.stringify(updatedUser));
-      }
-    }
   };
 
   // Utility functions
@@ -379,9 +307,7 @@ export const AuthProvider = ({ children }) => {
       login, 
       register, 
       logout,
-      refreshUser,
       updateUser,
-      refreshRestaurantData,
       hasRole,
       isApproved,
       isAuthenticated,
