@@ -10,7 +10,7 @@ import { useAuth } from '../../context/AuthContext';
 const API_URL = 'https://food-ordering-app-production-35eb.up.railway.app/api';
 
 const RestaurantDashboard = () => {
-  const { user, logout, getRestaurantId, getRestaurantData, refreshRestaurantData } = useAuth();
+  const { user, logout, getRestaurantId, getRestaurantData, refreshRestaurantData, updateUser } = useAuth();
   const [activeTab, setActiveTab] = useState('dashboard');
   const [loading, setLoading] = useState(false);
   const [showAddProduct, setShowAddProduct] = useState(false);
@@ -28,6 +28,24 @@ const RestaurantDashboard = () => {
     name: '', price: '', description: '', category: 'main course', preparationTime: '', ingredients: '', image: ''
   });
 
+  // Profile state
+  const [profileData, setProfileData] = useState({
+    name: '',
+    email: '',
+    phone: '',
+    address: '',
+    cuisine: '',
+    description: '',
+    deliveryTime: '',
+    deliveryFee: '',
+    openingHours: {
+      open: '08:00',
+      close: '22:00'
+    },
+    image: '',
+    bannerImage: ''
+  });
+
   // 🔍 1. Get restaurant ID (with token) - UPDATED FOR YOUR BACKEND
   const initializeRestaurantData = async () => {
     const token = localStorage.getItem('token');
@@ -41,6 +59,20 @@ const RestaurantDashboard = () => {
     if (currentRestaurantId && restaurantData) {
       setRestaurantId(currentRestaurantId);
       setRestaurant(restaurantData);
+      // Initialize profile data
+      setProfileData({
+        name: restaurantData.name || '',
+        email: restaurantData.email || user?.email || '',
+        phone: restaurantData.phone || user?.phone || '',
+        address: restaurantData.address || user?.address || '',
+        cuisine: restaurantData.cuisine || '',
+        description: restaurantData.description || '',
+        deliveryTime: restaurantData.deliveryTime || '20-30 min',
+        deliveryFee: restaurantData.deliveryFee || 35,
+        openingHours: restaurantData.openingHours || { open: '08:00', close: '22:00' },
+        image: restaurantData.image || '',
+        bannerImage: restaurantData.bannerImage || ''
+      });
       console.log('✅ Using existing restaurant data');
       return currentRestaurantId;
     }
@@ -66,6 +98,20 @@ const RestaurantDashboard = () => {
             currentRestaurantId = data.restaurant._id;
             setRestaurantId(currentRestaurantId);
             setRestaurant(data.restaurant);
+            // Initialize profile data
+            setProfileData({
+              name: data.restaurant.name || '',
+              email: data.restaurant.email || user?.email || '',
+              phone: data.restaurant.phone || user?.phone || '',
+              address: data.restaurant.address || user?.address || '',
+              cuisine: data.restaurant.cuisine || '',
+              description: data.restaurant.description || '',
+              deliveryTime: data.restaurant.deliveryTime || '20-30 min',
+              deliveryFee: data.restaurant.deliveryFee || 35,
+              openingHours: data.restaurant.openingHours || { open: '08:00', close: '22:00' },
+              image: data.restaurant.image || '',
+              bannerImage: data.restaurant.bannerImage || ''
+            });
             refreshRestaurantData();
             console.log('✅ Restaurant found by owner ID:', currentRestaurantId);
             return currentRestaurantId;
@@ -98,6 +144,20 @@ const RestaurantDashboard = () => {
             currentRestaurantId = data.restaurant._id;
             setRestaurantId(currentRestaurantId);
             setRestaurant(data.restaurant);
+            // Initialize profile data
+            setProfileData({
+              name: data.restaurant.name || '',
+              email: data.restaurant.email || user?.email || '',
+              phone: data.restaurant.phone || user?.phone || '',
+              address: data.restaurant.address || user?.address || '',
+              cuisine: data.restaurant.cuisine || '',
+              description: data.restaurant.description || '',
+              deliveryTime: data.restaurant.deliveryTime || '20-30 min',
+              deliveryFee: data.restaurant.deliveryFee || 35,
+              openingHours: data.restaurant.openingHours || { open: '08:00', close: '22:00' },
+              image: data.restaurant.image || '',
+              bannerImage: data.restaurant.bannerImage || ''
+            });
             refreshRestaurantData();
             console.log('✅ Restaurant found by email:', currentRestaurantId);
             return currentRestaurantId;
@@ -250,65 +310,65 @@ const RestaurantDashboard = () => {
   };
 
   // ✅ Add product - FIXED VERSION
-const handleAddProduct = async (e) => {
-  e.preventDefault();
-  if (!restaurantId) {
-    alert('❌ Restaurant not found');
-    return;
-  }
-  
-  const token = localStorage.getItem('token');
-  setLoading(true);
-  
-  try {
-    console.log('➕ Adding new product...', newProduct);
-    console.log('🏪 Restaurant ID:', restaurantId);
-    
-    // FIXED: Use 'restaurant' field to match backend
-    const productData = {
-      name: newProduct.name.trim(),
-      price: parseFloat(newProduct.price),
-      description: newProduct.description?.trim() || '',
-      category: newProduct.category,
-      restaurant: restaurantId, // ✅ CORRECT FIELD NAME
-      preparationTime: parseInt(newProduct.preparationTime) || 15,
-      ingredients: newProduct.ingredients?.trim() || '',
-      image: newProduct.image?.trim() || ''
-    };
-
-    console.log('📦 Sending product data:', productData);
-
-    const res = await fetch(`${API_URL}/products`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
-      },
-      body: JSON.stringify(productData)
-    });
-    
-    const data = await res.json();
-    console.log('➕ Add product response:', data);
-    
-    if (res.ok) {
-      alert('✅ Product added successfully!');
-      setShowAddProduct(false);
-      setNewProduct({ 
-        name: '', price: '', description: '', category: 'main course', 
-        preparationTime: '', ingredients: '', image: '' 
-      });
-      // Refresh menu data
-      await fetchMenu(restaurantId);
-    } else {
-      alert(`❌ Failed: ${data.message || 'Error adding product'}`);
+  const handleAddProduct = async (e) => {
+    e.preventDefault();
+    if (!restaurantId) {
+      alert('❌ Restaurant not found');
+      return;
     }
-  } catch (error) {
-    console.error('❌ Error adding product:', error);
-    alert('❌ Network error. Please try again.');
-  } finally {
-    setLoading(false);
-  }
-};
+    
+    const token = localStorage.getItem('token');
+    setLoading(true);
+    
+    try {
+      console.log('➕ Adding new product...', newProduct);
+      console.log('🏪 Restaurant ID:', restaurantId);
+      
+      // FIXED: Use 'restaurant' field to match backend
+      const productData = {
+        name: newProduct.name.trim(),
+        price: parseFloat(newProduct.price),
+        description: newProduct.description?.trim() || '',
+        category: newProduct.category,
+        restaurant: restaurantId, // ✅ CORRECT FIELD NAME
+        preparationTime: parseInt(newProduct.preparationTime) || 15,
+        ingredients: newProduct.ingredients?.trim() || '',
+        image: newProduct.image?.trim() || ''
+      };
+
+      console.log('📦 Sending product data:', productData);
+
+      const res = await fetch(`${API_URL}/products`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(productData)
+      });
+      
+      const data = await res.json();
+      console.log('➕ Add product response:', data);
+      
+      if (res.ok) {
+        alert('✅ Product added successfully!');
+        setShowAddProduct(false);
+        setNewProduct({ 
+          name: '', price: '', description: '', category: 'main course', 
+          preparationTime: '', ingredients: '', image: '' 
+        });
+        // Refresh menu data
+        await fetchMenu(restaurantId);
+      } else {
+        alert(`❌ Failed: ${data.message || 'Error adding product'}`);
+      }
+    } catch (error) {
+      console.error('❌ Error adding product:', error);
+      alert('❌ Network error. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // ✅ Update order status - UPDATED FOR YOUR BACKEND
   const handleUpdateOrderStatus = async (orderId, newStatus) => {
@@ -338,6 +398,53 @@ const handleAddProduct = async (e) => {
     } catch (error) {
       console.error('❌ Error updating order status:', error);
       alert('❌ Network error. Please try again.');
+    }
+  };
+
+  // ✅ Update Profile - NEW FUNCTION
+  const handleUpdateProfile = async (e) => {
+    e.preventDefault();
+    if (!restaurantId) {
+      alert('❌ Restaurant not found');
+      return;
+    }
+    
+    const token = localStorage.getItem('token');
+    setLoading(true);
+    
+    try {
+      console.log('📝 Updating restaurant profile...', profileData);
+      
+      const res = await fetch(`${API_URL}/restaurants/${restaurantId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(profileData)
+      });
+      
+      const data = await res.json();
+      console.log('📝 Update profile response:', data);
+      
+      if (res.ok) {
+        alert('✅ Profile updated successfully!');
+        setShowProfile(false);
+        // Update local state
+        setRestaurant(data.restaurant);
+        refreshRestaurantData();
+        // Update user data if name changed
+        if (user.name !== profileData.name) {
+          updateUser({ name: profileData.name });
+        }
+      } else {
+        alert(`❌ Failed to update profile: ${data.message || 'Unknown error'}`);
+      }
+    } catch (error) {
+      console.error('❌ Error updating profile:', error);
+      alert('❌ Network error. Please try again.');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -535,6 +642,13 @@ const handleAddProduct = async (e) => {
                 <p><strong>Status:</strong> <span className={`ml-1 ${restaurant.isApproved ? 'text-green-600' : 'text-yellow-600'}`}>{restaurant.isApproved ? 'Approved' : 'Pending Approval'}</span></p>
                 <p><strong>Address:</strong> {restaurant.address || 'Not set'}</p>
                 <p><strong>Phone:</strong> {restaurant.phone || 'Not set'}</p>
+                <button 
+                  onClick={() => setShowProfile(true)}
+                  className="w-full mt-3 flex items-center justify-center space-x-2 bg-blue-600 text-white px-3 py-2 rounded hover:bg-blue-700 text-sm"
+                >
+                  <Edit size={14} />
+                  <span>Edit Profile</span>
+                </button>
               </div>
             </div>
           </div>
@@ -776,6 +890,209 @@ const handleAddProduct = async (e) => {
                   <button type="submit" disabled={loading} className="flex-1 px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 flex items-center justify-center space-x-2 disabled:opacity-50">
                     <Save size={16} />
                     <span>{loading ? 'Adding...' : 'Add Item'}</span>
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Profile Update Modal */}
+      {showProfile && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6">
+              <div className="flex justify-between items-center mb-6">
+                <h3 className="text-xl font-bold text-gray-900">Update Restaurant Profile</h3>
+                <button onClick={() => setShowProfile(false)} className="text-gray-500 hover:text-gray-700">
+                  <X size={24} />
+                </button>
+              </div>
+              <form onSubmit={handleUpdateProfile} className="space-y-6">
+                {/* Basic Information */}
+                <div>
+                  <h4 className="font-semibold text-gray-900 mb-4">Basic Information</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Restaurant Name *</label>
+                      <input 
+                        type="text" 
+                        required 
+                        value={profileData.name} 
+                        onChange={(e) => setProfileData({...profileData, name: e.target.value})} 
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500" 
+                        placeholder="Your Restaurant Name" 
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Cuisine Type *</label>
+                      <input 
+                        type="text" 
+                        required 
+                        value={profileData.cuisine} 
+                        onChange={(e) => setProfileData({...profileData, cuisine: e.target.value})} 
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500" 
+                        placeholder="e.g., Filipino, Chinese, Italian" 
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Contact Information */}
+                <div>
+                  <h4 className="font-semibold text-gray-900 mb-4">Contact Information</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Email *</label>
+                      <input 
+                        type="email" 
+                        required 
+                        value={profileData.email} 
+                        onChange={(e) => setProfileData({...profileData, email: e.target.value})} 
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500" 
+                        placeholder="restaurant@example.com" 
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Phone *</label>
+                      <input 
+                        type="tel" 
+                        required 
+                        value={profileData.phone} 
+                        onChange={(e) => setProfileData({...profileData, phone: e.target.value})} 
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500" 
+                        placeholder="+63 XXX XXX XXXX" 
+                      />
+                    </div>
+                  </div>
+                  <div className="mt-4">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Address *</label>
+                    <textarea 
+                      required 
+                      value={profileData.address} 
+                      onChange={(e) => setProfileData({...profileData, address: e.target.value})} 
+                      rows="2" 
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500" 
+                      placeholder="Full restaurant address" 
+                    />
+                  </div>
+                </div>
+
+                {/* Business Details */}
+                <div>
+                  <h4 className="font-semibold text-gray-900 mb-4">Business Details</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Delivery Time</label>
+                      <input 
+                        type="text" 
+                        value={profileData.deliveryTime} 
+                        onChange={(e) => setProfileData({...profileData, deliveryTime: e.target.value})} 
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500" 
+                        placeholder="e.g., 20-30 min" 
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Delivery Fee (₱)</label>
+                      <input 
+                        type="number" 
+                        value={profileData.deliveryFee} 
+                        onChange={(e) => setProfileData({...profileData, deliveryFee: e.target.value})} 
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500" 
+                        placeholder="35" 
+                        step="0.01" 
+                        min="0" 
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Opening Hours */}
+                <div>
+                  <h4 className="font-semibold text-gray-900 mb-4">Opening Hours</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Open Time</label>
+                      <input 
+                        type="time" 
+                        value={profileData.openingHours.open} 
+                        onChange={(e) => setProfileData({
+                          ...profileData, 
+                          openingHours: {...profileData.openingHours, open: e.target.value}
+                        })} 
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500" 
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Close Time</label>
+                      <input 
+                        type="time" 
+                        value={profileData.openingHours.close} 
+                        onChange={(e) => setProfileData({
+                          ...profileData, 
+                          openingHours: {...profileData.openingHours, close: e.target.value}
+                        })} 
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500" 
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Images */}
+                <div>
+                  <h4 className="font-semibold text-gray-900 mb-4">Restaurant Images</h4>
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Profile Image URL</label>
+                      <input 
+                        type="url" 
+                        value={profileData.image} 
+                        onChange={(e) => setProfileData({...profileData, image: e.target.value})} 
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500" 
+                        placeholder="https://example.com/profile-image.jpg" 
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Banner Image URL</label>
+                      <input 
+                        type="url" 
+                        value={profileData.bannerImage} 
+                        onChange={(e) => setProfileData({...profileData, bannerImage: e.target.value})} 
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500" 
+                        placeholder="https://example.com/banner-image.jpg" 
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Description */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                  <textarea 
+                    value={profileData.description} 
+                    onChange={(e) => setProfileData({...profileData, description: e.target.value})} 
+                    rows="3" 
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500" 
+                    placeholder="Describe your restaurant, specialities, etc..." 
+                  />
+                </div>
+
+                <div className="flex space-x-3 pt-4">
+                  <button 
+                    type="button" 
+                    onClick={() => setShowProfile(false)} 
+                    className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
+                  >
+                    Cancel
+                  </button>
+                  <button 
+                    type="submit" 
+                    disabled={loading} 
+                    className="flex-1 px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 flex items-center justify-center space-x-2 disabled:opacity-50"
+                  >
+                    <Save size={16} />
+                    <span>{loading ? 'Updating...' : 'Update Profile'}</span>
                   </button>
                 </div>
               </form>
