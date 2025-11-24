@@ -9,7 +9,9 @@ const userSchema = new mongoose.Schema({
   email: { 
     type: String, 
     required: [true, 'Email is required'],
-    unique: true 
+    unique: true,
+    lowercase: true,
+    trim: true
   },
   password: { 
     type: String, 
@@ -30,7 +32,10 @@ const userSchema = new mongoose.Schema({
   },
   isApproved: { 
     type: Boolean, 
-    default: false 
+    default: function() {
+      // ✅ AUTO-APPROVE CUSTOMERS, REQUIRE APPROVAL FOR RESTAURANT/RIDER
+      return this.role === 'customer' || this.role === 'admin';
+    }
   },
   isActive: { 
     type: Boolean, 
@@ -46,22 +51,67 @@ const userSchema = new mongoose.Schema({
     type: String, 
     default: '' 
   },
+  // Location for delivery calculations
+  location: {
+    type: {
+      type: String,
+      enum: ['Point'],
+      default: 'Point'
+    },
+    coordinates: {
+      type: [Number], // [longitude, latitude]
+      default: [0, 0]
+    }
+  },
   createdAt: { 
     type: Date, 
     default: Date.now 
   }
 });
 
+// Add index for location-based queries
+userSchema.index({ location: '2dsphere' });
+
 // Hash password before saving
 userSchema.pre('save', async function(next) {
+  // Only hash the password if it's modified (or new)
   if (!this.isModified('password')) return next();
-  this.password = await bcrypt.hash(this.password, 12);
-  next();
+  
+  try {
+    const salt = await bcrypt.genSalt(12);
+    this.password = await bcrypt.hash(this.password, salt);
+    next();
+  } catch (error) {
+    next(error);
+  }
 });
 
 // Compare password method
 userSchema.methods.comparePassword = async function(candidatePassword) {
   return await bcrypt.compare(candidatePassword, this.password);
 };
+
+// Virtual for formatted user info
+userSchema.virtual('userInfo').get(function() {
+  return {
+    id: this._id,
+    name: this.name,
+    email: this.email,
+    role: this.role,
+    isApproved: this.isApproved,
+    phone: this.phone,
+    address: this.address
+  };
+});
+
+// Ensure virtual fields are serialized
+userSchema.set('toJSON', {
+  virtuals: true,
+  transform: function(doc, ret) {
+    delete ret.password;
+    delete ret.__v;
+    return ret;
+  }
+});
 
 module.exports = mongoose.model('User', userSchema);

@@ -250,75 +250,83 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  // Register function
-  const register = async (userData) => {
-    setLoading(true);
+  // Register function - FIXED VERSION
+const register = async (userData) => {
+  setLoading(true);
+  
+  try {
+    console.log('📝 Sending registration data:', userData);
     
-    try {
-      const response = await fetch(`${API_URL}/auth/register`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(userData),
-      });
-      
-      const data = await response.json();
+    const response = await fetch(`${API_URL}/auth/register`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(userData),
+    });
+    
+    console.log('📝 Registration response status:', response.status);
+    
+    const data = await response.json();
+    console.log('📝 Registration API Response:', data);
 
-      if (response.ok && data.success) {
-        const userInfo = {
-          _id: data.user._id,
-          name: data.user.name,
-          email: data.user.email,
-          role: data.user.role,
-          isApproved: data.user.isApproved !== false,
-          phone: data.user.phone,
-          address: data.user.address
-        };
-        
-        if ((userInfo.role === 'rider' || userInfo.role === 'restaurant') && !userInfo.isApproved) {
-          return { 
-            success: true, 
-            message: 'Registration successful! Your account is pending approval.', 
-            user: userInfo,
-            needsApproval: true
-          };
-        }
-        
-        // For restaurant owners, fetch restaurant data
-        if (userInfo.role === 'restaurant') {
-          const restaurantInfo = await fetchRestaurantData(userInfo._id, userInfo.email);
-          if (restaurantInfo) {
-            userInfo.restaurantId = restaurantInfo.restaurantId;
-            userInfo.restaurantData = restaurantInfo.restaurantData;
-          }
-        }
-        
-        setUser(userInfo);
-        localStorage.setItem('token', data.token);
-        localStorage.setItem('user', JSON.stringify(userInfo));
-        
+    if (response.ok && data.success) {
+      const userInfo = {
+        _id: data.user.id || data.user._id,
+        name: data.user.name,
+        email: data.user.email,
+        role: data.user.role,
+        isApproved: data.user.isApproved !== false,
+        phone: data.user.phone,
+        address: data.user.address
+      };
+      
+      console.log('✅ Registration successful, user:', userInfo);
+      
+      if ((userInfo.role === 'rider' || userInfo.role === 'restaurant') && !userInfo.isApproved) {
         return { 
           success: true, 
-          message: 'Registration successful! 🎉', 
-          user: userInfo 
-        };
-      } else {
-        return { 
-          success: false, 
-          message: data.message || 'Registration failed.' 
+          message: data.message || 'Registration successful! Your account is pending approval.', 
+          user: userInfo,
+          needsApproval: true
         };
       }
-    } catch (error) {
-      console.error('❌ Registration error:', error);
+      
+      // For restaurant owners, fetch restaurant data
+      if (userInfo.role === 'restaurant') {
+        const restaurantInfo = await fetchRestaurantData(userInfo._id, userInfo.email);
+        if (restaurantInfo) {
+          userInfo.restaurantId = restaurantInfo.restaurantId;
+          userInfo.restaurantData = restaurantInfo.restaurantData;
+        }
+      }
+      
+      setUser(userInfo);
+      localStorage.setItem('token', data.token);
+      localStorage.setItem('user', JSON.stringify(userInfo));
+      
+      return { 
+        success: true, 
+        message: data.message || 'Registration successful! 🎉', 
+        user: userInfo 
+      };
+    } else {
+      console.log('❌ Registration failed:', data.message);
       return { 
         success: false, 
-        message: 'Network error.' 
+        message: data.message || 'Registration failed.' 
       };
-    } finally {
-      setLoading(false);
     }
-  };
+  } catch (error) {
+    console.error('❌ Registration network error:', error);
+    return { 
+      success: false, 
+      message: 'Network error during registration.' 
+    };
+  } finally {
+    setLoading(false);
+  }
+};
 
   // Logout function
   const logout = () => {

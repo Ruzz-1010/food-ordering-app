@@ -5,127 +5,254 @@ const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 const Restaurant = require('../models/Restaurant');
 
-// REGISTER ROUTE - COMPLETE VERSION
+// REGISTER ROUTE - COMPLETE FIXED VERSION
 router.post('/register', async (req, res) => {
   try {
-    console.log('📝 Register attempt:', req.body);
+    console.log('📝 REGISTER REQUEST RECEIVED ==========');
+    console.log('📝 Request Body:', JSON.stringify(req.body, null, 2));
     
-    const { name, email, password, phone, address, role = 'customer', restaurantName, cuisine, vehicleType, licenseNumber } = req.body;
+    // Validate request body exists
+    if (!req.body || Object.keys(req.body).length === 0) {
+      console.log('❌ No request body received');
+      return res.status(400).json({
+        success: false,
+        message: 'No registration data received'
+      });
+    }
 
+    const { 
+      name, 
+      email, 
+      password, 
+      phone, 
+      address, 
+      role = 'customer', 
+      restaurantName, 
+      cuisine, 
+      vehicleType, 
+      licenseNumber,
+      location 
+    } = req.body;
+
+    // Validate required fields
+    const requiredFields = ['name', 'email', 'password', 'phone', 'address'];
+    const missingFields = requiredFields.filter(field => {
+      const value = req.body[field];
+      return !value || value.toString().trim() === '';
+    });
+    
+    if (missingFields.length > 0) {
+      console.log('❌ Missing required fields:', missingFields);
+      return res.status(400).json({
+        success: false,
+        message: `Missing required fields: ${missingFields.join(', ')}`
+      });
+    }
+
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      console.log('❌ Invalid email format:', email);
+      return res.status(400).json({
+        success: false,
+        message: 'Please provide a valid email address'
+      });
+    }
+
+    console.log('🔍 Checking if user exists:', email);
+    
     // Check if user already exists
-    const existingUser = await User.findOne({ email });
+    const existingUser = await User.findOne({ email: email.toLowerCase().trim() });
     if (existingUser) {
+      console.log('❌ User already exists with email:', email);
       return res.status(400).json({ 
         success: false,
         message: 'User already exists with this email' 
       });
     }
 
-    // Auto-approve customers and admins, require approval for restaurant/rider
-    const isApproved = role === 'customer' || role === 'admin';
+    console.log('🔑 Hashing password...');
+    
+    // Hash password
+    const saltRounds = 10;
+    const hashedPassword = await bcrypt.hash(password, saltRounds);
 
-    // Create user data with conditional fields
+    console.log('👤 Creating user object...');
+    
+    // Create user data
     const userData = {
-      name,
-      email,
-      password,
-      phone,
-      address,
-      role,
-      isApproved
+      name: name.trim(),
+      email: email.toLowerCase().trim(),
+      password: hashedPassword,
+      phone: phone.trim(),
+      address: address.trim(),
+      role: role,
+      isApproved: role === 'customer' || role === 'admin',
+      location: location || undefined
     };
 
     // Add rider-specific fields
     if (role === 'rider') {
       userData.vehicleType = vehicleType || 'motorcycle';
       userData.licenseNumber = licenseNumber || '';
-      console.log('🚴 Rider registration:', { vehicleType, licenseNumber });
+      console.log('🚴 Rider data:', { vehicleType: userData.vehicleType, licenseNumber: userData.licenseNumber });
     }
 
+    console.log('💾 Saving user to database...');
     const newUser = new User(userData);
     await newUser.save();
+    console.log('✅ User saved successfully:', newUser._id);
 
     // AUTO-CREATE RESTAURANT IF ROLE IS RESTAURANT
     if (role === 'restaurant') {
       try {
+        console.log('🏪 Creating restaurant for restaurant owner...');
+        
         const restaurantData = {
-          name: restaurantName || name + "'s Restaurant",
+          name: restaurantName || (name + "'s Restaurant"),
           owner: newUser._id,
-          email: email,
-          phone: phone,
-          address: address,
+          email: email.toLowerCase().trim(),
+          phone: phone.trim(),
+          address: address.trim(),
           cuisine: cuisine || 'Various',
-          isApproved: false // Wait for admin approval
+          isApproved: false, // Wait for admin approval
+          location: location || undefined
         };
 
+        console.log('🏪 Restaurant data:', restaurantData);
+        
         const restaurant = new Restaurant(restaurantData);
         await restaurant.save();
         
-        console.log('🏪 Restaurant created for:', email);
+        console.log('✅ Restaurant created successfully:', restaurant._id);
         
       } catch (restaurantError) {
         console.error('❌ Failed to create restaurant:', restaurantError);
         // Don't fail user registration if restaurant creation fails
+        // User can create restaurant later
       }
     }
 
     // Generate JWT token
     const token = jwt.sign(
-      { userId: newUser._id, email: newUser.email, role: newUser.role }, 
+      { 
+        userId: newUser._id, 
+        email: newUser.email, 
+        role: newUser.role 
+      }, 
       process.env.JWT_SECRET || 'fallback-secret-key',
       { expiresIn: '7d' }
     );
 
-    console.log('✅ User registered:', { role, email, isApproved });
+    console.log('✅ Registration completed successfully!');
+    console.log('👤 User role:', role);
+    console.log('✅ User approved:', newUser.isApproved);
+
+    // Prepare response user data (exclude password)
+    const userResponse = {
+      id: newUser._id,
+      _id: newUser._id,
+      name: newUser.name,
+      email: newUser.email,
+      role: newUser.role,
+      isApproved: newUser.isApproved,
+      phone: newUser.phone,
+      address: newUser.address
+    };
+
+    // Add rider fields to response if applicable
+    if (role === 'rider') {
+      userResponse.vehicleType = newUser.vehicleType;
+      userResponse.licenseNumber = newUser.licenseNumber;
+    }
 
     res.status(201).json({
       success: true,
-      message: 'User registered successfully! 🎉',
+      message: getRegistrationMessage(role, newUser.isApproved),
       token,
-      user: {
-        id: newUser._id,
-        name: newUser.name,
-        email: newUser.email,
-        role: newUser.role,
-        isApproved: newUser.isApproved,
-        vehicleType: newUser.vehicleType,
-        licenseNumber: newUser.licenseNumber
-      }
+      user: userResponse
     });
 
   } catch (error) {
-    console.error('❌ Registration error:', error);
+    console.error('❌ REGISTRATION ERROR:', error);
+    console.error('❌ Error stack:', error.stack);
+    
+    // Handle specific MongoDB errors
+    if (error.name === 'ValidationError') {
+      const errors = Object.values(error.errors).map(err => err.message);
+      return res.status(400).json({
+        success: false,
+        message: `Validation error: ${errors.join(', ')}`
+      });
+    }
+    
+    if (error.code === 11000) {
+      return res.status(400).json({
+        success: false,
+        message: 'Email already exists'
+      });
+    }
+
     res.status(500).json({ 
       success: false,
-      message: 'Registration failed: ' + error.message 
+      message: 'Registration failed due to server error. Please try again.'
     });
   }
 });
 
+// Helper function for registration messages
+function getRegistrationMessage(role, isApproved) {
+  const baseMessage = 'Registration successful! 🎉';
+  
+  if (role === 'customer') {
+    return `${baseMessage} Welcome to FoodExpress!`;
+  }
+  
+  if (!isApproved) {
+    return `${baseMessage} Your ${role} account is pending admin approval. This usually takes 24-48 hours.`;
+  }
+  
+  return `${baseMessage} Your ${role} account has been approved!`;
+}
+
 // LOGIN ROUTE - UPDATED FOR RESTAURANT APPROVAL SYNC
 router.post('/login', async (req, res) => {
   try {
-    console.log('🔐 Login attempt:', req.body);
+    console.log('🔐 LOGIN ATTEMPT ==========');
+    console.log('📧 Email:', req.body.email);
     
     const { email, password } = req.body;
 
-    const user = await User.findOne({ email });
+    // Validate input
+    if (!email || !password) {
+      return res.status(400).json({ 
+        success: false,
+        message: 'Email and password are required' 
+      });
+    }
+
+    const user = await User.findOne({ email: email.toLowerCase().trim() });
     
     if (!user) {
+      console.log('❌ User not found:', email);
       return res.status(400).json({ 
         success: false,
         message: 'Invalid email or password' 
       });
     }
 
-    const isPasswordValid = await user.comparePassword(password);
+    console.log('🔑 Checking password for user:', user.email);
+    const isPasswordValid = await bcrypt.compare(password, user.password);
     
     if (!isPasswordValid) {
+      console.log('❌ Invalid password for user:', user.email);
       return res.status(400).json({ 
         success: false,
         message: 'Invalid email or password' 
       });
     }
+
+    console.log('✅ Password valid, checking approval status...');
 
     // ✅ FIX: For restaurant users, sync approval status with restaurant
     if (user.role === 'restaurant') {
@@ -161,6 +288,7 @@ router.post('/login', async (req, res) => {
 
     // Block restaurant/rider if not approved
     if (!user.isApproved && (user.role === 'restaurant' || user.role === 'rider')) {
+      console.log('🚫 Account not approved:', user.email, user.role);
       return res.status(400).json({ 
         success: false,
         message: 'Account pending admin approval' 
@@ -173,28 +301,38 @@ router.post('/login', async (req, res) => {
       { expiresIn: '7d' }
     );
 
+    // Prepare user response (exclude password)
+    const userResponse = {
+      _id: user._id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      isApproved: user.isApproved,
+      phone: user.phone,
+      address: user.address
+    };
+
+    // Add rider fields if applicable
+    if (user.role === 'rider') {
+      userResponse.vehicleType = user.vehicleType;
+      userResponse.licenseNumber = user.licenseNumber;
+    }
+
     console.log('✅ Login successful:', user.role);
+    console.log('👤 User data:', userResponse);
 
     res.json({
       success: true,
       message: 'Login successful! 🎉',
       token,
-      user: {
-        _id: user._id, 
-        name: user.name,
-        email: user.email,
-        role: user.role,
-        isApproved: user.isApproved,
-        vehicleType: user.vehicleType,
-        licenseNumber: user.licenseNumber
-      }
+      user: userResponse
     });
 
   } catch (error) {
-    console.error('❌ Login error:', error);
+    console.error('❌ LOGIN ERROR:', error);
     res.status(500).json({ 
       success: false,
-      message: 'Login failed: ' + error.message 
+      message: 'Login failed due to server error' 
     });
   }
 });
@@ -214,10 +352,13 @@ router.post('/create-admin', async (req, res) => {
       });
     }
 
+    // Hash password
+    const hashedPassword = await bcrypt.hash(password, 10);
+
     const adminUser = new User({
       name,
-      email,
-      password,
+      email: email.toLowerCase().trim(),
+      password: hashedPassword,
       phone: '09123456789',
       address: 'Admin Office',
       role: 'admin',
@@ -244,105 +385,21 @@ router.post('/create-admin', async (req, res) => {
   }
 });
 
-// SYNC RESTAURANT APPROVAL STATUS - NEW ENDPOINT
-router.post('/sync-restaurant-approval', async (req, res) => {
+// GET USER PROFILE
+router.get('/me', async (req, res) => {
   try {
-    const { email } = req.body;
+    const token = req.headers.authorization?.replace('Bearer ', '');
     
-    const user = await User.findOne({ email, role: 'restaurant' });
-    if (!user) {
-      return res.status(404).json({
+    if (!token) {
+      return res.status(401).json({
         success: false,
-        message: 'Restaurant user not found'
+        message: 'No token provided'
       });
     }
 
-    // Find restaurant by owner
-    const restaurant = await Restaurant.findOne({ owner: user._id });
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'fallback-secret-key');
+    const user = await User.findById(decoded.userId).select('-password');
     
-    if (!restaurant) {
-      return res.status(404).json({
-        success: false,
-        message: 'Restaurant not found for this user'
-      });
-    }
-
-    console.log('🔄 Current status:', {
-      user: { email: user.email, isApproved: user.isApproved },
-      restaurant: { name: restaurant.name, isApproved: restaurant.isApproved }
-    });
-
-    let updated = false;
-
-    // If restaurant is approved but user isn't, approve user
-    if (restaurant.isApproved && !user.isApproved) {
-      user.isApproved = true;
-      await user.save();
-      updated = true;
-      console.log('✅ User approved based on restaurant status');
-    }
-
-    // If user is approved but restaurant isn't, approve restaurant
-    if (user.isApproved && !restaurant.isApproved) {
-      restaurant.isApproved = true;
-      await restaurant.save();
-      updated = true;
-      console.log('✅ Restaurant approved based on user status');
-    }
-
-    res.json({
-      success: true,
-      message: updated ? 'Approval status synced successfully!' : 'No sync needed',
-      updated,
-      user: {
-        id: user._id,
-        email: user.email,
-        isApproved: user.isApproved
-      },
-      restaurant: {
-        id: restaurant._id,
-        name: restaurant.name,
-        isApproved: restaurant.isApproved
-      }
-    });
-
-  } catch (error) {
-    console.error('❌ Sync error:', error);
-    res.status(500).json({ 
-      success: false,
-      message: 'Failed to sync approval status: ' + error.message 
-    });
-  }
-});
-
-// GET ALL USERS
-router.get('/users', async (req, res) => {
-  try {
-    const users = await User.find({}, { password: 0 });
-    console.log(`📊 Returning ${users.length} users`);
-    
-    res.json({
-      success: true,
-      users
-    });
-  } catch (error) {
-    console.error('❌ Get users error:', error);
-    res.status(500).json({ 
-      success: false,
-      message: 'Failed to get users' 
-    });
-  }
-});
-
-// APPROVE USER - UPDATED TO ALSO APPROVE RESTAURANT
-router.put('/users/:id/approve', async (req, res) => {
-  try {
-    const user = await User.findByIdAndUpdate(
-      req.params.id,
-      { isApproved: true },
-      { new: true }
-    );
-
     if (!user) {
       return res.status(404).json({
         success: false,
@@ -350,161 +407,16 @@ router.put('/users/:id/approve', async (req, res) => {
       });
     }
 
-    // ✅ ALSO APPROVE ASSOCIATED RESTAURANT IF EXISTS
-    if (user.role === 'restaurant') {
-      const restaurant = await Restaurant.findOneAndUpdate(
-        { owner: user._id },
-        { isApproved: true },
-        { new: true }
-      );
-      
-      if (restaurant) {
-        console.log('✅ Associated restaurant also approved:', restaurant.name);
-      }
-    }
-
-    console.log('✅ User approved:', user.email, user.role);
-
     res.json({
       success: true,
-      message: 'User approved successfully!',
       user
     });
 
   } catch (error) {
-    console.error('❌ User approval error:', error);
-    res.status(500).json({ 
+    console.error('❌ Get profile error:', error);
+    res.status(401).json({
       success: false,
-      message: 'Failed to approve user: ' + error.message 
-    });
-  }
-});
-
-// TOGGLE USER ACTIVE STATUS
-router.put('/users/:id/toggle-active', async (req, res) => {
-  try {
-    const user = await User.findById(req.params.id);
-    
-    if (!user) {
-      return res.status(404).json({
-        success: false,
-        message: 'User not found'
-      });
-    }
-
-    user.isActive = !user.isActive;
-    await user.save();
-
-    console.log('🔄 User active status:', user.email, user.isActive);
-
-    res.json({
-      success: true,
-      message: `User ${user.isActive ? 'activated' : 'deactivated'} successfully!`,
-      user
-    });
-
-  } catch (error) {
-    console.error('❌ Toggle active error:', error);
-    res.status(500).json({ 
-      success: false,
-      message: 'Failed to update user status' 
-    });
-  }
-});
-
-// DELETE USER
-router.delete('/users/:id', async (req, res) => {
-  try {
-    const user = await User.findByIdAndDelete(req.params.id);
-
-    if (!user) {
-      return res.status(404).json({
-        success: false,
-        message: 'User not found'
-      });
-    }
-
-    console.log('🗑️ User deleted:', user.email);
-
-    res.json({
-      success: true,
-      message: 'User deleted successfully!'
-    });
-
-  } catch (error) {
-    console.error('❌ User deletion error:', error);
-    res.status(500).json({ 
-      success: false,
-      message: 'Failed to delete user: ' + error.message 
-    });
-  }
-});
-
-// GET USER STATISTICS
-router.get('/stats', async (req, res) => {
-  try {
-    const totalUsers = await User.countDocuments();
-    const totalCustomers = await User.countDocuments({ role: 'customer' });
-    const totalRestaurants = await User.countDocuments({ role: 'restaurant' });
-    const totalRiders = await User.countDocuments({ role: 'rider' });
-    const totalAdmins = await User.countDocuments({ role: 'admin' });
-    const pendingApprovals = await User.countDocuments({ 
-      isApproved: false, 
-      role: { $in: ['restaurant', 'rider'] } 
-    });
-
-    res.json({
-      success: true,
-      stats: {
-        totalUsers,
-        totalCustomers,
-        totalRestaurants,
-        totalRiders,
-        totalAdmins,
-        pendingApprovals
-      }
-    });
-
-  } catch (error) {
-    console.error('❌ Stats error:', error);
-    res.status(500).json({ 
-      success: false,
-      message: 'Failed to get statistics' 
-    });
-  }
-});
-
-// DEBUG: GET ALL DATA
-router.get('/debug/all', async (req, res) => {
-  try {
-    const users = await User.find({}, { password: 0 });
-    const restaurants = await Restaurant.find({});
-    
-    res.json({
-      success: true,
-      users: {
-        total: users.length,
-        byRole: {
-          customer: users.filter(u => u.role === 'customer').length,
-          restaurant: users.filter(u => u.role === 'restaurant').length,
-          rider: users.filter(u => u.role === 'rider').length,
-          admin: users.filter(u => u.role === 'admin').length
-        },
-        list: users
-      },
-      restaurants: {
-        total: restaurants.length,
-        approved: restaurants.filter(r => r.isApproved).length,
-        pending: restaurants.filter(r => !r.isApproved).length,
-        list: restaurants
-      }
-    });
-
-  } catch (error) {
-    console.error('❌ Debug error:', error);
-    res.status(500).json({ 
-      success: false,
-      error: error.message 
+      message: 'Invalid token'
     });
   }
 });
