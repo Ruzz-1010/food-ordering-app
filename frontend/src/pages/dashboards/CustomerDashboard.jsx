@@ -545,19 +545,19 @@ const LoginForm = ({ onLogin, onSwitchToRegister, onClose, loading }) => {
     };
 
     return (
-        <div className="bg-white rounded-lg shadow-xl p-6 max-w-md w-full mx-4">
-            <div className="text-center mb-6">
-                <h2 className="text-2xl font-bold text-gray-900 mb-2">Welcome Back</h2>
-                <p className="text-gray-600">Sign in to your FoodExpress account</p>
+        <div className="bg-white rounded-lg shadow-xl p-4 sm:p-6 max-w-md w-full mx-2 sm:mx-4">
+            <div className="text-center mb-4 sm:mb-6">
+                <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-2">Welcome Back</h2>
+                <p className="text-gray-600 text-sm sm:text-base">Sign in to your FoodExpress account</p>
             </div>
 
             {error && (
-                <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+                <div className="bg-red-100 border border-red-400 text-red-700 px-3 sm:px-4 py-2 sm:py-3 rounded mb-4 text-sm">
                     {error}
                 </div>
             )}
 
-            <form onSubmit={handleSubmit} className="space-y-6">
+            <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
                 <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                         Email Address
@@ -566,7 +566,7 @@ const LoginForm = ({ onLogin, onSwitchToRegister, onClose, loading }) => {
                         type="email"
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-800 focus:border-red-800"
+                        className="w-full px-3 sm:px-4 py-2 sm:py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-800 focus:border-red-800 text-sm sm:text-base"
                         placeholder="Enter your email"
                         required
                         disabled={loading}
@@ -582,7 +582,7 @@ const LoginForm = ({ onLogin, onSwitchToRegister, onClose, loading }) => {
                             type={showPassword ? "text" : "password"}
                             value={password}
                             onChange={(e) => setPassword(e.target.value)}
-                            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-800 focus:border-red-800 pr-10"
+                            className="w-full px-3 sm:px-4 py-2 sm:py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-800 focus:border-red-800 pr-10 text-sm sm:text-base"
                             placeholder="Enter your password"
                             required
                             disabled={loading}
@@ -592,7 +592,7 @@ const LoginForm = ({ onLogin, onSwitchToRegister, onClose, loading }) => {
                             onClick={() => setShowPassword(!showPassword)}
                             className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600"
                         >
-                            {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                            {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                         </button>
                     </div>
                 </div>
@@ -600,7 +600,7 @@ const LoginForm = ({ onLogin, onSwitchToRegister, onClose, loading }) => {
                 <button
                     type="submit"
                     disabled={loading}
-                    className="w-full bg-red-800 text-white py-3 rounded-lg font-semibold hover:bg-red-900 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="w-full bg-red-800 text-white py-2 sm:py-3 rounded-lg font-semibold hover:bg-red-900 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm sm:text-base"
                 >
                     {loading ? 'Signing in...' : 'SIGN IN'}
                 </button>
@@ -609,7 +609,7 @@ const LoginForm = ({ onLogin, onSwitchToRegister, onClose, loading }) => {
                     <button
                         type="button"
                         onClick={onSwitchToRegister}
-                        className="text-red-800 hover:text-red-900 font-medium"
+                        className="text-red-800 hover:text-red-900 font-medium text-sm sm:text-base"
                         disabled={loading}
                     >
                         Don't have an account? Sign up now
@@ -661,19 +661,19 @@ const CustomerRegisterForm = ({ onRegister, onSwitchToLogin, onSwitchToRestauran
     };
 
     return (
-        <div className="bg-white rounded-lg shadow-xl p-8 max-w-md w-full mx-4 max-h-[90vh] overflow-y-auto">
-            <div className="text-center mb-8">
-                <h2 className="text-2xl font-bold text-gray-900 mb-2">Join as Customer</h2>
-                <p className="text-gray-600">Create your account to start ordering food</p>
+        <div className="bg-white rounded-lg shadow-xl p-4 sm:p-6 max-w-md w-full mx-2 sm:mx-4 max-h-[90vh] overflow-y-auto">
+            <div className="text-center mb-4 sm:mb-6">
+                <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-2">Join as Customer</h2>
+                <p className="text-gray-600 text-sm sm:text-base">Create your account to start ordering food</p>
             </div>
 
             {error && (
-                <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+                <div className="bg-red-100 border border-red-400 text-red-700 px-3 sm:px-4 py-2 sm:py-3 rounded mb-4 text-sm">
                     {error}
                 </div>
             )}
 
-            <form onSubmit={handleSubmit} className="space-y-6">
+            <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
                 <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">Full Name</label>
                     <input
@@ -681,7 +681,7 @@ const CustomerRegisterForm = ({ onRegister, onSwitchToLogin, onSwitchToRestauran
                         name="name"
                         value={formData.name}
                         onChange={handleChange}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-800 focus:border-red-800"
+                        className="w-full px-3 sm:px-4 py-2 sm:py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-800 focus:border-red-800 text-sm sm:text-base"
                         placeholder="Enter your full name"
                         required
                         disabled={loading}
@@ -695,7 +695,7 @@ const CustomerRegisterForm = ({ onRegister, onSwitchToLogin, onSwitchToRestauran
                         name="email"
                         value={formData.email}
                         onChange={handleChange}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-800 focus:border-red-800"
+                        className="w-full px-3 sm:px-4 py-2 sm:py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-800 focus:border-red-800 text-sm sm:text-base"
                         placeholder="Enter your email"
                         required
                         disabled={loading}
@@ -710,7 +710,7 @@ const CustomerRegisterForm = ({ onRegister, onSwitchToLogin, onSwitchToRestauran
                             name="password"
                             value={formData.password}
                             onChange={handleChange}
-                            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-800 focus:border-red-800 pr-10"
+                            className="w-full px-3 sm:px-4 py-2 sm:py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-800 focus:border-red-800 pr-10 text-sm sm:text-base"
                             placeholder="Create a password"
                             required
                             disabled={loading}
@@ -720,7 +720,7 @@ const CustomerRegisterForm = ({ onRegister, onSwitchToLogin, onSwitchToRestauran
                             onClick={() => setShowPassword(!showPassword)}
                             className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600"
                         >
-                            {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                            {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                         </button>
                     </div>
                 </div>
@@ -732,7 +732,7 @@ const CustomerRegisterForm = ({ onRegister, onSwitchToLogin, onSwitchToRestauran
                         name="phone"
                         value={formData.phone}
                         onChange={handleChange}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-800 focus:border-red-800"
+                        className="w-full px-3 sm:px-4 py-2 sm:py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-800 focus:border-red-800 text-sm sm:text-base"
                         placeholder="09XXXXXXXXX"
                         required
                         disabled={loading}
@@ -752,18 +752,18 @@ const CustomerRegisterForm = ({ onRegister, onSwitchToLogin, onSwitchToRestauran
                 <button
                     type="submit"
                     disabled={loading}
-                    className="w-full bg-red-800 text-white py-3 rounded-lg font-semibold hover:bg-red-900 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="w-full bg-red-800 text-white py-2 sm:py-3 rounded-lg font-semibold hover:bg-red-900 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm sm:text-base"
                 >
                     {loading ? 'Creating account...' : 'CREATE CUSTOMER ACCOUNT'}
                 </button>
 
-                <div className="text-center space-y-4">
-                    <p className="text-gray-600">Want to join as?</p>
-                    <div className="flex justify-center space-x-6">
+                <div className="text-center space-y-3 sm:space-y-4">
+                    <p className="text-gray-600 text-sm sm:text-base">Want to join as?</p>
+                    <div className="flex justify-center space-x-4 sm:space-x-6">
                         <button
                             type="button"
                             onClick={onSwitchToRestaurant}
-                            className="text-red-800 hover:text-red-900 font-medium"
+                            className="text-red-800 hover:text-red-900 font-medium text-sm sm:text-base"
                             disabled={loading}
                         >
                             Restaurant Owner
@@ -771,7 +771,7 @@ const CustomerRegisterForm = ({ onRegister, onSwitchToLogin, onSwitchToRestauran
                         <button
                             type="button"
                             onClick={onSwitchToRider}
-                            className="text-red-800 hover:text-red-900 font-medium"
+                            className="text-red-800 hover:text-red-900 font-medium text-sm sm:text-base"
                             disabled={loading}
                         >
                             Delivery Rider
@@ -780,7 +780,7 @@ const CustomerRegisterForm = ({ onRegister, onSwitchToLogin, onSwitchToRestauran
                     <button
                         type="button"
                         onClick={onSwitchToLogin}
-                        className="text-red-800 hover:text-red-900 font-medium"
+                        className="text-red-800 hover:text-red-900 font-medium text-sm sm:text-base"
                         disabled={loading}
                     >
                         Already have an account? Sign in
@@ -834,19 +834,19 @@ const RestaurantRegisterForm = ({ onRegister, onSwitchToLogin, onSwitchToCustome
     };
 
     return (
-        <div className="bg-white rounded-lg shadow-xl p-8 max-w-md w-full mx-4 max-h-[90vh] overflow-y-auto">
-            <div className="text-center mb-8">
-                <h2 className="text-2xl font-bold text-gray-900 mb-2">Join as Restaurant</h2>
-                <p className="text-gray-600">Register your restaurant and start serving customers</p>
+        <div className="bg-white rounded-lg shadow-xl p-4 sm:p-6 max-w-md w-full mx-2 sm:mx-4 max-h-[90vh] overflow-y-auto">
+            <div className="text-center mb-4 sm:mb-6">
+                <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-2">Join as Restaurant</h2>
+                <p className="text-gray-600 text-sm sm:text-base">Register your restaurant and start serving customers</p>
             </div>
 
             {error && (
-                <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+                <div className="bg-red-100 border border-red-400 text-red-700 px-3 sm:px-4 py-2 sm:py-3 rounded mb-4 text-sm">
                     {error}
                 </div>
             )}
 
-            <form onSubmit={handleSubmit} className="space-y-6">
+            <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
                 <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">Restaurant Name</label>
                     <input
@@ -854,7 +854,7 @@ const RestaurantRegisterForm = ({ onRegister, onSwitchToLogin, onSwitchToCustome
                         name="restaurantName"
                         value={formData.restaurantName}
                         onChange={handleChange}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-600 focus:border-orange-600"
+                        className="w-full px-3 sm:px-4 py-2 sm:py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-600 focus:border-orange-600 text-sm sm:text-base"
                         placeholder="Enter your restaurant name"
                         required
                         disabled={loading}
@@ -867,7 +867,7 @@ const RestaurantRegisterForm = ({ onRegister, onSwitchToLogin, onSwitchToCustome
                         name="cuisine"
                         value={formData.cuisine}
                         onChange={handleChange}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-600 focus:border-orange-600"
+                        className="w-full px-3 sm:px-4 py-2 sm:py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-600 focus:border-orange-600 text-sm sm:text-base"
                         required
                         disabled={loading}
                     >
@@ -894,7 +894,7 @@ const RestaurantRegisterForm = ({ onRegister, onSwitchToLogin, onSwitchToCustome
                         name="name"
                         value={formData.name}
                         onChange={handleChange}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-600 focus:border-orange-600"
+                        className="w-full px-3 sm:px-4 py-2 sm:py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-600 focus:border-orange-600 text-sm sm:text-base"
                         placeholder="Enter owner's full name"
                         required
                         disabled={loading}
@@ -908,7 +908,7 @@ const RestaurantRegisterForm = ({ onRegister, onSwitchToLogin, onSwitchToCustome
                         name="email"
                         value={formData.email}
                         onChange={handleChange}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-600 focus:border-orange-600"
+                        className="w-full px-3 sm:px-4 py-2 sm:py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-600 focus:border-orange-600 text-sm sm:text-base"
                         placeholder="Enter business email"
                         required
                         disabled={loading}
@@ -923,7 +923,7 @@ const RestaurantRegisterForm = ({ onRegister, onSwitchToLogin, onSwitchToCustome
                             name="password"
                             value={formData.password}
                             onChange={handleChange}
-                            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-600 focus:border-orange-600 pr-10"
+                            className="w-full px-3 sm:px-4 py-2 sm:py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-600 focus:border-orange-600 pr-10 text-sm sm:text-base"
                             placeholder="Create a password"
                             required
                             disabled={loading}
@@ -933,7 +933,7 @@ const RestaurantRegisterForm = ({ onRegister, onSwitchToLogin, onSwitchToCustome
                             onClick={() => setShowPassword(!showPassword)}
                             className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600"
                         >
-                            {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                            {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                         </button>
                     </div>
                 </div>
@@ -945,7 +945,7 @@ const RestaurantRegisterForm = ({ onRegister, onSwitchToLogin, onSwitchToCustome
                         name="phone"
                         value={formData.phone}
                         onChange={handleChange}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-600 focus:border-orange-600"
+                        className="w-full px-3 sm:px-4 py-2 sm:py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-600 focus:border-orange-600 text-sm sm:text-base"
                         placeholder="09XXXXXXXXX"
                         required
                         disabled={loading}
@@ -962,8 +962,8 @@ const RestaurantRegisterForm = ({ onRegister, onSwitchToLogin, onSwitchToCustome
                     />
                 </div>
 
-                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-                    <p className="text-sm text-yellow-800">
+                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 text-sm">
+                    <p className="text-yellow-800">
                         <strong>Note:</strong> Restaurant accounts require admin approval before you can start accepting orders.
                         This usually takes 24-48 hours.
                     </p>
@@ -972,18 +972,18 @@ const RestaurantRegisterForm = ({ onRegister, onSwitchToLogin, onSwitchToCustome
                 <button
                     type="submit"
                     disabled={loading}
-                    className="w-full bg-orange-600 text-white py-3 rounded-lg font-semibold hover:bg-orange-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="w-full bg-orange-600 text-white py-2 sm:py-3 rounded-lg font-semibold hover:bg-orange-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm sm:text-base"
                 >
                     {loading ? 'Creating account...' : 'REGISTER RESTAURANT'}
                 </button>
 
-                <div className="text-center space-y-4">
-                    <p className="text-gray-600">Want to join as?</p>
-                    <div className="flex justify-center space-x-6">
+                <div className="text-center space-y-3 sm:space-y-4">
+                    <p className="text-gray-600 text-sm sm:text-base">Want to join as?</p>
+                    <div className="flex justify-center space-x-4 sm:space-x-6">
                         <button
                             type="button"
                             onClick={onSwitchToCustomer}
-                            className="text-orange-600 hover:text-orange-700 font-medium"
+                            className="text-orange-600 hover:text-orange-700 font-medium text-sm sm:text-base"
                             disabled={loading}
                         >
                             Customer
@@ -991,7 +991,7 @@ const RestaurantRegisterForm = ({ onRegister, onSwitchToLogin, onSwitchToCustome
                         <button
                             type="button"
                             onClick={onSwitchToRider}
-                            className="text-orange-600 hover:text-orange-700 font-medium"
+                            className="text-orange-600 hover:text-orange-700 font-medium text-sm sm:text-base"
                             disabled={loading}
                         >
                             Delivery Rider
@@ -1000,7 +1000,7 @@ const RestaurantRegisterForm = ({ onRegister, onSwitchToLogin, onSwitchToCustome
                     <button
                         type="button"
                         onClick={onSwitchToLogin}
-                        className="text-orange-600 hover:text-orange-700 font-medium"
+                        className="text-orange-600 hover:text-orange-700 font-medium text-sm sm:text-base"
                         disabled={loading}
                     >
                         Already have an account? Sign in
@@ -1069,19 +1069,19 @@ const RiderRegisterForm = ({ onRegister, onSwitchToLogin, onSwitchToCustomer, on
     };
 
     return (
-        <div className="bg-white rounded-lg shadow-xl p-8 max-w-md w-full mx-4 max-h-[90vh] overflow-y-auto">
-            <div className="text-center mb-8">
-                <h2 className="text-2xl font-bold text-gray-900 mb-2">Join as Rider</h2>
-                <p className="text-gray-600">Become a delivery rider and start earning</p>
+        <div className="bg-white rounded-lg shadow-xl p-4 sm:p-6 max-w-md w-full mx-2 sm:mx-4 max-h-[90vh] overflow-y-auto">
+            <div className="text-center mb-4 sm:mb-6">
+                <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-2">Join as Rider</h2>
+                <p className="text-gray-600 text-sm sm:text-base">Become a delivery rider and start earning</p>
             </div>
 
             {error && (
-                <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+                <div className="bg-red-100 border border-red-400 text-red-700 px-3 sm:px-4 py-2 sm:py-3 rounded mb-4 text-sm">
                     {error}
                 </div>
             )}
 
-            <form onSubmit={handleSubmit} className="space-y-6">
+            <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
                 <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">Full Name *</label>
                     <input
@@ -1089,7 +1089,7 @@ const RiderRegisterForm = ({ onRegister, onSwitchToLogin, onSwitchToCustomer, on
                         name="name"
                         value={formData.name}
                         onChange={handleChange}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600"
+                        className="w-full px-3 sm:px-4 py-2 sm:py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600 text-sm sm:text-base"
                         placeholder="Enter your full name"
                         required
                         disabled={loading}
@@ -1103,7 +1103,7 @@ const RiderRegisterForm = ({ onRegister, onSwitchToLogin, onSwitchToCustomer, on
                         name="email"
                         value={formData.email}
                         onChange={handleChange}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600"
+                        className="w-full px-3 sm:px-4 py-2 sm:py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600 text-sm sm:text-base"
                         placeholder="Enter your email"
                         required
                         disabled={loading}
@@ -1118,7 +1118,7 @@ const RiderRegisterForm = ({ onRegister, onSwitchToLogin, onSwitchToCustomer, on
                             name="password"
                             value={formData.password}
                             onChange={handleChange}
-                            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600 pr-10"
+                            className="w-full px-3 sm:px-4 py-2 sm:py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600 pr-10 text-sm sm:text-base"
                             placeholder="Create a password"
                             required
                             disabled={loading}
@@ -1128,7 +1128,7 @@ const RiderRegisterForm = ({ onRegister, onSwitchToLogin, onSwitchToCustomer, on
                             onClick={() => setShowPassword(!showPassword)}
                             className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600"
                         >
-                            {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                            {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                         </button>
                     </div>
                 </div>
@@ -1140,7 +1140,7 @@ const RiderRegisterForm = ({ onRegister, onSwitchToLogin, onSwitchToCustomer, on
                         name="phone"
                         value={formData.phone}
                         onChange={handleChange}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600"
+                        className="w-full px-3 sm:px-4 py-2 sm:py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600 text-sm sm:text-base"
                         placeholder="09XXXXXXXXX"
                         required
                         disabled={loading}
@@ -1153,7 +1153,7 @@ const RiderRegisterForm = ({ onRegister, onSwitchToLogin, onSwitchToCustomer, on
                         name="vehicleType"
                         value={formData.vehicleType}
                         onChange={handleChange}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600"
+                        className="w-full px-3 sm:px-4 py-2 sm:py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600 text-sm sm:text-base"
                         required
                         disabled={loading}
                     >
@@ -1170,7 +1170,7 @@ const RiderRegisterForm = ({ onRegister, onSwitchToLogin, onSwitchToCustomer, on
                         name="licenseNumber"
                         value={formData.licenseNumber}
                         onChange={handleChange}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600"
+                        className="w-full px-3 sm:px-4 py-2 sm:py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600 text-sm sm:text-base"
                         placeholder="Enter license number if applicable"
                         disabled={loading}
                     />
@@ -1186,8 +1186,8 @@ const RiderRegisterForm = ({ onRegister, onSwitchToLogin, onSwitchToCustomer, on
                     />
                 </div>
 
-                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-                    <p className="text-sm text-yellow-800">
+                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 text-sm">
+                    <p className="text-yellow-800">
                         <strong>Note:</strong> Rider accounts require admin approval before you can start accepting delivery requests.
                         This usually takes 24-48 hours.
                     </p>
@@ -1196,18 +1196,18 @@ const RiderRegisterForm = ({ onRegister, onSwitchToLogin, onSwitchToCustomer, on
                 <button
                     type="submit"
                     disabled={loading}
-                    className="w-full bg-blue-600 text-white py-3 rounded-lg font-semibold hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="w-full bg-blue-600 text-white py-2 sm:py-3 rounded-lg font-semibold hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm sm:text-base"
                 >
                     {loading ? 'Creating account...' : 'REGISTER AS RIDER'}
                 </button>
 
-                <div className="text-center space-y-4">
-                    <p className="text-gray-600">Want to join as?</p>
-                    <div className="flex justify-center space-x-6">
+                <div className="text-center space-y-3 sm:space-y-4">
+                    <p className="text-gray-600 text-sm sm:text-base">Want to join as?</p>
+                    <div className="flex justify-center space-x-4 sm:space-x-6">
                         <button
                             type="button"
                             onClick={onSwitchToCustomer}
-                            className="text-blue-600 hover:text-blue-700 font-medium"
+                            className="text-blue-600 hover:text-blue-700 font-medium text-sm sm:text-base"
                             disabled={loading}
                         >
                             Customer
@@ -1215,7 +1215,7 @@ const RiderRegisterForm = ({ onRegister, onSwitchToLogin, onSwitchToCustomer, on
                         <button
                             type="button"
                             onClick={onSwitchToRestaurant}
-                            className="text-blue-600 hover:text-blue-700 font-medium"
+                            className="text-blue-600 hover:text-blue-700 font-medium text-sm sm:text-base"
                             disabled={loading}
                         >
                             Restaurant Owner
@@ -1224,7 +1224,7 @@ const RiderRegisterForm = ({ onRegister, onSwitchToLogin, onSwitchToCustomer, on
                     <button
                         type="button"
                         onClick={onSwitchToLogin}
-                        className="text-blue-600 hover:text-blue-700 font-medium"
+                        className="text-blue-600 hover:text-blue-700 font-medium text-sm sm:text-base"
                         disabled={loading}
                     >
                         Already have an account? Sign in
@@ -2503,9 +2503,10 @@ const CustomerDashboard = () => {
                 </div>
 
                 <div className="max-w-7xl mx-auto px-4 py-6 sm:py-8 md:py-12">
+                    {/* Fixed Featured Restaurants Header */}
                     <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-4 mb-6 sm:mb-8">
                         <h2 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-bold text-gray-900">FEATURED RESTAURANTS</h2>
-                        <button className="text-red-800 hover:text-red-900 font-semibold text-base sm:text-lg">
+                        <button className="text-red-800 hover:text-red-900 font-semibold text-base sm:text-lg whitespace-nowrap">
                             VIEW ALL →
                         </button>
                     </div>
@@ -2867,8 +2868,9 @@ const CustomerDashboard = () => {
                 user={user}
             />
 
+            {/* Auth Modal */}
             {showAuthModal && (
-                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-2 sm:p-4 overflow-y-auto">
                     {authMode === 'login' ? (
                         <LoginForm 
                             onLogin={handleLogin}
