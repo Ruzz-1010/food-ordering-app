@@ -30,7 +30,10 @@ const userSchema = new mongoose.Schema({
   },
   isApproved: { 
     type: Boolean, 
-    default: true  // AUTO-APPROVE EVERYONE FOR NOW
+    default: function() {
+      // ✅ CUSTOMERS AUTO-APPROVED, RESTAURANT/RIDER NEED APPROVAL
+      return this.role === 'customer' || this.role === 'admin';
+    }
   },
   isActive: { 
     type: Boolean, 
@@ -38,6 +41,7 @@ const userSchema = new mongoose.Schema({
   },
   vehicleType: { 
     type: String, 
+    enum: ['motorcycle', 'bicycle', 'car'],
     default: 'motorcycle' 
   },
   licenseNumber: { 

@@ -5,7 +5,7 @@ const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 const Restaurant = require('../models/Restaurant');
 
-// SIMPLE REGISTER ROUTE - NO COMPLEX LOGIC
+// REGISTER ROUTE - WITH RESTAURANT & RIDER SUPPORT
 router.post('/register', async (req, res) => {
   try {
     console.log('📝 REGISTER REQUEST RECEIVED');
@@ -22,44 +22,56 @@ router.post('/register', async (req, res) => {
       });
     }
 
-    // Create user - let the model handle hashing
+    // Create user - let the model handle hashing and approval logic
     const userData = {
       name: name.trim(),
       email: email.toLowerCase().trim(),
-      password: password, // Model will hash this
+      password: password,
       phone: phone.trim(),
       address: address.trim(),
-      role: role,
-      isApproved: true // AUTO-APPROVE EVERYONE
+      role: role
+      // isApproved will be set by the model based on role
     };
 
-    // Add rider fields
+    // Add rider-specific fields
     if (role === 'rider') {
       userData.vehicleType = vehicleType || 'motorcycle';
       userData.licenseNumber = licenseNumber || '';
+      console.log('🚴 Rider registration data:', userData);
     }
 
     const newUser = new User(userData);
     await newUser.save();
 
+    console.log('✅ User created:', { 
+      id: newUser._id, 
+      role: newUser.role, 
+      isApproved: newUser.isApproved 
+    });
+
     // Create restaurant if role is restaurant
     if (role === 'restaurant') {
       try {
         const restaurantData = {
-          name: restaurantName || name + "'s Restaurant",
+          name: restaurantName || (name + "'s Restaurant"),
           owner: newUser._id,
           email: email,
           phone: phone,
           address: address,
           cuisine: cuisine || 'Various',
-          isApproved: true // AUTO-APPROVE
+          isApproved: false // Restaurant needs approval
         };
 
+        console.log('🏪 Creating restaurant:', restaurantData);
+        
         const restaurant = new Restaurant(restaurantData);
         await restaurant.save();
-        console.log('✅ Restaurant created');
+        
+        console.log('✅ Restaurant created:', restaurant._id);
+        
       } catch (restaurantError) {
-        console.error('Restaurant creation failed:', restaurantError);
+        console.error('❌ Restaurant creation failed:', restaurantError);
+        // Don't fail user registration if restaurant creation fails
       }
     }
 
@@ -81,11 +93,23 @@ router.post('/register', async (req, res) => {
       address: newUser.address
     };
 
+    // Add rider fields to response
+    if (role === 'rider') {
+      userResponse.vehicleType = newUser.vehicleType;
+      userResponse.licenseNumber = newUser.licenseNumber;
+    }
+
+    let message = 'Registration successful! 🎉';
+    if ((role === 'restaurant' || role === 'rider') && !newUser.isApproved) {
+      message = 'Registration successful! Your account is pending admin approval.';
+    }
+
     res.status(201).json({
       success: true,
-      message: 'Registration successful! 🎉',
+      message: message,
       token,
-      user: userResponse
+      user: userResponse,
+      needsApproval: (role === 'restaurant' || role === 'rider') && !newUser.isApproved
     });
 
   } catch (error) {
@@ -97,7 +121,7 @@ router.post('/register', async (req, res) => {
   }
 });
 
-// SIMPLE LOGIN ROUTE
+// LOGIN ROUTE WITH APPROVAL CHECK
 router.post('/login', async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -120,6 +144,14 @@ router.post('/login', async (req, res) => {
       });
     }
 
+    // Check approval status for restaurant and rider
+    if ((user.role === 'restaurant' || user.role === 'rider') && !user.isApproved) {
+      return res.status(400).json({ 
+        success: false,
+        message: 'Your account is pending admin approval. Please wait for approval.' 
+      });
+    }
+
     const token = jwt.sign(
       { userId: user._id, email: user.email, role: user.role }, 
       process.env.JWT_SECRET || 'fallback-secret-key',
@@ -135,6 +167,12 @@ router.post('/login', async (req, res) => {
       phone: user.phone,
       address: user.address
     };
+
+    // Add rider fields if applicable
+    if (user.role === 'rider') {
+      userResponse.vehicleType = user.vehicleType;
+      userResponse.licenseNumber = user.licenseNumber;
+    }
 
     res.json({
       success: true,
@@ -168,6 +206,46 @@ router.get('/users', async (req, res) => {
   }
 });
 
+// APPROVE USER
+router.put('/users/:id/approve', async (req, res) => {
+  try {
+    const user = await User.findByIdAndUpdate(
+      req.params.id,
+      { isApproved: true },
+      { new: true }
+    );
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+
+    // Also approve associated restaurant if exists
+    if (user.role === 'restaurant') {
+      await Restaurant.findOneAndUpdate(
+        { owner: user._id },
+        { isApproved: true },
+        { new: true }
+      );
+    }
+
+    res.json({
+      success: true,
+      message: 'User approved successfully!',
+      user
+    });
+
+  } catch (error) {
+    console.error('User approval error:', error);
+    res.status(500).json({ 
+      success: false,
+      message: 'Failed to approve user' 
+    });
+  }
+});
+
 // EMERGENCY: GET ALL DATA
 router.get('/debug-all', async (req, res) => {
   try {
@@ -178,7 +256,17 @@ router.get('/debug-all', async (req, res) => {
       success: true,
       usersCount: users.length,
       restaurantsCount: restaurants.length,
-      users: users,
+      users: users.map(u => ({
+        _id: u._id,
+        name: u.name,
+        email: u.email,
+        role: u.role,
+        isApproved: u.isApproved,
+        phone: u.phone,
+        address: u.address,
+        vehicleType: u.vehicleType,
+        licenseNumber: u.licenseNumber
+      })),
       restaurants: restaurants
     });
   } catch (error) {
