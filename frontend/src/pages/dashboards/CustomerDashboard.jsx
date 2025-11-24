@@ -6,7 +6,7 @@ import {
     Plus, Minus, X, Package, User, History,
     Phone, Mail, Map, Home, Settings, LogOut,
     BarChart3, Users, DollarSign, ChevronDown,
-    Eye, Edit, Trash2, CheckCircle, XCircle,
+    Eye, EyeOff, Edit, Trash2, CheckCircle, XCircle,
     Truck, CreditCard, MessageCircle, Heart,
     ChevronLeft, ChevronRight
 } from 'lucide-react';
@@ -143,31 +143,31 @@ const useCart = () => {
 const HeroSlideshow = () => {
     const [currentSlide, setCurrentSlide] = useState(0);
     
-    // Optimized food images - cropped and focused on food
+    // Optimized food images - more compact and space-saving
     const slides = [
         {
             id: 1,
-            image: "https://d3bjzufjcawald.cloudfront.net/public/web/2025-05-17/68283ae88bb40/McDo_Employer_Branding_2025_McDo_PH_Career_Portal_Banner_Web-banner.jpg",
-            alt: "Mcdonalds"
+            image: "https://images.unsplash.com/photo-1571091718767-18b5b1457add?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=800&h=400&crop=center",
+            alt: "Burger and Fries"
         },
         {
             id: 2,
-            image: "https://www.manginasal.ph/wp-content/uploads/2025/07/1920-x-470.png",
-            alt: "Mang inasal"
+            image: "https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=800&h=400&crop=center",
+            alt: "Pizza"
         },
         {
             id: 3,
-            image: "https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEgx41qCVW92irwBVq9gWwdO6MP_uGL7yZxsfpD-Pr_aFySu_yiK9PpNZAyDOuAkhv1qdQpAlYLnS4pjyJjyGQBwW9718xogeTSG7GcagV3x9VtC161qvW3K5ioyOjfJrIlGfOX4iEQVG_ZTQeyIlB_esY5eWl3WpwcT53SvT0xqczqWWFeei3MdL7seCLs/s1200/JOY%20ng%20Pamilya.jpg",
-            alt: "Jollibee"
+            image: "https://images.unsplash.com/photo-1563379926898-05f4575a45d8?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=800&h=400&crop=center",
+            alt: "Asian Food"
         },
         {
             id: 4,
-            image: "https://img1.wsimg.com/isteam/ip/8e16088e-228d-4ec0-bf62-c38e1dd5a2ca/Screenshot%202025-01-04%20114708.png/:/cr=t:0.66%25,l:0%25,w:100%25,h:67.64%25/rs=w:515,h:234,cg:true",
-            alt: "Ribshack"
+            image: "https://images.unsplash.com/photo-1559715745-e1b33a271c8f?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=800&h=400&crop=center",
+            alt: "Desserts"
         },
         {
             id: 5,
-            image: "https://images.unsplash.com/photo-1567620905732-2d1ec7ab7445?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=800&h=600&crop=center",
+            image: "https://images.unsplash.com/photo-1567620905732-2d1ec7ab7445?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=800&h=400&crop=center",
             alt: "Breakfast Platter"
         }
     ];
@@ -194,7 +194,7 @@ const HeroSlideshow = () => {
     };
 
     return (
-        <div className="relative h-64 sm:h-80 md:h-96 lg:h-[500px] xl:h-[550px] overflow-hidden">
+        <div className="relative h-48 sm:h-64 md:h-72 lg:h-80 overflow-hidden">
             {/* Slides */}
             <div 
                 className="flex transition-transform duration-700 ease-in-out h-full"
@@ -530,6 +530,7 @@ const LoginForm = ({ onLogin, onSwitchToRegister, onClose, loading }) => {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
+    const [showPassword, setShowPassword] = useState(false);
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -546,21 +547,6 @@ const LoginForm = ({ onLogin, onSwitchToRegister, onClose, loading }) => {
     return (
         <div className="bg-white rounded-lg shadow-xl p-6 max-w-md w-full mx-4">
             <div className="text-center mb-6">
-                {/* Logo in Login Form - LARGER */}
-                <div className="mx-auto mb-4 flex justify-center">
-                    <img 
-                        src="/logo.png" 
-                        alt="FoodExpress Logo" 
-                        className="h-20 w-auto"
-                        onError={(e) => {
-                            e.target.style.display = 'none';
-                            e.target.nextSibling.style.display = 'flex';
-                        }}
-                    />
-                    <div className="h-20 w-20 bg-red-800 rounded-lg flex items-center justify-center shadow-md hidden">
-                        <span className="text-white font-bold text-2xl">FX</span>
-                    </div>
-                </div>
                 <h2 className="text-2xl font-bold text-gray-900 mb-2">Welcome Back</h2>
                 <p className="text-gray-600">Sign in to your FoodExpress account</p>
             </div>
@@ -591,15 +577,24 @@ const LoginForm = ({ onLogin, onSwitchToRegister, onClose, loading }) => {
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                         Password
                     </label>
-                    <input
-                        type="password"
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-800 focus:border-red-800"
-                        placeholder="Enter your password"
-                        required
-                        disabled={loading}
-                    />
+                    <div className="relative">
+                        <input
+                            type={showPassword ? "text" : "password"}
+                            value={password}
+                            onChange={(e) => setPassword(e.target.value)}
+                            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-800 focus:border-red-800 pr-10"
+                            placeholder="Enter your password"
+                            required
+                            disabled={loading}
+                        />
+                        <button
+                            type="button"
+                            onClick={() => setShowPassword(!showPassword)}
+                            className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600"
+                        >
+                            {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                        </button>
+                    </div>
                 </div>
 
                 <button
@@ -636,6 +631,7 @@ const CustomerRegisterForm = ({ onRegister, onSwitchToLogin, onSwitchToRestauran
         role: 'customer'
     });
     const [error, setError] = useState('');
+    const [showPassword, setShowPassword] = useState(false);
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -667,21 +663,6 @@ const CustomerRegisterForm = ({ onRegister, onSwitchToLogin, onSwitchToRestauran
     return (
         <div className="bg-white rounded-lg shadow-xl p-8 max-w-md w-full mx-4 max-h-[90vh] overflow-y-auto">
             <div className="text-center mb-8">
-                {/* Logo in Register Form - LARGER */}
-                <div className="mx-auto mb-4 flex justify-center">
-                    <img 
-                        src="/logo.png" 
-                        alt="FoodExpress Logo" 
-                        className="h-20 w-auto"
-                        onError={(e) => {
-                            e.target.style.display = 'none';
-                            e.target.nextSibling.style.display = 'flex';
-                        }}
-                    />
-                    <div className="h-20 w-20 bg-red-800 rounded-lg flex items-center justify-center shadow-md hidden">
-                        <span className="text-white font-bold text-2xl">FX</span>
-                    </div>
-                </div>
                 <h2 className="text-2xl font-bold text-gray-900 mb-2">Join as Customer</h2>
                 <p className="text-gray-600">Create your account to start ordering food</p>
             </div>
@@ -723,16 +704,25 @@ const CustomerRegisterForm = ({ onRegister, onSwitchToLogin, onSwitchToRestauran
 
                 <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">Password</label>
-                    <input
-                        type="password"
-                        name="password"
-                        value={formData.password}
-                        onChange={handleChange}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-800 focus:border-red-800"
-                        placeholder="Create a password"
-                        required
-                        disabled={loading}
-                    />
+                    <div className="relative">
+                        <input
+                            type={showPassword ? "text" : "password"}
+                            name="password"
+                            value={formData.password}
+                            onChange={handleChange}
+                            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-800 focus:border-red-800 pr-10"
+                            placeholder="Create a password"
+                            required
+                            disabled={loading}
+                        />
+                        <button
+                            type="button"
+                            onClick={() => setShowPassword(!showPassword)}
+                            className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600"
+                        >
+                            {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                        </button>
+                    </div>
                 </div>
 
                 <div>
@@ -814,6 +804,7 @@ const RestaurantRegisterForm = ({ onRegister, onSwitchToLogin, onSwitchToCustome
         cuisine: ''
     });
     const [error, setError] = useState('');
+    const [showPassword, setShowPassword] = useState(false);
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -845,21 +836,6 @@ const RestaurantRegisterForm = ({ onRegister, onSwitchToLogin, onSwitchToCustome
     return (
         <div className="bg-white rounded-lg shadow-xl p-8 max-w-md w-full mx-4 max-h-[90vh] overflow-y-auto">
             <div className="text-center mb-8">
-                {/* Logo in Restaurant Register Form - LARGER */}
-                <div className="mx-auto mb-4 flex justify-center">
-                    <img 
-                        src="/logo.png" 
-                        alt="FoodExpress Logo" 
-                        className="h-20 w-auto"
-                        onError={(e) => {
-                            e.target.style.display = 'none';
-                            e.target.nextSibling.style.display = 'flex';
-                        }}
-                    />
-                    <div className="h-20 w-20 bg-orange-600 rounded-lg flex items-center justify-center shadow-md hidden">
-                        <Store className="text-white" size={28} />
-                    </div>
-                </div>
                 <h2 className="text-2xl font-bold text-gray-900 mb-2">Join as Restaurant</h2>
                 <p className="text-gray-600">Register your restaurant and start serving customers</p>
             </div>
@@ -941,16 +917,25 @@ const RestaurantRegisterForm = ({ onRegister, onSwitchToLogin, onSwitchToCustome
 
                 <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">Password</label>
-                    <input
-                        type="password"
-                        name="password"
-                        value={formData.password}
-                        onChange={handleChange}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-600 focus:border-orange-600"
-                        placeholder="Create a password"
-                        required
-                        disabled={loading}
-                    />
+                    <div className="relative">
+                        <input
+                            type={showPassword ? "text" : "password"}
+                            name="password"
+                            value={formData.password}
+                            onChange={handleChange}
+                            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-600 focus:border-orange-600 pr-10"
+                            placeholder="Create a password"
+                            required
+                            disabled={loading}
+                        />
+                        <button
+                            type="button"
+                            onClick={() => setShowPassword(!showPassword)}
+                            className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600"
+                        >
+                            {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                        </button>
+                    </div>
                 </div>
 
                 <div>
@@ -1039,6 +1024,7 @@ const RiderRegisterForm = ({ onRegister, onSwitchToLogin, onSwitchToCustomer, on
         licenseNumber: ''
     });
     const [error, setError] = useState('');
+    const [showPassword, setShowPassword] = useState(false);
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -1085,21 +1071,6 @@ const RiderRegisterForm = ({ onRegister, onSwitchToLogin, onSwitchToCustomer, on
     return (
         <div className="bg-white rounded-lg shadow-xl p-8 max-w-md w-full mx-4 max-h-[90vh] overflow-y-auto">
             <div className="text-center mb-8">
-                {/* Logo in Rider Register Form - LARGER */}
-                <div className="mx-auto mb-4 flex justify-center">
-                    <img 
-                        src="/logo.png" 
-                        alt="FoodExpress Logo" 
-                        className="h-20 w-auto"
-                        onError={(e) => {
-                            e.target.style.display = 'none';
-                            e.target.nextSibling.style.display = 'flex';
-                        }}
-                    />
-                    <div className="h-20 w-20 bg-blue-600 rounded-lg flex items-center justify-center shadow-md hidden">
-                        <Bike className="text-white" size={28} />
-                    </div>
-                </div>
                 <h2 className="text-2xl font-bold text-gray-900 mb-2">Join as Rider</h2>
                 <p className="text-gray-600">Become a delivery rider and start earning</p>
             </div>
@@ -1141,16 +1112,25 @@ const RiderRegisterForm = ({ onRegister, onSwitchToLogin, onSwitchToCustomer, on
 
                 <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">Password *</label>
-                    <input
-                        type="password"
-                        name="password"
-                        value={formData.password}
-                        onChange={handleChange}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600"
-                        placeholder="Create a password"
-                        required
-                        disabled={loading}
-                    />
+                    <div className="relative">
+                        <input
+                            type={showPassword ? "text" : "password"}
+                            name="password"
+                            value={formData.password}
+                            onChange={handleChange}
+                            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600 pr-10"
+                            placeholder="Create a password"
+                            required
+                            disabled={loading}
+                        />
+                        <button
+                            type="button"
+                            onClick={() => setShowPassword(!showPassword)}
+                            className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600"
+                        >
+                            {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                        </button>
+                    </div>
                 </div>
 
                 <div>
@@ -2501,22 +2481,6 @@ const CustomerDashboard = () => {
                     {/* Content Overlay */}
                     <div className="absolute inset-0 flex items-center justify-center">
                         <div className="text-center text-white px-4 max-w-4xl mx-auto">
-                            {/* Logo in Hero Section - MUCH LARGER */}
-                            <div className="mb-4 sm:mb-6 md:mb-8 flex justify-center">
-                                <img 
-                                    src="/logo.png" 
-                                    alt="FoodExpress Logo" 
-                                    className="h-20 sm:h-24 md:h-32 lg:h-40 w-auto bg-white bg-opacity-20 rounded-2xl p-3 sm:p-4 shadow-2xl"
-                                    onError={(e) => {
-                                        e.target.style.display = 'none';
-                                        e.target.nextSibling.style.display = 'flex';
-                                    }}
-                                />
-                                <div className="h-20 sm:h-24 md:h-32 lg:h-40 w-20 sm:w-24 md:w-32 lg:w-40 bg-red-800 rounded-2xl flex items-center justify-center shadow-2xl hidden bg-opacity-90">
-                                    <span className="text-white font-bold text-2xl sm:text-3xl md:text-4xl lg:text-5xl">FX</span>
-                                </div>
-                            </div>
-                            
                             <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl xl:text-6xl font-bold mb-4 sm:mb-6 drop-shadow-2xl leading-tight">
                                 DELICIOUS FOOD DELIVERED TO YOUR DOORSTEP
                             </h1>
@@ -2672,7 +2636,7 @@ const CustomerDashboard = () => {
                 <div className="max-w-7xl mx-auto px-4 py-3">
                     <div className="flex items-center justify-between">
                         <div className="flex items-center space-x-2 sm:space-x-3">
-                            {/* Logo in Header - LARGER */}
+                            {/* Logo in Header */}
                             <div className="flex items-center space-x-2 sm:space-x-3">
                                 <img 
                                     src="/logo.png" 
