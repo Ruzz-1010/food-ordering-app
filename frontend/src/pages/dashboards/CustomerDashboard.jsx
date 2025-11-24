@@ -268,27 +268,76 @@ const Cart = ({ cart, isOpen, onClose, onUpdateQuantity, onRemoveItem, onClearCa
     );
 };
 
-// Map Component for Location Pinning
+// Enhanced Map Component with OpenStreetMap
 const LocationMap = ({ onLocationSelect, initialAddress = '' }) => {
     const [address, setAddress] = useState(initialAddress);
     const [coordinates, setCoordinates] = useState({ lat: 9.7392, lng: 118.7353 });
+    const [loading, setLoading] = useState(false);
 
-    const handleSearch = () => {
+    // Get user's current location
+    const getCurrentLocation = () => {
+        setLoading(true);
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(
+                async (position) => {
+                    const { latitude, longitude } = position.coords;
+                    setCoordinates({ lat: latitude, lng: longitude });
+                    
+                    // Reverse geocode to get address
+                    try {
+                        const response = await fetch(
+                            `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}`
+                        );
+                        const data = await response.json();
+                        if (data && data.display_name) {
+                            setAddress(data.display_name);
+                            onLocationSelect(data.display_name, latitude, longitude);
+                        }
+                    } catch (error) {
+                        console.error('Error reverse geocoding:', error);
+                    }
+                    setLoading(false);
+                },
+                (error) => {
+                    console.error('Error getting location:', error);
+                    setLoading(false);
+                }
+            );
+        } else {
+            alert('Geolocation is not supported by this browser.');
+            setLoading(false);
+        }
+    };
+
+    const handleSearch = async () => {
         if (!address.trim()) return;
         
-        fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address)}`)
-            .then(response => response.json())
-            .then(data => {
-                if (data && data[0]) {
-                    const lat = parseFloat(data[0].lat);
-                    const lng = parseFloat(data[0].lon);
-                    setCoordinates({ lat, lng });
-                    onLocationSelect(data[0].display_name, lat, lng);
-                }
-            })
-            .catch(error => {
-                console.error('Error searching location:', error);
-            });
+        setLoading(true);
+        try {
+            const response = await fetch(
+                `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address)}&limit=1`
+            );
+            const data = await response.json();
+            if (data && data[0]) {
+                const lat = parseFloat(data[0].lat);
+                const lng = parseFloat(data[0].lon);
+                setCoordinates({ lat, lng });
+                onLocationSelect(data[0].display_name, lat, lng);
+            } else {
+                alert('Location not found. Please try a different address.');
+            }
+        } catch (error) {
+            console.error('Error searching location:', error);
+            alert('Error searching location. Please try again.');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleKeyPress = (e) => {
+        if (e.key === 'Enter') {
+            handleSearch();
+        }
     };
 
     return (
@@ -297,42 +346,72 @@ const LocationMap = ({ onLocationSelect, initialAddress = '' }) => {
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                     Search Location
                 </label>
-                <div className="flex space-x-2">
+                <div className="flex flex-col sm:flex-row gap-2">
                     <input
                         type="text"
                         value={address}
                         onChange={(e) => setAddress(e.target.value)}
-                        className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-800"
-                        placeholder="Enter your address"
+                        onKeyPress={handleKeyPress}
+                        className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-800 text-sm"
+                        placeholder="Enter your full address"
+                        disabled={loading}
                     />
-                    <button
-                        type="button"
-                        onClick={handleSearch}
-                        className="px-4 py-2 bg-red-800 text-white rounded-lg hover:bg-red-900"
-                    >
-                        <Search size={16} />
-                    </button>
+                    <div className="flex gap-2">
+                        <button
+                            type="button"
+                            onClick={handleSearch}
+                            disabled={loading || !address.trim()}
+                            className="px-4 py-2 bg-red-800 text-white rounded-lg hover:bg-red-900 disabled:opacity-50 flex items-center gap-2 text-sm"
+                        >
+                            {loading ? (
+                                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                            ) : (
+                                <Search size={16} />
+                            )}
+                            Search
+                        </button>
+                        <button
+                            type="button"
+                            onClick={getCurrentLocation}
+                            disabled={loading}
+                            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 flex items-center gap-2 text-sm"
+                        >
+                            <Navigation size={16} />
+                            Current
+                        </button>
+                    </div>
                 </div>
             </div>
 
-            <div className="border-2 border-gray-300 rounded-lg overflow-hidden h-64 relative">
-                <div className="absolute inset-0 bg-gray-100 flex items-center justify-center">
-                    <div className="text-center">
-                        <Navigation size={32} className="mx-auto text-gray-400 mb-2" />
-                        <p className="text-gray-600">Location Map</p>
-                        <p className="text-sm text-gray-500">Enter your address above to set location</p>
-                    </div>
+            {/* Map Container */}
+            <div className="border-2 border-gray-300 rounded-lg overflow-hidden h-64 relative bg-gray-100">
+                <iframe
+                    width="100%"
+                    height="100%"
+                    frameBorder="0"
+                    scrolling="no"
+                    marginHeight="0"
+                    marginWidth="0"
+                    src={`https://www.openstreetmap.org/export/embed.html?bbox=${coordinates.lng - 0.01}%2C${coordinates.lat - 0.01}%2C${coordinates.lng + 0.01}%2C${coordinates.lat + 0.01}&layer=mapnik&marker=${coordinates.lat}%2C${coordinates.lng}`}
+                    style={{ border: 0 }}
+                    title="Location Map"
+                />
+                <div className="absolute bottom-2 left-2 bg-white bg-opacity-90 px-3 py-1 rounded text-sm shadow">
+                    📍 {coordinates.lat.toFixed(6)}, {coordinates.lng.toFixed(6)}
                 </div>
                 
-                <div className="absolute bottom-2 left-2 bg-white bg-opacity-90 px-3 py-1 rounded text-sm">
-                    📍 {coordinates.lat.toFixed(6)}, {coordinates.lng.toFixed(6)}
+                {/* Map Attribution */}
+                <div className="absolute bottom-2 right-2 bg-white bg-opacity-90 px-2 py-1 rounded text-xs">
+                    <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">
+                        © OpenStreetMap
+                    </a>
                 </div>
             </div>
             
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
                 <p className="text-sm text-blue-800 flex items-center">
-                    <MapPin size={16} className="mr-2" />
-                    <span>Selected Location: {address || 'Enter your address above'}</span>
+                    <MapPin size={16} className="mr-2 flex-shrink-0" />
+                    <span>Selected Location: {address || 'Enter your address above or use current location'}</span>
                 </p>
             </div>
         </div>
@@ -358,31 +437,31 @@ const LoginForm = ({ onLogin, onSwitchToRegister, onClose, loading }) => {
     };
 
     return (
-        <div className="bg-white rounded-lg shadow-xl p-8 max-w-md w-full mx-4">
-            <div className="text-center mb-8">
-                <div className="mx-auto h-16 w-16 bg-red-800 rounded-lg flex items-center justify-center shadow-md mb-4">
-                    <span className="text-white font-bold text-xl">FX</span>
+        <div className="bg-white rounded-lg shadow-xl p-6 max-w-md w-full mx-4">
+            <div className="text-center mb-6">
+                <div className="mx-auto h-12 w-12 bg-red-800 rounded-lg flex items-center justify-center shadow-md mb-3">
+                    <span className="text-white font-bold text-lg">FX</span>
                 </div>
-                <h2 className="text-2xl font-bold text-gray-900 mb-2">Welcome Back</h2>
-                <p className="text-gray-600">Sign in to your FoodExpress account</p>
+                <h2 className="text-xl font-bold text-gray-900 mb-1">Welcome Back</h2>
+                <p className="text-gray-600 text-sm">Sign in to your FoodExpress account</p>
             </div>
 
             {error && (
-                <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+                <div className="bg-red-100 border border-red-400 text-red-700 px-3 py-2 rounded mb-4 text-sm">
                     {error}
                 </div>
             )}
 
-            <form onSubmit={handleSubmit} className="space-y-6">
+            <form onSubmit={handleSubmit} className="space-y-4">
                 <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
                         Email Address
                     </label>
                     <input
                         type="email"
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-800 focus:border-red-800"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-800 focus:border-red-800 text-sm"
                         placeholder="Enter your email"
                         required
                         disabled={loading}
@@ -390,14 +469,14 @@ const LoginForm = ({ onLogin, onSwitchToRegister, onClose, loading }) => {
                 </div>
                 
                 <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
                         Password
                     </label>
                     <input
                         type="password"
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-800 focus:border-red-800"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-800 focus:border-red-800 text-sm"
                         placeholder="Enter your password"
                         required
                         disabled={loading}
@@ -407,7 +486,7 @@ const LoginForm = ({ onLogin, onSwitchToRegister, onClose, loading }) => {
                 <button
                     type="submit"
                     disabled={loading}
-                    className="w-full bg-red-800 text-white py-3 rounded-lg font-semibold hover:bg-red-900 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="w-full bg-red-800 text-white py-2 rounded-lg font-semibold hover:bg-red-900 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm"
                 >
                     {loading ? 'Signing in...' : 'SIGN IN'}
                 </button>
@@ -416,7 +495,7 @@ const LoginForm = ({ onLogin, onSwitchToRegister, onClose, loading }) => {
                     <button
                         type="button"
                         onClick={onSwitchToRegister}
-                        className="text-red-800 hover:text-red-900 font-medium"
+                        className="text-red-800 hover:text-red-900 font-medium text-sm"
                         disabled={loading}
                     >
                         Don't have an account? Sign up now
@@ -459,35 +538,38 @@ const CustomerRegisterForm = ({ onRegister, onSwitchToLogin, onSwitchToRestauran
         setFormData(prev => ({
             ...prev,
             address: address,
-            location: { lat, lng }
+            location: { 
+                type: 'Point',
+                coordinates: [lng, lat]
+            }
         }));
     };
 
     return (
-        <div className="bg-white rounded-lg shadow-xl p-8 max-w-md w-full mx-4 max-h-[90vh] overflow-y-auto">
-            <div className="text-center mb-8">
-                <div className="mx-auto h-16 w-16 bg-red-800 rounded-lg flex items-center justify-center shadow-md mb-4">
-                    <span className="text-white font-bold text-xl">FX</span>
+        <div className="bg-white rounded-lg shadow-xl p-6 max-w-md w-full mx-4 max-h-[90vh] overflow-y-auto">
+            <div className="text-center mb-6">
+                <div className="mx-auto h-12 w-12 bg-red-800 rounded-lg flex items-center justify-center shadow-md mb-3">
+                    <span className="text-white font-bold text-lg">FX</span>
                 </div>
-                <h2 className="text-2xl font-bold text-gray-900 mb-2">Join as Customer</h2>
-                <p className="text-gray-600">Create your account to start ordering food</p>
+                <h2 className="text-xl font-bold text-gray-900 mb-1">Join as Customer</h2>
+                <p className="text-gray-600 text-sm">Create your account to start ordering food</p>
             </div>
 
             {error && (
-                <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+                <div className="bg-red-100 border border-red-400 text-red-700 px-3 py-2 rounded mb-4 text-sm">
                     {error}
                 </div>
             )}
 
-            <form onSubmit={handleSubmit} className="space-y-4">
+            <form onSubmit={handleSubmit} className="space-y-3">
                 <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Full Name</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Full Name</label>
                     <input
                         type="text"
                         name="name"
                         value={formData.name}
                         onChange={handleChange}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-800 focus:border-red-800"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-800 focus:border-red-800 text-sm"
                         placeholder="Enter your full name"
                         required
                         disabled={loading}
@@ -495,13 +577,13 @@ const CustomerRegisterForm = ({ onRegister, onSwitchToLogin, onSwitchToRestauran
                 </div>
 
                 <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Email Address</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Email Address</label>
                     <input
                         type="email"
                         name="email"
                         value={formData.email}
                         onChange={handleChange}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-800 focus:border-red-800"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-800 focus:border-red-800 text-sm"
                         placeholder="Enter your email"
                         required
                         disabled={loading}
@@ -509,13 +591,13 @@ const CustomerRegisterForm = ({ onRegister, onSwitchToLogin, onSwitchToRestauran
                 </div>
 
                 <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Password</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Password</label>
                     <input
                         type="password"
                         name="password"
                         value={formData.password}
                         onChange={handleChange}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-800 focus:border-red-800"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-800 focus:border-red-800 text-sm"
                         placeholder="Create a password"
                         required
                         disabled={loading}
@@ -523,13 +605,13 @@ const CustomerRegisterForm = ({ onRegister, onSwitchToLogin, onSwitchToRestauran
                 </div>
 
                 <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Phone Number</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Phone Number</label>
                     <input
                         type="tel"
                         name="phone"
                         value={formData.phone}
                         onChange={handleChange}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-800 focus:border-red-800"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-800 focus:border-red-800 text-sm"
                         placeholder="09XXXXXXXXX"
                         required
                         disabled={loading}
@@ -537,7 +619,7 @@ const CustomerRegisterForm = ({ onRegister, onSwitchToLogin, onSwitchToRestauran
                 </div>
 
                 <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
                         Delivery Location
                     </label>
                     <LocationMap 
@@ -549,18 +631,18 @@ const CustomerRegisterForm = ({ onRegister, onSwitchToLogin, onSwitchToRestauran
                 <button
                     type="submit"
                     disabled={loading}
-                    className="w-full bg-red-800 text-white py-3 rounded-lg font-semibold hover:bg-red-900 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="w-full bg-red-800 text-white py-2 rounded-lg font-semibold hover:bg-red-900 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm"
                 >
                     {loading ? 'Creating account...' : 'CREATE CUSTOMER ACCOUNT'}
                 </button>
 
                 <div className="text-center space-y-2">
-                    <p className="text-gray-600 text-sm">Want to join as?</p>
-                    <div className="flex justify-center space-x-4">
+                    <p className="text-gray-600 text-xs">Want to join as?</p>
+                    <div className="flex justify-center space-x-3">
                         <button
                             type="button"
                             onClick={onSwitchToRestaurant}
-                            className="text-red-800 hover:text-red-900 font-medium text-sm"
+                            className="text-red-800 hover:text-red-900 font-medium text-xs"
                             disabled={loading}
                         >
                             Restaurant Owner
@@ -568,7 +650,7 @@ const CustomerRegisterForm = ({ onRegister, onSwitchToLogin, onSwitchToRestauran
                         <button
                             type="button"
                             onClick={onSwitchToRider}
-                            className="text-red-800 hover:text-red-900 font-medium text-sm"
+                            className="text-red-800 hover:text-red-900 font-medium text-xs"
                             disabled={loading}
                         >
                             Delivery Rider
@@ -577,7 +659,7 @@ const CustomerRegisterForm = ({ onRegister, onSwitchToLogin, onSwitchToRestauran
                     <button
                         type="button"
                         onClick={onSwitchToLogin}
-                        className="text-red-800 hover:text-red-900 font-medium text-sm"
+                        className="text-red-800 hover:text-red-900 font-medium text-xs"
                         disabled={loading}
                     >
                         Already have an account? Sign in
@@ -622,35 +704,38 @@ const RestaurantRegisterForm = ({ onRegister, onSwitchToLogin, onSwitchToCustome
         setFormData(prev => ({
             ...prev,
             address: address,
-            location: { lat, lng }
+            location: { 
+                type: 'Point',
+                coordinates: [lng, lat]
+            }
         }));
     };
 
     return (
-        <div className="bg-white rounded-lg shadow-xl p-8 max-w-md w-full mx-4 max-h-[90vh] overflow-y-auto">
-            <div className="text-center mb-8">
-                <div className="mx-auto h-16 w-16 bg-orange-600 rounded-lg flex items-center justify-center shadow-md mb-4">
-                    <Store className="text-white" size={24} />
+        <div className="bg-white rounded-lg shadow-xl p-6 max-w-md w-full mx-4 max-h-[90vh] overflow-y-auto">
+            <div className="text-center mb-6">
+                <div className="mx-auto h-12 w-12 bg-orange-600 rounded-lg flex items-center justify-center shadow-md mb-3">
+                    <Store className="text-white" size={20} />
                 </div>
-                <h2 className="text-2xl font-bold text-gray-900 mb-2">Join as Restaurant</h2>
-                <p className="text-gray-600">Register your restaurant and start serving customers</p>
+                <h2 className="text-xl font-bold text-gray-900 mb-1">Join as Restaurant</h2>
+                <p className="text-gray-600 text-sm">Register your restaurant and start serving customers</p>
             </div>
 
             {error && (
-                <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+                <div className="bg-red-100 border border-red-400 text-red-700 px-3 py-2 rounded mb-4 text-sm">
                     {error}
                 </div>
             )}
 
-            <form onSubmit={handleSubmit} className="space-y-4">
+            <form onSubmit={handleSubmit} className="space-y-3">
                 <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Restaurant Name</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Restaurant Name</label>
                     <input
                         type="text"
                         name="restaurantName"
                         value={formData.restaurantName}
                         onChange={handleChange}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-600 focus:border-orange-600"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-600 focus:border-orange-600 text-sm"
                         placeholder="Enter your restaurant name"
                         required
                         disabled={loading}
@@ -658,12 +743,12 @@ const RestaurantRegisterForm = ({ onRegister, onSwitchToLogin, onSwitchToCustome
                 </div>
 
                 <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Cuisine Type</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Cuisine Type</label>
                     <select
                         name="cuisine"
                         value={formData.cuisine}
                         onChange={handleChange}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-600 focus:border-orange-600"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-600 focus:border-orange-600 text-sm"
                         required
                         disabled={loading}
                     >
@@ -684,13 +769,13 @@ const RestaurantRegisterForm = ({ onRegister, onSwitchToLogin, onSwitchToCustome
                 </div>
 
                 <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Owner Name</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Owner Name</label>
                     <input
                         type="text"
                         name="name"
                         value={formData.name}
                         onChange={handleChange}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-600 focus:border-orange-600"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-600 focus:border-orange-600 text-sm"
                         placeholder="Enter owner's full name"
                         required
                         disabled={loading}
@@ -698,13 +783,13 @@ const RestaurantRegisterForm = ({ onRegister, onSwitchToLogin, onSwitchToCustome
                 </div>
 
                 <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Email Address</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Email Address</label>
                     <input
                         type="email"
                         name="email"
                         value={formData.email}
                         onChange={handleChange}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-600 focus:border-orange-600"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-600 focus:border-orange-600 text-sm"
                         placeholder="Enter business email"
                         required
                         disabled={loading}
@@ -712,13 +797,13 @@ const RestaurantRegisterForm = ({ onRegister, onSwitchToLogin, onSwitchToCustome
                 </div>
 
                 <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Password</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Password</label>
                     <input
                         type="password"
                         name="password"
                         value={formData.password}
                         onChange={handleChange}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-600 focus:border-orange-600"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-600 focus:border-orange-600 text-sm"
                         placeholder="Create a password"
                         required
                         disabled={loading}
@@ -726,13 +811,13 @@ const RestaurantRegisterForm = ({ onRegister, onSwitchToLogin, onSwitchToCustome
                 </div>
 
                 <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Phone Number</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Phone Number</label>
                     <input
                         type="tel"
                         name="phone"
                         value={formData.phone}
                         onChange={handleChange}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-600 focus:border-orange-600"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-600 focus:border-orange-600 text-sm"
                         placeholder="09XXXXXXXXX"
                         required
                         disabled={loading}
@@ -740,7 +825,7 @@ const RestaurantRegisterForm = ({ onRegister, onSwitchToLogin, onSwitchToCustome
                 </div>
 
                 <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
                         Restaurant Location
                     </label>
                     <LocationMap 
@@ -749,8 +834,8 @@ const RestaurantRegisterForm = ({ onRegister, onSwitchToLogin, onSwitchToCustome
                     />
                 </div>
 
-                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-                    <p className="text-sm text-yellow-800">
+                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 text-xs">
+                    <p className="text-yellow-800">
                         <strong>Note:</strong> Restaurant accounts require admin approval before you can start accepting orders.
                         This usually takes 24-48 hours.
                     </p>
@@ -759,18 +844,18 @@ const RestaurantRegisterForm = ({ onRegister, onSwitchToLogin, onSwitchToCustome
                 <button
                     type="submit"
                     disabled={loading}
-                    className="w-full bg-orange-600 text-white py-3 rounded-lg font-semibold hover:bg-orange-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="w-full bg-orange-600 text-white py-2 rounded-lg font-semibold hover:bg-orange-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm"
                 >
                     {loading ? 'Creating account...' : 'REGISTER RESTAURANT'}
                 </button>
 
                 <div className="text-center space-y-2">
-                    <p className="text-gray-600 text-sm">Want to join as?</p>
-                    <div className="flex justify-center space-x-4">
+                    <p className="text-gray-600 text-xs">Want to join as?</p>
+                    <div className="flex justify-center space-x-3">
                         <button
                             type="button"
                             onClick={onSwitchToCustomer}
-                            className="text-orange-600 hover:text-orange-700 font-medium text-sm"
+                            className="text-orange-600 hover:text-orange-700 font-medium text-xs"
                             disabled={loading}
                         >
                             Customer
@@ -778,7 +863,7 @@ const RestaurantRegisterForm = ({ onRegister, onSwitchToLogin, onSwitchToCustome
                         <button
                             type="button"
                             onClick={onSwitchToRider}
-                            className="text-orange-600 hover:text-orange-700 font-medium text-sm"
+                            className="text-orange-600 hover:text-orange-700 font-medium text-xs"
                             disabled={loading}
                         >
                             Delivery Rider
@@ -787,7 +872,7 @@ const RestaurantRegisterForm = ({ onRegister, onSwitchToLogin, onSwitchToCustome
                     <button
                         type="button"
                         onClick={onSwitchToLogin}
-                        className="text-orange-600 hover:text-orange-700 font-medium text-sm"
+                        className="text-orange-600 hover:text-orange-700 font-medium text-xs"
                         disabled={loading}
                     >
                         Already have an account? Sign in
@@ -847,35 +932,38 @@ const RiderRegisterForm = ({ onRegister, onSwitchToLogin, onSwitchToCustomer, on
         setFormData(prev => ({
             ...prev,
             address: address,
-            location: { lat, lng }
+            location: { 
+                type: 'Point',
+                coordinates: [lng, lat]
+            }
         }));
     };
 
     return (
-        <div className="bg-white rounded-lg shadow-xl p-8 max-w-md w-full mx-4 max-h-[90vh] overflow-y-auto">
-            <div className="text-center mb-8">
-                <div className="mx-auto h-16 w-16 bg-blue-600 rounded-lg flex items-center justify-center shadow-md mb-4">
-                    <Bike className="text-white" size={24} />
+        <div className="bg-white rounded-lg shadow-xl p-6 max-w-md w-full mx-4 max-h-[90vh] overflow-y-auto">
+            <div className="text-center mb-6">
+                <div className="mx-auto h-12 w-12 bg-blue-600 rounded-lg flex items-center justify-center shadow-md mb-3">
+                    <Bike className="text-white" size={20} />
                 </div>
-                <h2 className="text-2xl font-bold text-gray-900 mb-2">Join as Rider</h2>
-                <p className="text-gray-600">Become a delivery rider and start earning</p>
+                <h2 className="text-xl font-bold text-gray-900 mb-1">Join as Rider</h2>
+                <p className="text-gray-600 text-sm">Become a delivery rider and start earning</p>
             </div>
 
             {error && (
-                <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+                <div className="bg-red-100 border border-red-400 text-red-700 px-3 py-2 rounded mb-4 text-sm">
                     {error}
                 </div>
             )}
 
-            <form onSubmit={handleSubmit} className="space-y-4">
+            <form onSubmit={handleSubmit} className="space-y-3">
                 <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Full Name *</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Full Name *</label>
                     <input
                         type="text"
                         name="name"
                         value={formData.name}
                         onChange={handleChange}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600 text-sm"
                         placeholder="Enter your full name"
                         required
                         disabled={loading}
@@ -883,13 +971,13 @@ const RiderRegisterForm = ({ onRegister, onSwitchToLogin, onSwitchToCustomer, on
                 </div>
 
                 <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Email Address *</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Email Address *</label>
                     <input
                         type="email"
                         name="email"
                         value={formData.email}
                         onChange={handleChange}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600 text-sm"
                         placeholder="Enter your email"
                         required
                         disabled={loading}
@@ -897,13 +985,13 @@ const RiderRegisterForm = ({ onRegister, onSwitchToLogin, onSwitchToCustomer, on
                 </div>
 
                 <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Password *</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Password *</label>
                     <input
                         type="password"
                         name="password"
                         value={formData.password}
                         onChange={handleChange}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600 text-sm"
                         placeholder="Create a password"
                         required
                         disabled={loading}
@@ -911,13 +999,13 @@ const RiderRegisterForm = ({ onRegister, onSwitchToLogin, onSwitchToCustomer, on
                 </div>
 
                 <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Phone Number *</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Phone Number *</label>
                     <input
                         type="tel"
                         name="phone"
                         value={formData.phone}
                         onChange={handleChange}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600 text-sm"
                         placeholder="09XXXXXXXXX"
                         required
                         disabled={loading}
@@ -925,12 +1013,12 @@ const RiderRegisterForm = ({ onRegister, onSwitchToLogin, onSwitchToCustomer, on
                 </div>
 
                 <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Vehicle Type *</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Vehicle Type *</label>
                     <select
                         name="vehicleType"
                         value={formData.vehicleType}
                         onChange={handleChange}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600 text-sm"
                         required
                         disabled={loading}
                     >
@@ -941,20 +1029,20 @@ const RiderRegisterForm = ({ onRegister, onSwitchToLogin, onSwitchToCustomer, on
                 </div>
 
                 <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">License Number (Optional)</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">License Number (Optional)</label>
                     <input
                         type="text"
                         name="licenseNumber"
                         value={formData.licenseNumber}
                         onChange={handleChange}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600 text-sm"
                         placeholder="Enter license number if applicable"
                         disabled={loading}
                     />
                 </div>
 
                 <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
                         Home Location *
                     </label>
                     <LocationMap 
@@ -963,8 +1051,8 @@ const RiderRegisterForm = ({ onRegister, onSwitchToLogin, onSwitchToCustomer, on
                     />
                 </div>
 
-                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-                    <p className="text-sm text-yellow-800">
+                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 text-xs">
+                    <p className="text-yellow-800">
                         <strong>Note:</strong> Rider accounts require admin approval before you can start accepting delivery requests.
                         This usually takes 24-48 hours.
                     </p>
@@ -973,18 +1061,18 @@ const RiderRegisterForm = ({ onRegister, onSwitchToLogin, onSwitchToCustomer, on
                 <button
                     type="submit"
                     disabled={loading}
-                    className="w-full bg-blue-600 text-white py-3 rounded-lg font-semibold hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="w-full bg-blue-600 text-white py-2 rounded-lg font-semibold hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm"
                 >
                     {loading ? 'Creating account...' : 'REGISTER AS RIDER'}
                 </button>
 
                 <div className="text-center space-y-2">
-                    <p className="text-gray-600 text-sm">Want to join as?</p>
-                    <div className="flex justify-center space-x-4">
+                    <p className="text-gray-600 text-xs">Want to join as?</p>
+                    <div className="flex justify-center space-x-3">
                         <button
                             type="button"
                             onClick={onSwitchToCustomer}
-                            className="text-blue-600 hover:text-blue-700 font-medium text-sm"
+                            className="text-blue-600 hover:text-blue-700 font-medium text-xs"
                             disabled={loading}
                         >
                             Customer
@@ -992,7 +1080,7 @@ const RiderRegisterForm = ({ onRegister, onSwitchToLogin, onSwitchToCustomer, on
                         <button
                             type="button"
                             onClick={onSwitchToRestaurant}
-                            className="text-blue-600 hover:text-blue-700 font-medium text-sm"
+                            className="text-blue-600 hover:text-blue-700 font-medium text-xs"
                             disabled={loading}
                         >
                             Restaurant Owner
@@ -1001,7 +1089,7 @@ const RiderRegisterForm = ({ onRegister, onSwitchToLogin, onSwitchToCustomer, on
                     <button
                         type="button"
                         onClick={onSwitchToLogin}
-                        className="text-blue-600 hover:text-blue-700 font-medium text-sm"
+                        className="text-blue-600 hover:text-blue-700 font-medium text-xs"
                         disabled={loading}
                     >
                         Already have an account? Sign in
@@ -1098,7 +1186,7 @@ const RestaurantCard = ({ restaurant, onAddToCart, user }) => {
         <>
             {/* Restaurant Card (Normal View) */}
             <div className="bg-white rounded-lg shadow-md hover:shadow-lg transition-all duration-300 overflow-hidden border border-gray-200">
-                <div className="h-48 bg-gradient-to-br from-red-700 to-red-900 flex items-center justify-center relative">
+                <div className="h-40 bg-gradient-to-br from-red-700 to-red-900 flex items-center justify-center relative">
                     {restaurant.image ? (
                         <img 
                             src={restaurant.image} 
@@ -1106,30 +1194,30 @@ const RestaurantCard = ({ restaurant, onAddToCart, user }) => {
                             className="w-full h-full object-cover"
                         />
                     ) : (
-                        <span className="text-white text-4xl">🍕</span>
+                        <span className="text-white text-3xl">🍕</span>
                     )}
                     <div className="absolute bottom-2 right-2 bg-black bg-opacity-50 text-white px-2 py-1 rounded text-xs">
                         {restaurant.cuisine || 'Food'}
                     </div>
                 </div>
                 
-                <div className="p-4">
-                    <div className="flex justify-between items-start mb-3">
-                        <h3 className="text-xl font-bold text-gray-900">{restaurant.name || 'Restaurant Name'}</h3>
+                <div className="p-3">
+                    <div className="flex justify-between items-start mb-2">
+                        <h3 className="text-lg font-bold text-gray-900 line-clamp-1">{restaurant.name || 'Restaurant Name'}</h3>
                         <div className="flex items-center space-x-1">
-                            <Star size={16} className="text-yellow-400 fill-current" />
+                            <Star size={14} className="text-yellow-400 fill-current" />
                             <span className="text-sm font-bold">{restaurant.rating || '4.5'}</span>
                         </div>
                     </div>
                     
-                    <div className="flex items-center text-gray-600 text-sm mb-3">
-                        <MapPin size={14} className="mr-1 text-red-800" />
-                        <span className="text-xs line-clamp-1">{restaurant.address || 'Puerto Princesa City'}</span>
+                    <div className="flex items-center text-gray-600 text-xs mb-2">
+                        <MapPin size={12} className="mr-1 text-red-800 flex-shrink-0" />
+                        <span className="line-clamp-1">{restaurant.address || 'Puerto Princesa City'}</span>
                     </div>
 
-                    <div className="flex justify-between items-center text-sm text-gray-500 mb-4">
-                        <span className="bg-gray-100 px-2 py-1 rounded text-xs">{restaurant.cuisine || 'Various'}</span>
-                        <span className="text-green-600 font-semibold flex items-center text-xs">
+                    <div className="flex justify-between items-center text-xs text-gray-500 mb-3">
+                        <span className="bg-gray-100 px-2 py-1 rounded">{restaurant.cuisine || 'Various'}</span>
+                        <span className="text-green-600 font-semibold flex items-center">
                             <Clock size={12} className="mr-1" />
                             {restaurant.deliveryTime || '25-35 min'}
                         </span>
@@ -1138,25 +1226,25 @@ const RestaurantCard = ({ restaurant, onAddToCart, user }) => {
                     <button
                         onClick={fetchProducts}
                         disabled={loadingProducts}
-                        className="w-full bg-red-800 text-white py-3 rounded-lg mb-3 hover:bg-red-900 transition-colors disabled:opacity-50 flex items-center justify-center space-x-2 font-semibold"
+                        className="w-full bg-red-800 text-white py-2 rounded-lg mb-2 hover:bg-red-900 transition-colors disabled:opacity-50 flex items-center justify-center space-x-2 font-semibold text-sm"
                     >
                         {loadingProducts ? (
                             <>
                                 <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                                <span className="text-sm">Loading Menu...</span>
+                                <span>Loading Menu...</span>
                             </>
                         ) : (
                             <>
-                                <span className="text-sm">📖 VIEW FULL MENU</span>
+                                <span>📖 VIEW FULL MENU</span>
                             </>
                         )}
                     </button>
 
-                    <div className="flex justify-between items-center mt-3 pt-3 border-t">
-                        <span className="text-red-800 font-bold text-sm">₱{restaurant.deliveryFee || '35'} delivery</span>
+                    <div className="flex justify-between items-center mt-2 pt-2 border-t">
+                        <span className="text-red-800 font-bold text-xs">₱{restaurant.deliveryFee || '35'} delivery</span>
                         <button
                             onClick={handleQuickOrder}
-                            className="bg-red-800 text-white px-4 py-2 rounded text-sm hover:bg-red-900 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                            className="bg-red-800 text-white px-3 py-1 rounded text-xs hover:bg-red-900 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                             disabled={!user}
                         >
                             {user ? 'QUICK ORDER' : 'LOGIN TO ORDER'}
@@ -1169,50 +1257,50 @@ const RestaurantCard = ({ restaurant, onAddToCart, user }) => {
             {showProducts && (
                 <div className="fixed inset-0 bg-white z-50 overflow-y-auto">
                     <div className="bg-red-800 text-white sticky top-0 z-10">
-                        <div className="container mx-auto px-4 py-4">
+                        <div className="container mx-auto px-4 py-3">
                             <div className="flex items-center justify-between">
-                                <div className="flex items-center space-x-3">
+                                <div className="flex items-center space-x-2">
                                     <button 
                                         onClick={closeMenu}
-                                        className="p-2 hover:bg-red-900 rounded-lg transition-colors"
+                                        className="p-1 hover:bg-red-900 rounded-lg transition-colors"
                                     >
-                                        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
                                         </svg>
                                     </button>
                                     <div>
-                                        <h1 className="text-2xl font-bold">{restaurant.name}</h1>
-                                        <p className="text-red-100 text-sm">{restaurant.cuisine} • {restaurant.address}</p>
+                                        <h1 className="text-lg font-bold">{restaurant.name}</h1>
+                                        <p className="text-red-100 text-xs">{restaurant.cuisine} • {restaurant.address}</p>
                                     </div>
                                 </div>
                                 <div className="text-right">
-                                    <div className="flex items-center space-x-2 text-yellow-300">
-                                        <Star size={20} className="fill-current" />
-                                        <span className="font-bold text-lg">{restaurant.rating || '4.5'}</span>
+                                    <div className="flex items-center space-x-1 text-yellow-300">
+                                        <Star size={16} className="fill-current" />
+                                        <span className="font-bold">{restaurant.rating || '4.5'}</span>
                                     </div>
-                                    <p className="text-red-100 text-sm">{products.length} items</p>
+                                    <p className="text-red-100 text-xs">{products.length} items</p>
                                 </div>
                             </div>
                         </div>
                     </div>
 
-                    <div className="container mx-auto px-4 py-6">
+                    <div className="container mx-auto px-4 py-4">
                         {error ? (
-                            <div className="text-center py-12">
-                                <p className="text-gray-500 text-lg">{error}</p>
+                            <div className="text-center py-8">
+                                <p className="text-gray-500">{error}</p>
                             </div>
                         ) : products.length === 0 ? (
-                            <div className="text-center py-12">
-                                <p className="text-gray-500 text-lg">No menu items available</p>
+                            <div className="text-center py-8">
+                                <p className="text-gray-500">No menu items available</p>
                             </div>
                         ) : (
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                                 {products.map((product) => (
                                     <div 
                                         key={product._id} 
-                                        className="bg-white border border-gray-200 rounded-xl shadow-sm hover:shadow-md transition-all duration-300 overflow-hidden"
+                                        className="bg-white border border-gray-200 rounded-lg shadow-sm hover:shadow-md transition-all duration-300 overflow-hidden"
                                     >
-                                        <div className="h-48 bg-gray-100 relative">
+                                        <div className="h-32 bg-gray-100 relative">
                                             {product.image ? (
                                                 <img 
                                                     src={product.image} 
@@ -1221,41 +1309,41 @@ const RestaurantCard = ({ restaurant, onAddToCart, user }) => {
                                                 />
                                             ) : (
                                                 <div className="w-full h-full flex items-center justify-center">
-                                                    <span className="text-gray-400 text-6xl">🍽️</span>
+                                                    <span className="text-gray-400 text-4xl">🍽️</span>
                                                 </div>
                                             )}
-                                            <div className="absolute top-3 right-3 bg-white bg-opacity-90 px-3 py-1 rounded-full">
-                                                <span className="text-green-600 font-bold text-lg">₱{product.price}</span>
+                                            <div className="absolute top-2 right-2 bg-white bg-opacity-90 px-2 py-1 rounded-full">
+                                                <span className="text-green-600 font-bold">₱{product.price}</span>
                                             </div>
                                         </div>
                                         
-                                        <div className="p-4">
-                                            <div className="mb-3">
-                                                <h3 className="font-bold text-xl text-gray-900 mb-2">
+                                        <div className="p-3">
+                                            <div className="mb-2">
+                                                <h3 className="font-bold text-gray-900 mb-1 text-sm">
                                                     {product.name}
                                                 </h3>
                                                 
                                                 {product.description && (
-                                                    <p className="text-gray-600 text-base mb-3 leading-relaxed">
+                                                    <p className="text-gray-600 text-xs mb-2 leading-relaxed line-clamp-2">
                                                         {product.description}
                                                     </p>
                                                 )}
                                                 
                                                 {product.ingredients && (
-                                                    <div className="mb-3">
-                                                        <p className="text-sm text-gray-500 font-semibold mb-1">Ingredients:</p>
-                                                        <p className="text-gray-600 text-sm">{product.ingredients}</p>
+                                                    <div className="mb-2">
+                                                        <p className="text-xs text-gray-500 font-semibold mb-1">Ingredients:</p>
+                                                        <p className="text-gray-600 text-xs line-clamp-1">{product.ingredients}</p>
                                                     </div>
                                                 )}
                                             </div>
                                             
                                             <div className="flex justify-between items-center">
-                                                <div className="flex items-center space-x-2">
-                                                    <span className="bg-gray-100 text-gray-700 px-3 py-1 rounded-full text-sm font-medium">
+                                                <div className="flex items-center space-x-1">
+                                                    <span className="bg-gray-100 text-gray-700 px-2 py-1 rounded text-xs">
                                                         {product.category}
                                                     </span>
-                                                    <span className="text-blue-600 text-sm flex items-center">
-                                                        <Clock size={14} className="mr-1" />
+                                                    <span className="text-blue-600 text-xs flex items-center">
+                                                        <Clock size={12} className="mr-1" />
                                                         {product.preparationTime || 15} min
                                                     </span>
                                                 </div>
@@ -1263,7 +1351,7 @@ const RestaurantCard = ({ restaurant, onAddToCart, user }) => {
                                                 <button
                                                     onClick={() => handleAddToCart(product)}
                                                     disabled={!user}
-                                                    className="bg-red-800 text-white px-4 py-2 rounded-lg font-semibold hover:bg-red-900 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+                                                    className="bg-red-800 text-white px-3 py-1 rounded font-semibold hover:bg-red-900 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-xs"
                                                 >
                                                     {user ? 'ADD TO CART' : 'LOGIN'}
                                                 </button>
@@ -1275,18 +1363,18 @@ const RestaurantCard = ({ restaurant, onAddToCart, user }) => {
                         )}
                     </div>
 
-                    <div className="bg-gray-100 border-t mt-8">
-                        <div className="container mx-auto px-4 py-4">
-                            <div className="flex justify-between items-center">
+                    <div className="bg-gray-100 border-t mt-4">
+                        <div className="container mx-auto px-4 py-3">
+                            <div className="flex flex-col sm:flex-row justify-between items-center gap-2">
                                 <div>
-                                    <p className="text-gray-600">
+                                    <p className="text-gray-600 text-sm">
                                         Showing <strong>{products.length}</strong> menu item{products.length !== 1 ? 's' : ''}
                                     </p>
                                 </div>
-                                <div className="flex space-x-3">
+                                <div className="flex space-x-2">
                                     <button
                                         onClick={closeMenu}
-                                        className="bg-gray-300 text-gray-700 px-6 py-2 rounded-lg font-semibold hover:bg-gray-400 transition-colors"
+                                        className="bg-gray-300 text-gray-700 px-4 py-2 rounded font-semibold hover:bg-gray-400 transition-colors text-sm"
                                     >
                                         CLOSE MENU
                                     </button>
@@ -1297,7 +1385,7 @@ const RestaurantCard = ({ restaurant, onAddToCart, user }) => {
                                                 handleAddToCart(firstProduct);
                                                 closeMenu();
                                             }}
-                                            className="bg-red-800 text-white px-6 py-2 rounded-lg font-semibold hover:bg-red-900 transition-colors"
+                                            className="bg-red-800 text-white px-4 py-2 rounded font-semibold hover:bg-red-900 transition-colors text-sm"
                                         >
                                             ORDER NOW
                                         </button>
@@ -1437,24 +1525,24 @@ const TrackOrder = ({ user }) => {
     };
 
     return (
-        <div className="min-h-screen bg-gray-50 py-8">
+        <div className="min-h-screen bg-gray-50 py-4">
             <div className="max-w-4xl mx-auto px-4">
-                <div className="bg-white rounded-lg shadow-md p-6 mb-6">
-                    <h1 className="text-3xl font-bold text-gray-900 mb-2">Track Your Order</h1>
-                    <p className="text-gray-600">Monitor your food delivery in real-time</p>
+                <div className="bg-white rounded-lg shadow-md p-4 mb-4">
+                    <h1 className="text-2xl font-bold text-gray-900 mb-1">Track Your Order</h1>
+                    <p className="text-gray-600 text-sm">Monitor your food delivery in real-time</p>
                     
-                    <div className="mt-6 flex space-x-4">
+                    <div className="mt-4 flex flex-col sm:flex-row gap-2">
                         <input
                             type="text"
                             value={trackingId}
                             onChange={(e) => setTrackingId(e.target.value)}
                             placeholder="Enter Order ID"
-                            className="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-800 focus:border-red-800"
+                            className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-800 focus:border-red-800 text-sm"
                         />
                         <button
                             onClick={trackOrderById}
                             disabled={!trackingId.trim()}
-                            className="bg-red-800 text-white px-6 py-3 rounded-lg hover:bg-red-900 disabled:opacity-50 disabled:cursor-not-allowed"
+                            className="bg-red-800 text-white px-4 py-2 rounded-lg hover:bg-red-900 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
                         >
                             Track Order
                         </button>
@@ -1462,57 +1550,57 @@ const TrackOrder = ({ user }) => {
                 </div>
 
                 {loading ? (
-                    <div className="flex justify-center items-center py-12">
+                    <div className="flex justify-center items-center py-8">
                         <div className="text-center">
-                            <div className="w-12 h-12 border-4 border-red-800 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-                            <p className="text-gray-600">Loading orders...</p>
+                            <div className="w-10 h-10 border-4 border-red-800 border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>
+                            <p className="text-gray-600 text-sm">Loading orders...</p>
                         </div>
                     </div>
                 ) : error ? (
-                    <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-6">
+                    <div className="bg-red-100 border border-red-400 text-red-700 px-3 py-2 rounded mb-4 text-sm">
                         {error}
                     </div>
                 ) : orders.length === 0 ? (
-                    <div className="bg-white rounded-lg shadow-md p-8 text-center">
-                        <Package size={64} className="mx-auto text-gray-400 mb-4" />
-                        <h3 className="text-xl font-semibold text-gray-900 mb-2">No Orders Found</h3>
-                        <p className="text-gray-600">You haven't placed any orders yet.</p>
+                    <div className="bg-white rounded-lg shadow-md p-6 text-center">
+                        <Package size={48} className="mx-auto text-gray-400 mb-3" />
+                        <h3 className="text-lg font-semibold text-gray-900 mb-1">No Orders Found</h3>
+                        <p className="text-gray-600 text-sm">You haven't placed any orders yet.</p>
                     </div>
                 ) : (
-                    <div className="space-y-6">
+                    <div className="space-y-4">
                         {orders.map((order) => (
                             <div key={order._id} className="bg-white rounded-lg shadow-md overflow-hidden">
-                                <div className="border-b border-gray-200 p-6">
-                                    <div className="flex justify-between items-start">
+                                <div className="border-b border-gray-200 p-4">
+                                    <div className="flex flex-col sm:flex-row justify-between items-start gap-2">
                                         <div>
-                                            <h3 className="text-lg font-semibold text-gray-900">
+                                            <h3 className="text-base font-semibold text-gray-900">
                                                 Order #{order.orderId || order._id?.slice(-8).toUpperCase() || 'N/A'}
                                             </h3>
-                                            <p className="text-gray-600 text-sm">
+                                            <p className="text-gray-600 text-xs">
                                                 {new Date(order.createdAt).toLocaleDateString()} • 
                                                 {new Date(order.createdAt).toLocaleTimeString()}
                                             </p>
                                         </div>
-                                        <span className={`px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(order.status)}`}>
+                                        <span className={`px-2 py-1 rounded text-xs font-medium ${getStatusColor(order.status)}`}>
                                             {getStatusText(order.status)}
                                         </span>
                                     </div>
                                 </div>
 
-                                <div className="p-6">
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div className="p-4">
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                         <div>
-                                            <h4 className="font-semibold text-gray-900 mb-3">Order Details</h4>
-                                            <div className="space-y-2">
+                                            <h4 className="font-semibold text-gray-900 mb-2 text-sm">Order Details</h4>
+                                            <div className="space-y-1">
                                                 {order.items?.map((item, index) => (
-                                                    <div key={index} className="flex justify-between text-sm">
+                                                    <div key={index} className="flex justify-between text-xs">
                                                         <span>{item.productName || item.product?.name || `Item ${index + 1}`} x {item.quantity}</span>
                                                         <span>₱{((item.price || 0) * item.quantity).toFixed(2)}</span>
                                                     </div>
                                                 ))}
                                             </div>
-                                            <div className="border-t mt-3 pt-3">
-                                                <div className="flex justify-between font-semibold">
+                                            <div className="border-t mt-2 pt-2">
+                                                <div className="flex justify-between font-semibold text-sm">
                                                     <span>Total</span>
                                                     <span>₱{(order.total || 0).toFixed(2)}</span>
                                                 </div>
@@ -1520,8 +1608,8 @@ const TrackOrder = ({ user }) => {
                                         </div>
 
                                         <div>
-                                            <h4 className="font-semibold text-gray-900 mb-3">Delivery Information</h4>
-                                            <div className="space-y-2 text-sm">
+                                            <h4 className="font-semibold text-gray-900 mb-2 text-sm">Delivery Information</h4>
+                                            <div className="space-y-1 text-xs">
                                                 <p><strong>Address:</strong> {order.deliveryAddress}</p>
                                                 <p><strong>Payment:</strong> {order.paymentMethod}</p>
                                                 {order.rider && (
@@ -1535,17 +1623,17 @@ const TrackOrder = ({ user }) => {
                                     </div>
 
                                     {/* Order Progress */}
-                                    <div className="mt-6">
-                                        <h4 className="font-semibold text-gray-900 mb-4">Order Progress</h4>
-                                        <div className="flex items-center justify-between">
+                                    <div className="mt-4">
+                                        <h4 className="font-semibold text-gray-900 mb-3 text-sm">Order Progress</h4>
+                                        <div className="flex items-center justify-between overflow-x-auto">
                                             {['pending', 'confirmed', 'preparing', 'ready', 'out_for_delivery', 'delivered'].map((status, index) => (
-                                                <div key={status} className="flex flex-col items-center">
-                                                    <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                                                <div key={status} className="flex flex-col items-center min-w-16">
+                                                    <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs ${
                                                         getStatusIndex(order.status) >= index ? 'bg-red-800 text-white' : 'bg-gray-200 text-gray-400'
                                                     }`}>
                                                         {index + 1}
                                                     </div>
-                                                    <span className="text-xs mt-2 text-center">
+                                                    <span className="text-xs mt-1 text-center">
                                                         {getStatusText(status)}
                                                     </span>
                                                 </div>
@@ -1627,23 +1715,23 @@ const UserProfile = ({ user, onUpdate }) => {
     }
 
     return (
-        <div className="min-h-screen bg-gray-50 py-8">
+        <div className="min-h-screen bg-gray-50 py-4">
             <div className="max-w-2xl mx-auto px-4">
-                <div className="bg-white rounded-lg shadow-md p-6">
-                    <h1 className="text-3xl font-bold text-gray-900 mb-2">My Profile</h1>
-                    <p className="text-gray-600 mb-6">Manage your account information</p>
+                <div className="bg-white rounded-lg shadow-md p-4">
+                    <h1 className="text-2xl font-bold text-gray-900 mb-1">My Profile</h1>
+                    <p className="text-gray-600 text-sm mb-4">Manage your account information</p>
 
                     {message && (
-                        <div className={`p-4 rounded mb-6 ${
+                        <div className={`p-3 rounded mb-4 text-sm ${
                             message.includes('successfully') ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
                         }`}>
                             {message}
                         </div>
                     )}
 
-                    <form onSubmit={handleSubmit} className="space-y-6">
+                    <form onSubmit={handleSubmit} className="space-y-4">
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
                                 Full Name
                             </label>
                             <input
@@ -1651,13 +1739,13 @@ const UserProfile = ({ user, onUpdate }) => {
                                 name="name"
                                 value={formData.name}
                                 onChange={handleChange}
-                                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-800 focus:border-red-800"
+                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-800 focus:border-red-800 text-sm"
                                 required
                             />
                         </div>
 
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
                                 Email Address
                             </label>
                             <input
@@ -1665,13 +1753,13 @@ const UserProfile = ({ user, onUpdate }) => {
                                 name="email"
                                 value={formData.email}
                                 onChange={handleChange}
-                                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-800 focus:border-red-800"
+                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-800 focus:border-red-800 text-sm"
                                 required
                             />
                         </div>
 
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
                                 Phone Number
                             </label>
                             <input
@@ -1679,13 +1767,13 @@ const UserProfile = ({ user, onUpdate }) => {
                                 name="phone"
                                 value={formData.phone}
                                 onChange={handleChange}
-                                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-800 focus:border-red-800"
+                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-800 focus:border-red-800 text-sm"
                                 required
                             />
                         </div>
 
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
                                 Delivery Address
                             </label>
                             <textarea
@@ -1693,7 +1781,7 @@ const UserProfile = ({ user, onUpdate }) => {
                                 value={formData.address}
                                 onChange={handleChange}
                                 rows="3"
-                                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-800 focus:border-red-800"
+                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-800 focus:border-red-800 text-sm"
                                 required
                             />
                         </div>
@@ -1701,7 +1789,7 @@ const UserProfile = ({ user, onUpdate }) => {
                         <button
                             type="submit"
                             disabled={loading}
-                            className="w-full bg-red-800 text-white py-3 rounded-lg font-semibold hover:bg-red-900 transition-colors disabled:opacity-50"
+                            className="w-full bg-red-800 text-white py-2 rounded-lg font-semibold hover:bg-red-900 transition-colors disabled:opacity-50 text-sm"
                         >
                             {loading ? 'Updating...' : 'UPDATE PROFILE'}
                         </button>
@@ -1843,37 +1931,37 @@ const RestaurantDashboard = ({ user }) => {
     return (
         <div className="min-h-screen bg-gray-50">
             <div className="bg-white shadow-sm">
-                <div className="max-w-7xl mx-auto px-4 py-6">
-                    <h1 className="text-3xl font-bold text-gray-900">Restaurant Dashboard</h1>
-                    <p className="text-gray-600">Manage your restaurant operations</p>
+                <div className="max-w-7xl mx-auto px-4 py-4">
+                    <h1 className="text-2xl font-bold text-gray-900">Restaurant Dashboard</h1>
+                    <p className="text-gray-600 text-sm">Manage your restaurant operations</p>
                 </div>
             </div>
 
             {/* Stats Overview */}
-            <div className="max-w-7xl mx-auto px-4 py-6">
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-                    <div className="bg-white rounded-lg shadow p-6">
-                        <h3 className="text-lg font-semibold text-gray-900 mb-2">Total Orders</h3>
-                        <p className="text-3xl font-bold text-red-800">{stats.totalOrders}</p>
+            <div className="max-w-7xl mx-auto px-4 py-4">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+                    <div className="bg-white rounded-lg shadow p-3">
+                        <h3 className="text-sm font-semibold text-gray-900 mb-1">Total Orders</h3>
+                        <p className="text-xl font-bold text-red-800">{stats.totalOrders}</p>
                     </div>
-                    <div className="bg-white rounded-lg shadow p-6">
-                        <h3 className="text-lg font-semibold text-gray-900 mb-2">Pending Orders</h3>
-                        <p className="text-3xl font-bold text-orange-600">{stats.pendingOrders}</p>
+                    <div className="bg-white rounded-lg shadow p-3">
+                        <h3 className="text-sm font-semibold text-gray-900 mb-1">Pending Orders</h3>
+                        <p className="text-xl font-bold text-orange-600">{stats.pendingOrders}</p>
                     </div>
-                    <div className="bg-white rounded-lg shadow p-6">
-                        <h3 className="text-lg font-semibold text-gray-900 mb-2">Completed Orders</h3>
-                        <p className="text-3xl font-bold text-green-600">{stats.completedOrders}</p>
+                    <div className="bg-white rounded-lg shadow p-3">
+                        <h3 className="text-sm font-semibold text-gray-900 mb-1">Completed Orders</h3>
+                        <p className="text-xl font-bold text-green-600">{stats.completedOrders}</p>
                     </div>
-                    <div className="bg-white rounded-lg shadow p-6">
-                        <h3 className="text-lg font-semibold text-gray-900 mb-2">Total Revenue</h3>
-                        <p className="text-3xl font-bold text-blue-600">₱{stats.totalRevenue.toFixed(2)}</p>
+                    <div className="bg-white rounded-lg shadow p-3">
+                        <h3 className="text-sm font-semibold text-gray-900 mb-1">Total Revenue</h3>
+                        <p className="text-xl font-bold text-blue-600">₱{stats.totalRevenue.toFixed(2)}</p>
                     </div>
                 </div>
 
                 {/* Tabs */}
                 <div className="bg-white rounded-lg shadow">
                     <div className="border-b border-gray-200">
-                        <nav className="flex -mb-px">
+                        <nav className="flex -mb-px overflow-x-auto">
                             {[
                                 { id: 'orders', name: 'Orders', count: orders.length },
                                 { id: 'products', name: 'Products', count: products.length },
@@ -1882,7 +1970,7 @@ const RestaurantDashboard = ({ user }) => {
                                 <button
                                     key={tab.id}
                                     onClick={() => setActiveTab(tab.id)}
-                                    className={`py-4 px-6 text-center border-b-2 font-medium text-sm ${
+                                    className={`py-3 px-4 text-center border-b-2 font-medium text-sm whitespace-nowrap ${
                                         activeTab === tab.id
                                             ? 'border-red-800 text-red-800'
                                             : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
@@ -1890,7 +1978,7 @@ const RestaurantDashboard = ({ user }) => {
                                 >
                                     {tab.name}
                                     {tab.count !== undefined && (
-                                        <span className="ml-2 bg-gray-100 text-gray-900 py-0.5 px-2 rounded-full text-xs">
+                                        <span className="ml-1 bg-gray-100 text-gray-900 py-0.5 px-1.5 rounded-full text-xs">
                                             {tab.count}
                                         </span>
                                     )}
@@ -1899,17 +1987,17 @@ const RestaurantDashboard = ({ user }) => {
                         </nav>
                     </div>
 
-                    <div className="p-6">
+                    <div className="p-4">
                         {activeTab === 'orders' && (
-                            <div className="space-y-4">
+                            <div className="space-y-3">
                                 {orders.map((order) => (
-                                    <div key={order._id} className="border border-gray-200 rounded-lg p-4">
-                                        <div className="flex justify-between items-start mb-3">
+                                    <div key={order._id} className="border border-gray-200 rounded-lg p-3">
+                                        <div className="flex flex-col sm:flex-row justify-between items-start gap-2 mb-2">
                                             <div>
-                                                <h4 className="font-semibold">
+                                                <h4 className="font-semibold text-sm">
                                                     Order #{order.orderId || order._id?.slice(-8).toUpperCase() || 'N/A'}
                                                 </h4>
-                                                <p className="text-sm text-gray-600">
+                                                <p className="text-xs text-gray-600">
                                                     {new Date(order.createdAt).toLocaleString()}
                                                 </p>
                                             </div>
@@ -1925,22 +2013,22 @@ const RestaurantDashboard = ({ user }) => {
                                             </span>
                                         </div>
                                         
-                                        <div className="mb-3">
+                                        <div className="mb-2">
                                             {order.items?.map((item, index) => (
-                                                <div key={index} className="flex justify-between text-sm">
+                                                <div key={index} className="flex justify-between text-xs">
                                                     <span>{item.productName || item.product?.name || `Item ${index + 1}`} x {item.quantity}</span>
                                                     <span>₱{((item.price || 0) * item.quantity).toFixed(2)}</span>
                                                 </div>
                                             ))}
                                         </div>
 
-                                        <div className="flex justify-between items-center">
-                                            <span className="font-semibold">Total: ₱{(order.total || 0).toFixed(2)}</span>
-                                            <div className="space-x-2">
+                                        <div className="flex flex-col sm:flex-row justify-between items-center gap-2">
+                                            <span className="font-semibold text-sm">Total: ₱{(order.total || 0).toFixed(2)}</span>
+                                            <div className="flex space-x-1">
                                                 {order.status === 'pending' && (
                                                     <button
                                                         onClick={() => updateOrderStatus(order._id, 'confirmed')}
-                                                        className="bg-blue-600 text-white px-3 py-1 rounded text-sm hover:bg-blue-700"
+                                                        className="bg-blue-600 text-white px-2 py-1 rounded text-xs hover:bg-blue-700"
                                                     >
                                                         Confirm
                                                     </button>
@@ -1948,7 +2036,7 @@ const RestaurantDashboard = ({ user }) => {
                                                 {order.status === 'confirmed' && (
                                                     <button
                                                         onClick={() => updateOrderStatus(order._id, 'preparing')}
-                                                        className="bg-orange-600 text-white px-3 py-1 rounded text-sm hover:bg-orange-700"
+                                                        className="bg-orange-600 text-white px-2 py-1 rounded text-xs hover:bg-orange-700"
                                                     >
                                                         Start Preparing
                                                     </button>
@@ -1956,7 +2044,7 @@ const RestaurantDashboard = ({ user }) => {
                                                 {order.status === 'preparing' && (
                                                     <button
                                                         onClick={() => updateOrderStatus(order._id, 'ready')}
-                                                        className="bg-purple-600 text-white px-3 py-1 rounded text-sm hover:bg-purple-700"
+                                                        className="bg-purple-600 text-white px-2 py-1 rounded text-xs hover:bg-purple-700"
                                                     >
                                                         Mark Ready
                                                     </button>
@@ -1970,19 +2058,19 @@ const RestaurantDashboard = ({ user }) => {
 
                         {activeTab === 'products' && (
                             <div>
-                                <div className="flex justify-between items-center mb-4">
-                                    <h3 className="text-lg font-semibold">Menu Items</h3>
-                                    <button className="bg-red-800 text-white px-4 py-2 rounded hover:bg-red-900">
+                                <div className="flex flex-col sm:flex-row justify-between items-center gap-2 mb-3">
+                                    <h3 className="text-lg font-semibold text-sm">Menu Items</h3>
+                                    <button className="bg-red-800 text-white px-3 py-1 rounded hover:bg-red-900 text-sm">
                                         Add Product
                                     </button>
                                 </div>
-                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
                                     {products.map((product) => (
-                                        <div key={product._id} className="border border-gray-200 rounded-lg p-4">
-                                            <h4 className="font-semibold">{product.name}</h4>
-                                            <p className="text-gray-600 text-sm mb-2">{product.description}</p>
+                                        <div key={product._id} className="border border-gray-200 rounded-lg p-3">
+                                            <h4 className="font-semibold text-sm">{product.name}</h4>
+                                            <p className="text-gray-600 text-xs mb-2 line-clamp-2">{product.description}</p>
                                             <div className="flex justify-between items-center">
-                                                <span className="text-red-800 font-bold">₱{product.price}</span>
+                                                <span className="text-red-800 font-bold text-sm">₱{product.price}</span>
                                                 <span className="bg-gray-100 text-gray-700 px-2 py-1 rounded text-xs">
                                                     {product.category}
                                                 </span>
@@ -2147,7 +2235,7 @@ const CustomerDashboard = () => {
     );
 
     const renderNavigation = () => (
-        <nav className="hidden lg:flex items-center space-x-8">
+        <nav className="hidden lg:flex items-center space-x-6">
             <button 
                 onClick={() => setActiveSection('home')}
                 className={`font-semibold text-sm ${
@@ -2187,6 +2275,53 @@ const CustomerDashboard = () => {
         </nav>
     );
 
+    const renderMobileNavigation = () => (
+        <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-40">
+            <div className="flex justify-around items-center py-2">
+                <button 
+                    onClick={() => setActiveSection('home')}
+                    className={`flex flex-col items-center p-2 ${
+                        activeSection === 'home' ? 'text-red-800' : 'text-gray-600'
+                    }`}
+                >
+                    <Home size={20} />
+                    <span className="text-xs mt-1">Home</span>
+                </button>
+                <button 
+                    onClick={() => setActiveSection('track')}
+                    className={`flex flex-col items-center p-2 ${
+                        activeSection === 'track' ? 'text-red-800' : 'text-gray-600'
+                    }`}
+                >
+                    <Package size={20} />
+                    <span className="text-xs mt-1">Track</span>
+                </button>
+                {user && (
+                    <button 
+                        onClick={() => setActiveSection('profile')}
+                        className={`flex flex-col items-center p-2 ${
+                            activeSection === 'profile' ? 'text-red-800' : 'text-gray-600'
+                        }`}
+                    >
+                        <User size={20} />
+                        <span className="text-xs mt-1">Profile</span>
+                    </button>
+                )}
+                {user && user.role === 'restaurant' && (
+                    <button 
+                        onClick={() => setActiveSection('restaurant')}
+                        className={`flex flex-col items-center p-2 ${
+                            activeSection === 'restaurant' ? 'text-red-800' : 'text-gray-600'
+                        }`}
+                    >
+                        <Store size={20} />
+                        <span className="text-xs mt-1">Dashboard</span>
+                    </button>
+                )}
+            </div>
+        </div>
+    );
+
     const renderActiveSection = () => {
         switch (activeSection) {
             case 'track':
@@ -2204,62 +2339,62 @@ const CustomerDashboard = () => {
     const renderHomeSection = () => {
         return (
             <>
-                <div className="bg-gradient-to-r from-red-800 to-red-900 text-white py-16">
+                <div className="bg-gradient-to-r from-red-800 to-red-900 text-white py-8 md:py-12">
                     <div className="max-w-7xl mx-auto px-4 text-center">
-                        <h1 className="text-4xl md:text-5xl font-bold mb-6">
+                        <h1 className="text-2xl md:text-4xl font-bold mb-4">
                             DELICIOUS FOOD DELIVERED TO YOUR DOORSTEP
                         </h1>
-                        <p className="text-lg md:text-xl mb-8 opacity-90">
+                        <p className="text-base md:text-lg mb-6 opacity-90">
                             Experience the best food delivery service in town
                         </p>
-                        <div className="flex flex-col sm:flex-row justify-center space-y-4 sm:space-y-0 sm:space-x-6">
+                        <div className="flex flex-col sm:flex-row justify-center space-y-3 sm:space-y-0 sm:space-x-4">
                             <button 
                                 onClick={() => user ? setIsCartOpen(true) : setShowAuthModal(true)}
-                                className="bg-white text-red-800 px-8 py-4 rounded font-bold text-lg hover:bg-gray-100 transition-colors"
+                                className="bg-white text-red-800 px-6 py-3 rounded font-bold text-base hover:bg-gray-100 transition-colors"
                             >
                                 {user ? "ORDER NOW" : "LOGIN TO ORDER"}
                             </button>
-                            <button className="border-2 border-white text-white px-8 py-4 rounded font-bold text-lg hover:bg-white hover:text-red-800 transition-colors">
+                            <button className="border-2 border-white text-white px-6 py-3 rounded font-bold text-base hover:bg-white hover:text-red-800 transition-colors">
                                 BROWSE RESTAURANTS
                             </button>
                         </div>
                     </div>
                 </div>
 
-                <div className="max-w-7xl mx-auto px-4 py-12">
-                    <div className="flex justify-between items-center mb-8">
-                        <h2 className="text-3xl font-bold text-gray-900">FEATURED RESTAURANTS</h2>
-                        <button className="text-red-800 hover:text-red-900 font-semibold">
+                <div className="max-w-7xl mx-auto px-4 py-6 md:py-8">
+                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-6">
+                        <h2 className="text-xl md:text-2xl font-bold text-gray-900">FEATURED RESTAURANTS</h2>
+                        <button className="text-red-800 hover:text-red-900 font-semibold text-sm">
                             VIEW ALL →
                         </button>
                     </div>
                     
                     {loadingRestaurants ? (
-                        <div className="flex justify-center items-center py-12">
+                        <div className="flex justify-center items-center py-8">
                             <div className="text-center">
-                                <div className="w-12 h-12 border-4 border-red-800 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-                                <p className="text-gray-600">Loading restaurants...</p>
+                                <div className="w-10 h-10 border-4 border-red-800 border-t-transparent rounded-full animate-spin mx-auto mb-3"></div>
+                                <p className="text-gray-600 text-sm">Loading restaurants...</p>
                             </div>
                         </div>
                     ) : apiError ? (
-                        <div className="text-center py-12">
-                            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6 max-w-md mx-auto">
-                                <p className="text-yellow-800 font-semibold mb-2"> API Connection</p>
-                                <p className="text-yellow-700 text-sm">{apiError}</p>
-                                <p className="text-yellow-600 text-xs mt-2">Using real-time data from your database</p>
+                        <div className="text-center py-8">
+                            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 max-w-md mx-auto">
+                                <p className="text-yellow-800 font-semibold mb-1 text-sm"> API Connection</p>
+                                <p className="text-yellow-700 text-xs">{apiError}</p>
+                                <p className="text-yellow-600 text-xs mt-1">Using real-time data from your database</p>
                             </div>
                         </div>
                     ) : filteredRestaurants.length === 0 ? (
-                        <div className="text-center py-12">
-                            <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 max-w-md mx-auto">
-                                <p className="text-blue-800 font-semibold"> No Restaurants Yet</p>
-                                <p className="text-blue-700 text-sm mt-2">
+                        <div className="text-center py-8">
+                            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 max-w-md mx-auto">
+                                <p className="text-blue-800 font-semibold text-sm"> No Restaurants Yet</p>
+                                <p className="text-blue-700 text-xs mt-1">
                                     No restaurants found in your database. Add restaurants via admin panel.
                                 </p>
                             </div>
                         </div>
                     ) : (
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                             {filteredRestaurants.map((restaurant, index) => (
                                 <RestaurantCard 
                                     key={restaurant._id || restaurant.id || index}
@@ -2272,47 +2407,47 @@ const CustomerDashboard = () => {
                     )}
                 </div>
 
-                <div className="bg-gray-100 py-16">
+                <div className="bg-gray-100 py-8 md:py-12">
                     <div className="max-w-7xl mx-auto px-4">
-                        <h2 className="text-3xl font-bold text-center text-gray-900 mb-12">Join Our Community</h2>
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                            <div className="bg-white rounded-xl shadow-md p-6 text-center">
-                                <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                                    <span className="text-2xl">🍽️</span>
+                        <h2 className="text-2xl md:text-3xl font-bold text-center text-gray-900 mb-8">Join Our Community</h2>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                            <div className="bg-white rounded-xl shadow-md p-4 text-center">
+                                <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                                    <span className="text-xl">🍽️</span>
                                 </div>
-                                <h3 className="text-xl font-bold text-gray-900 mb-3">Food Lover</h3>
-                                <p className="text-gray-600 mb-4">Order from your favorite restaurants and enjoy delicious meals delivered to your door.</p>
+                                <h3 className="text-lg font-bold text-gray-900 mb-2">Food Lover</h3>
+                                <p className="text-gray-600 text-sm mb-3">Order from your favorite restaurants and enjoy delicious meals delivered to your door.</p>
                                 <button 
                                     onClick={() => { setShowAuthModal(true); setAuthMode('customer'); }}
-                                    className="bg-red-800 text-white px-6 py-2 rounded hover:bg-red-900 transition-colors"
+                                    className="bg-red-800 text-white px-4 py-2 rounded hover:bg-red-900 transition-colors text-sm"
                                 >
                                     Join as Customer
                                 </button>
                             </div>
 
-                            <div className="bg-white rounded-xl shadow-md p-6 text-center">
-                                <div className="w-16 h-16 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                                    <Store className="text-orange-600" size={24} />
+                            <div className="bg-white rounded-xl shadow-md p-4 text-center">
+                                <div className="w-12 h-12 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                                    <Store className="text-orange-600" size={20} />
                                 </div>
-                                <h3 className="text-xl font-bold text-gray-900 mb-3">Restaurant Owner</h3>
-                                <p className="text-gray-600 mb-4">Reach more customers and grow your business with our delivery platform.</p>
+                                <h3 className="text-lg font-bold text-gray-900 mb-2">Restaurant Owner</h3>
+                                <p className="text-gray-600 text-sm mb-3">Reach more customers and grow your business with our delivery platform.</p>
                                 <button 
                                     onClick={() => { setShowAuthModal(true); setAuthMode('restaurant'); }}
-                                    className="bg-orange-600 text-white px-6 py-2 rounded hover:bg-orange-700 transition-colors"
+                                    className="bg-orange-600 text-white px-4 py-2 rounded hover:bg-orange-700 transition-colors text-sm"
                                 >
                                     Join as Restaurant
                                 </button>
                             </div>
 
-                            <div className="bg-white rounded-xl shadow-md p-6 text-center">
-                                <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                                    <Bike className="text-blue-600" size={24} />
+                            <div className="bg-white rounded-xl shadow-md p-4 text-center">
+                                <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                                    <Bike className="text-blue-600" size={20} />
                                 </div>
-                                <h3 className="text-xl font-bold text-gray-900 mb-3">Delivery Rider</h3>
-                                <p className="text-gray-600 mb-4">Earn money by delivering food to customers in your area. Flexible hours available.</p>
+                                <h3 className="text-lg font-bold text-gray-900 mb-2">Delivery Rider</h3>
+                                <p className="text-gray-600 text-sm mb-3">Earn money by delivering food to customers in your area. Flexible hours available.</p>
                                 <button 
                                     onClick={() => { setShowAuthModal(true); setAuthMode('rider'); }}
-                                    className="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700 transition-colors"
+                                    className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition-colors text-sm"
                                 >
                                     Join as Rider
                                 </button>
@@ -2321,13 +2456,13 @@ const CustomerDashboard = () => {
                     </div>
                 </div>
 
-                <div className="bg-red-800 text-white py-12">
+                <div className="bg-red-800 text-white py-6 md:py-8">
                     <div className="max-w-7xl mx-auto px-4 text-center">
-                        <h2 className="text-4xl font-bold mb-4">SPECIAL OFFER!</h2>
-                        <p className="text-xl mb-6">Get 20% OFF on your first order with promo code: WELCOME20</p>
+                        <h2 className="text-2xl md:text-3xl font-bold mb-3">SPECIAL OFFER!</h2>
+                        <p className="text-base md:text-lg mb-4">Get 20% OFF on your first order with promo code: WELCOME20</p>
                         <button 
                             onClick={() => user ? console.log('Grab offer') : setShowAuthModal(true)}
-                            className="bg-white text-red-800 px-8 py-3 rounded font-bold text-lg hover:bg-gray-100 transition-colors"
+                            className="bg-white text-red-800 px-6 py-2 rounded font-bold text-base hover:bg-gray-100 transition-colors"
                         >
                             {user ? "GRAB THIS OFFER" : "LOGIN TO GET OFFER"}
                         </button>
@@ -2341,60 +2476,60 @@ const CustomerDashboard = () => {
         return (
             <div className="min-h-screen bg-gray-50 flex items-center justify-center">
                 <div className="text-center">
-                    <div className="w-16 h-16 border-4 border-red-800 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-                    <p className="text-gray-600">Loading...</p>
+                    <div className="w-12 h-12 border-4 border-red-800 border-t-transparent rounded-full animate-spin mx-auto mb-3"></div>
+                    <p className="text-gray-600 text-sm">Loading...</p>
                 </div>
             </div>
         );
     }
 
     return (
-        <div className="min-h-screen bg-gray-50">
-            <header className="bg-white shadow-md sticky top-0 z-50">
-                <div className="bg-gray-800 text-white py-2">
-                    <div className="max-w-7xl mx-auto px-4 text-center text-sm">
+        <div className="min-h-screen bg-gray-50 pb-16 lg:pb-0">
+            <header className="bg-white shadow-md sticky top-0 z-40">
+                <div className="bg-gray-800 text-white py-1">
+                    <div className="max-w-7xl mx-auto px-4 text-center text-xs">
                         Free delivery on orders over ₱299! • ⭐ Rate your experience and get rewards
                     </div>
                 </div>
 
-                <div className="max-w-7xl mx-auto px-4 py-4">
+                <div className="max-w-7xl mx-auto px-4 py-2">
                     <div className="flex items-center justify-between">
-                        <div className="flex items-center space-x-3">
-                            <div className="w-12 h-12 bg-red-800 rounded-lg flex items-center justify-center text-white font-bold text-xl shadow-md">
+                        <div className="flex items-center space-x-2">
+                            <div className="w-8 h-8 bg-red-800 rounded flex items-center justify-center text-white font-bold text-sm shadow">
                                 FX
                             </div>
                             <div>
-                                <h1 className="text-2xl font-bold text-red-800">FOODEXPRESS</h1>
-                                <p className="text-xs text-gray-600">Delivery Service</p>
+                                <h1 className="text-lg font-bold text-red-800">FOODEXPRESS</h1>
+                                <p className="text-xs text-gray-600 hidden sm:block">Delivery Service</p>
                             </div>
                         </div>
 
                         {renderNavigation()}
 
-                        <div className="flex items-center space-x-4">
+                        <div className="flex items-center space-x-2">
                             {user ? (
                                 <>
-                                    <div className="flex items-center space-x-2">
-                                        <span className="text-gray-700">Welcome, {user.name}!</span>
+                                    <div className="hidden sm:flex items-center space-x-1">
+                                        <span className="text-gray-700 text-sm">Welcome, {user.name}!</span>
                                         {user.role === 'restaurant' && (
-                                            <span className="bg-orange-100 text-orange-800 px-2 py-1 rounded-full text-xs font-medium">
+                                            <span className="bg-orange-100 text-orange-800 px-1.5 py-0.5 rounded-full text-xs font-medium">
                                                 Restaurant
                                             </span>
                                         )}
                                         {user.role === 'rider' && (
-                                            <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs font-medium">
+                                            <span className="bg-blue-100 text-blue-800 px-1.5 py-0.5 rounded-full text-xs font-medium">
                                                 Rider
                                             </span>
                                         )}
                                     </div>
                                     <button 
                                         onClick={() => setIsCartOpen(true)}
-                                        className="relative flex items-center space-x-2 text-gray-700 hover:text-red-800"
+                                        className="relative flex items-center space-x-1 text-gray-700 hover:text-red-800"
                                     >
-                                        <ShoppingCart size={24} />
-                                        <span className="font-medium">CART</span>
+                                        <ShoppingCart size={20} />
+                                        <span className="font-medium text-sm hidden sm:block">CART</span>
                                         {getCartItemCount() > 0 && (
-                                            <span className="absolute -top-2 -right-2 bg-red-800 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs font-bold">
+                                            <span className="absolute -top-1 -right-1 bg-red-800 text-white rounded-full w-4 h-4 flex items-center justify-center text-xs font-bold">
                                                 {getCartItemCount()}
                                             </span>
                                         )}
@@ -2402,41 +2537,41 @@ const CustomerDashboard = () => {
                                     
                                     <button 
                                         onClick={logout}
-                                        className="bg-red-800 text-white px-4 py-2 rounded hover:bg-red-900 transition-colors shadow-md"
+                                        className="bg-red-800 text-white px-3 py-1.5 rounded hover:bg-red-900 transition-colors shadow text-sm"
                                     >
                                         LOGOUT
                                     </button>
                                 </>
                             ) : (
-                                <div className="flex items-center space-x-3">
+                                <div className="flex items-center space-x-2">
                                     <button 
                                         onClick={() => { setShowAuthModal(true); setAuthMode('login'); }}
-                                        className="text-gray-700 hover:text-red-800 font-medium"
+                                        className="text-gray-700 hover:text-red-800 font-medium text-sm"
                                     >
                                         LOGIN
                                     </button>
                                     <div className="relative group">
                                         <button 
-                                            className="bg-red-800 text-white px-4 py-2 rounded hover:bg-red-900 transition-colors shadow-md"
+                                            className="bg-red-800 text-white px-3 py-1.5 rounded hover:bg-red-900 transition-colors shadow text-sm"
                                         >
                                             SIGN UP
                                         </button>
-                                        <div className="absolute top-full left-0 mt-2 w-48 bg-white shadow-lg rounded-lg py-2 hidden group-hover:block z-50">
+                                        <div className="absolute top-full left-0 mt-1 w-36 bg-white shadow-lg rounded-lg py-1 hidden group-hover:block z-50">
                                             <button 
                                                 onClick={() => { setShowAuthModal(true); setAuthMode('customer'); }}
-                                                className="w-full text-left px-4 py-2 hover:bg-gray-100 text-gray-700"
+                                                className="w-full text-left px-3 py-1 hover:bg-gray-100 text-gray-700 text-xs"
                                             >
                                                  As Customer
                                             </button>
                                             <button 
                                                 onClick={() => { setShowAuthModal(true); setAuthMode('restaurant'); }}
-                                                className="w-full text-left px-4 py-2 hover:bg-gray-100 text-gray-700"
+                                                className="w-full text-left px-3 py-1 hover:bg-gray-100 text-gray-700 text-xs"
                                             >
                                                  As Restaurant
                                             </button>
                                             <button 
                                                 onClick={() => { setShowAuthModal(true); setAuthMode('rider'); }}
-                                                className="w-full text-left px-4 py-2 hover:bg-gray-100 text-gray-700"
+                                                className="w-full text-left px-3 py-1 hover:bg-gray-100 text-gray-700 text-xs"
                                             >
                                                  As Rider
                                             </button>
@@ -2449,29 +2584,31 @@ const CustomerDashboard = () => {
                 </div>
 
                 {activeSection === 'home' && (
-                    <div className="bg-gray-100 border-t border-b border-gray-200 py-4">
+                    <div className="bg-gray-100 border-t border-b border-gray-200 py-2">
                         <div className="max-w-7xl mx-auto px-4">
-                            <div className="flex items-center space-x-4">
-                                <div className="flex-1 max-w-2xl">
+                            <div className="flex flex-col sm:flex-row items-center gap-2">
+                                <div className="flex-1 max-w-2xl w-full">
                                     <div className="relative">
-                                        <Search size={20} className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400" />
+                                        <Search size={16} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
                                         <input 
                                             type="text" 
                                             placeholder="Search for restaurants, cuisines, or dishes..." 
                                             value={searchQuery}
                                             onChange={(e) => setSearchQuery(e.target.value)}
-                                            className="w-full pl-12 pr-4 py-3 bg-white border border-gray-300 rounded focus:ring-2 focus:ring-red-800 focus:border-red-800"
+                                            className="w-full pl-10 pr-3 py-2 bg-white border border-gray-300 rounded focus:ring-2 focus:ring-red-800 focus:border-red-800 text-sm"
                                         />
                                     </div>
                                 </div>
-                                <button className="flex items-center space-x-2 bg-red-800 text-white px-6 py-3 rounded hover:bg-red-900 transition-colors">
-                                    <Search size={16} />
-                                    <span>SEARCH</span>
-                                </button>
-                                <button className="flex items-center space-x-2 bg-white border border-gray-300 px-4 py-3 rounded hover:border-red-800 transition-colors">
-                                    <Filter size={16} />
-                                    <span className="font-semibold">FILTER</span>
-                                </button>
+                                <div className="flex gap-2 w-full sm:w-auto">
+                                    <button className="flex items-center space-x-1 bg-red-800 text-white px-3 py-2 rounded hover:bg-red-900 transition-colors text-sm w-full sm:w-auto justify-center">
+                                        <Search size={14} />
+                                        <span>SEARCH</span>
+                                    </button>
+                                    <button className="flex items-center space-x-1 bg-white border border-gray-300 px-3 py-2 rounded hover:border-red-800 transition-colors text-sm w-full sm:w-auto justify-center">
+                                        <Filter size={14} />
+                                        <span className="font-semibold">FILTER</span>
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -2480,19 +2617,21 @@ const CustomerDashboard = () => {
 
             {renderActiveSection()}
 
-            <footer className="bg-gray-900 text-white">
-                <div className="max-w-7xl mx-auto px-4 py-12">
-                    <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
+            {renderMobileNavigation()}
+
+            <footer className="bg-gray-900 text-white mt-8">
+                <div className="max-w-7xl mx-auto px-4 py-6">
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
                         <div>
-                            <h3 className="text-xl font-bold text-white mb-4">FOODEXPRESS</h3>
-                            <p className="text-gray-400 mb-4">
+                            <h3 className="text-lg font-bold text-white mb-3">FOODEXPRESS</h3>
+                            <p className="text-gray-400 text-sm mb-3">
                                 Delivering delicious food to your doorstep with the best quality and service.
                             </p>
-                            <div className="flex space-x-4">
+                            <div className="flex space-x-3">
                                 {[Facebook, Twitter, Instagram, Youtube].map((Icon, index) => (
                                     <Icon 
                                         key={index}
-                                        size={20} 
+                                        size={16} 
                                         className="text-gray-400 hover:text-white cursor-pointer" 
                                     />
                                 ))}
@@ -2500,11 +2639,11 @@ const CustomerDashboard = () => {
                         </div>
                         
                         <div>
-                            <h4 className="font-bold text-white mb-4">QUICK LINKS</h4>
-                            <ul className="space-y-2 text-gray-400">
+                            <h4 className="font-bold text-white mb-3 text-sm">QUICK LINKS</h4>
+                            <ul className="space-y-1 text-gray-400">
                                 {['About Us', 'Contact Us', 'FAQs', 'Privacy Policy'].map((link, index) => (
                                     <li key={index}>
-                                        <button className="hover:text-white transition-colors">
+                                        <button className="hover:text-white transition-colors text-xs">
                                             {link}
                                         </button>
                                     </li>
@@ -2513,30 +2652,30 @@ const CustomerDashboard = () => {
                         </div>
 
                         <div>
-                            <h4 className="font-bold text-white mb-4">CONTACT INFO</h4>
-                            <div className="space-y-2 text-gray-400">
-                                <div className="flex items-center space-x-2 hover:text-white transition-colors">
+                            <h4 className="font-bold text-white mb-3 text-sm">CONTACT INFO</h4>
+                            <div className="space-y-1 text-gray-400 text-xs">
+                                <div className="flex items-center space-x-1 hover:text-white transition-colors">
                                     <span>📞 09105019330</span>
                                 </div>
-                                <div className="flex items-center space-x-2 hover:text-white transition-colors">
+                                <div className="flex items-center space-x-1 hover:text-white transition-colors">
                                     <span>✉️ foodexpress@delivery.com</span>
                                 </div>
-                                <div className="flex items-center space-x-2 hover:text-white transition-colors">
+                                <div className="flex items-center space-x-1 hover:text-white transition-colors">
                                     <span>📍 Puerto Princesa City, Philippines</span>
                                 </div>
                             </div>
                         </div>
 
                         <div>
-                            <h4 className="font-bold text-white mb-4">NEWSLETTER</h4>
-                            <p className="text-gray-400 mb-4">Subscribe to get special offers and updates</p>
+                            <h4 className="font-bold text-white mb-3 text-sm">NEWSLETTER</h4>
+                            <p className="text-gray-400 text-xs mb-2">Subscribe to get special offers and updates</p>
                             <div className="flex">
                                 <input 
                                     type="email" 
                                     placeholder="Your email" 
-                                    className="flex-1 px-3 py-2 bg-gray-800 border border-gray-700 rounded-l focus:outline-none focus:border-red-800 transition-colors"
+                                    className="flex-1 px-2 py-1 bg-gray-800 border border-gray-700 rounded-l focus:outline-none focus:border-red-800 transition-colors text-xs"
                                 />
-                                <button className="bg-red-800 text-white px-4 py-2 rounded-r hover:bg-red-900 transition-colors">
+                                <button className="bg-red-800 text-white px-2 py-1 rounded-r hover:bg-red-900 transition-colors text-xs">
                                     SUBSCRIBE
                                 </button>
                             </div>
@@ -2545,10 +2684,10 @@ const CustomerDashboard = () => {
                 </div>
 
                 <div className="border-t border-gray-800">
-                    <div className="max-w-7xl mx-auto px-4 py-4">
-                        <div className="flex flex-col md:flex-row justify-between items-center text-sm text-gray-400">
+                    <div className="max-w-7xl mx-auto px-4 py-2">
+                        <div className="flex flex-col md:flex-row justify-between items-center text-xs text-gray-400">
                             <p>&copy; 2025 FoodExpress Delivery Service. All rights reserved.</p>
-                            <div className="flex space-x-4 mt-2 md:mt-0">
+                            <div className="flex space-x-3 mt-1 md:mt-0">
                                 {['Terms & Conditions', 'Privacy Policy', 'Sitemap'].map((item, index) => (
                                     <span 
                                         key={index}
