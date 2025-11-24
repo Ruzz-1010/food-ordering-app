@@ -1,6 +1,5 @@
-// SettingsTab.jsx - WITH REAL CONFIGURATION
 import React, { useState, useEffect } from 'react';
-import { Save, RefreshCw, Database, Shield, Bell, Mail, Globe, CreditCard } from 'lucide-react';
+import { Save, RefreshCw, Database, Shield, Bell, Mail, Globe, CreditCard, AlertCircle } from 'lucide-react';
 
 const SettingsTab = () => {
   const [settings, setSettings] = useState({
@@ -29,20 +28,14 @@ const SettingsTab = () => {
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState('');
 
-  const API_URL = 'https://food-ordering-app-production-35eb.up.railway.app/api';
-
   // Fetch current settings
   const fetchSettings = async () => {
     try {
       setLoading(true);
-      const token = localStorage.getItem('token');
       
-      // In a real app, you'd have a settings endpoint
-      // const response = await fetch(`${API_URL}/admin/settings`, {
-      //   headers: { 'Authorization': `Bearer ${token}` }
-      // });
+      // Simulate API call - replace with actual API endpoint
+      await new Promise(resolve => setTimeout(resolve, 1000));
       
-      // For now, we'll use mock data that simulates your current setup
       const currentSettings = {
         siteName: 'FoodExpress',
         siteDescription: 'Food Delivery System',
@@ -62,7 +55,7 @@ const SettingsTab = () => {
       
     } catch (error) {
       console.error('Error fetching settings:', error);
-      setMessage('Error loading settings');
+      setMessage('❌ Error loading settings');
     } finally {
       setLoading(false);
     }
@@ -88,7 +81,7 @@ const SettingsTab = () => {
       // });
       
       // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      await new Promise(resolve => setTimeout(resolve, 1500));
       
       setMessage('✅ Settings saved successfully!');
       setTimeout(() => setMessage(''), 3000);
@@ -117,9 +110,9 @@ const SettingsTab = () => {
 
   if (loading) {
     return (
-      <div className="bg-white rounded-2xl shadow-lg border border-orange-200 p-6">
-        <div className="flex justify-between items-center mb-6">
-          <h2 className="text-2xl font-bold text-gray-900"> System Settings</h2>
+      <div className="bg-white rounded-2xl shadow-lg border border-orange-200 p-4 sm:p-6">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+          <h2 className="text-xl sm:text-2xl font-bold text-gray-900">⚙️ System Settings</h2>
         </div>
         <div className="text-center py-12">
           <div className="w-12 h-12 border-4 border-orange-200 border-t-orange-500 rounded-full animate-spin mx-auto"></div>
@@ -130,28 +123,28 @@ const SettingsTab = () => {
   }
 
   return (
-    <div className="bg-white rounded-2xl shadow-lg border border-orange-200 p-6">
+    <div className="bg-white rounded-2xl shadow-lg border border-orange-200 p-4 sm:p-6">
       {/* Header */}
       <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 mb-6">
-        <div>
-          <h2 className="text-2xl font-bold text-gray-900">⚙️ System Settings</h2>
-          <p className="text-gray-600 mt-1">Configure your food delivery platform</p>
+        <div className="min-w-0 flex-1">
+          <h2 className="text-xl sm:text-2xl font-bold text-gray-900">⚙️ System Settings</h2>
+          <p className="text-gray-600 mt-1 text-sm sm:text-base">Configure your food delivery platform</p>
         </div>
-        <div className="flex space-x-3">
+        <div className="flex space-x-2 sm:space-x-3 w-full sm:w-auto">
           <button
             onClick={fetchSettings}
-            className="flex items-center space-x-2 bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-600 transition-colors"
+            className="flex items-center space-x-2 bg-gray-500 text-white px-3 sm:px-4 py-2 rounded-lg hover:bg-gray-600 transition-colors flex-1 sm:flex-none justify-center"
           >
             <RefreshCw size={16} />
-            <span>Reload</span>
+            <span className="text-sm sm:text-base">Reload</span>
           </button>
           <button
             onClick={handleSaveSettings}
             disabled={saving}
-            className="flex items-center space-x-2 bg-orange-500 text-white px-4 py-2 rounded-lg hover:bg-orange-600 transition-colors disabled:opacity-50"
+            className="flex items-center space-x-2 bg-orange-500 text-white px-3 sm:px-4 py-2 rounded-lg hover:bg-orange-600 transition-colors disabled:opacity-50 flex-1 sm:flex-none justify-center"
           >
             <Save size={16} />
-            <span>{saving ? 'Saving...' : 'Save Settings'}</span>
+            <span className="text-sm sm:text-base">{saving ? 'Saving...' : 'Save'}</span>
           </button>
         </div>
       </div>
@@ -160,14 +153,17 @@ const SettingsTab = () => {
         <div className={`p-4 rounded-lg mb-6 ${
           message.includes('✅') ? 'bg-green-100 text-green-800 border border-green-200' : 'bg-red-100 text-red-800 border border-red-200'
         }`}>
-          {message}
+          <div className="flex items-center space-x-2">
+            {message.includes('✅') ? <CheckCircle size={16} /> : <AlertCircle size={16} />}
+            <span>{message}</span>
+          </div>
         </div>
       )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 lg:gap-8">
         {/* General Settings */}
-        <div className="space-y-6">
-          <div className="bg-orange-50 border border-orange-200 rounded-xl p-6">
+        <div className="space-y-4 sm:space-y-6">
+          <div className="bg-orange-50 border border-orange-200 rounded-xl p-4 sm:p-6">
             <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
               <Globe size={20} className="text-orange-600 mr-2" />
               General Settings
@@ -180,7 +176,7 @@ const SettingsTab = () => {
                   type="text"
                   value={settings.siteName}
                   onChange={(e) => handleInputChange('siteName', e.target.value)}
-                  className="w-full border border-orange-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-orange-500"
+                  className="w-full border border-orange-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-orange-500 text-sm sm:text-base"
                 />
               </div>
               
@@ -190,17 +186,17 @@ const SettingsTab = () => {
                   value={settings.siteDescription}
                   onChange={(e) => handleInputChange('siteDescription', e.target.value)}
                   rows="3"
-                  className="w-full border border-orange-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-orange-500"
+                  className="w-full border border-orange-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-orange-500 text-sm sm:text-base"
                 />
               </div>
               
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Currency</label>
                   <select
                     value={settings.currency}
                     onChange={(e) => handleInputChange('currency', e.target.value)}
-                    className="w-full border border-orange-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-orange-500"
+                    className="w-full border border-orange-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-orange-500 text-sm sm:text-base"
                   >
                     <option value="PHP">Philippine Peso (₱)</option>
                     <option value="USD">US Dollar ($)</option>
@@ -212,7 +208,7 @@ const SettingsTab = () => {
                   <select
                     value={settings.timezone}
                     onChange={(e) => handleInputChange('timezone', e.target.value)}
-                    className="w-full border border-orange-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-orange-500"
+                    className="w-full border border-orange-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-orange-500 text-sm sm:text-base"
                   >
                     <option value="Asia/Manila">Manila (UTC+8)</option>
                     <option value="UTC">UTC</option>
@@ -223,7 +219,7 @@ const SettingsTab = () => {
           </div>
 
           {/* Payment Settings */}
-          <div className="bg-green-50 border border-green-200 rounded-xl p-6">
+          <div className="bg-green-50 border border-green-200 rounded-xl p-4 sm:p-6">
             <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
               <CreditCard size={20} className="text-green-600 mr-2" />
               Payment Settings
@@ -239,7 +235,7 @@ const SettingsTab = () => {
                   min="0"
                   max="50"
                   step="0.1"
-                  className="w-full border border-green-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500"
+                  className="w-full border border-green-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500 text-sm sm:text-base"
                 />
               </div>
               
@@ -251,7 +247,7 @@ const SettingsTab = () => {
                   onChange={(e) => handleInputChange('deliveryFee', parseFloat(e.target.value))}
                   min="0"
                   step="5"
-                  className="w-full border border-green-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500"
+                  className="w-full border border-green-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500 text-sm sm:text-base"
                 />
               </div>
             </div>
@@ -259,9 +255,9 @@ const SettingsTab = () => {
         </div>
 
         {/* Notification & Security Settings */}
-        <div className="space-y-6">
+        <div className="space-y-4 sm:space-y-6">
           {/* Notification Settings */}
-          <div className="bg-blue-50 border border-blue-200 rounded-xl p-6">
+          <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 sm:p-6">
             <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
               <Bell size={20} className="text-blue-600 mr-2" />
               Notification Settings
@@ -269,13 +265,13 @@ const SettingsTab = () => {
             
             <div className="space-y-4">
               <div className="flex items-center justify-between">
-                <div>
-                  <p className="font-medium text-gray-900">Email Notifications</p>
-                  <p className="text-sm text-gray-600">Receive email alerts</p>
+                <div className="min-w-0 flex-1 mr-4">
+                  <p className="font-medium text-gray-900 text-sm sm:text-base">Email Notifications</p>
+                  <p className="text-xs sm:text-sm text-gray-600">Receive email alerts</p>
                 </div>
                 <button
                   onClick={() => handleToggle('emailNotifications')}
-                  className={`relative inline-flex h-6 w-11 items-center rounded-full ${
+                  className={`relative inline-flex h-6 w-11 items-center rounded-full flex-shrink-0 ${
                     settings.emailNotifications ? 'bg-blue-600' : 'bg-gray-300'
                   }`}
                 >
@@ -286,13 +282,13 @@ const SettingsTab = () => {
               </div>
               
               <div className="flex items-center justify-between">
-                <div>
-                  <p className="font-medium text-gray-900">Order Alerts</p>
-                  <p className="text-sm text-gray-600">New order notifications</p>
+                <div className="min-w-0 flex-1 mr-4">
+                  <p className="font-medium text-gray-900 text-sm sm:text-base">Order Alerts</p>
+                  <p className="text-xs sm:text-sm text-gray-600">New order notifications</p>
                 </div>
                 <button
                   onClick={() => handleToggle('orderAlerts')}
-                  className={`relative inline-flex h-6 w-11 items-center rounded-full ${
+                  className={`relative inline-flex h-6 w-11 items-center rounded-full flex-shrink-0 ${
                     settings.orderAlerts ? 'bg-blue-600' : 'bg-gray-300'
                   }`}
                 >
@@ -303,13 +299,13 @@ const SettingsTab = () => {
               </div>
               
               <div className="flex items-center justify-between">
-                <div>
-                  <p className="font-medium text-gray-900">Promotional Notifications</p>
-                  <p className="text-sm text-gray-600">Promo and discount alerts</p>
+                <div className="min-w-0 flex-1 mr-4">
+                  <p className="font-medium text-gray-900 text-sm sm:text-base">Promotional Notifications</p>
+                  <p className="text-xs sm:text-sm text-gray-600">Promo and discount alerts</p>
                 </div>
                 <button
                   onClick={() => handleToggle('promoNotifications')}
-                  className={`relative inline-flex h-6 w-11 items-center rounded-full ${
+                  className={`relative inline-flex h-6 w-11 items-center rounded-full flex-shrink-0 ${
                     settings.promoNotifications ? 'bg-blue-600' : 'bg-gray-300'
                   }`}
                 >
@@ -322,7 +318,7 @@ const SettingsTab = () => {
           </div>
 
           {/* Security Settings */}
-          <div className="bg-purple-50 border border-purple-200 rounded-xl p-6">
+          <div className="bg-purple-50 border border-purple-200 rounded-xl p-4 sm:p-6">
             <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
               <Shield size={20} className="text-purple-600 mr-2" />
               Security & Approval
@@ -330,13 +326,13 @@ const SettingsTab = () => {
             
             <div className="space-y-4">
               <div className="flex items-center justify-between">
-                <div>
-                  <p className="font-medium text-gray-900">Require Restaurant Approval</p>
-                  <p className="text-sm text-gray-600">Manual approval for new restaurants</p>
+                <div className="min-w-0 flex-1 mr-4">
+                  <p className="font-medium text-gray-900 text-sm sm:text-base">Require Restaurant Approval</p>
+                  <p className="text-xs sm:text-sm text-gray-600">Manual approval for new restaurants</p>
                 </div>
                 <button
                   onClick={() => handleToggle('requireApproval')}
-                  className={`relative inline-flex h-6 w-11 items-center rounded-full ${
+                  className={`relative inline-flex h-6 w-11 items-center rounded-full flex-shrink-0 ${
                     settings.requireApproval ? 'bg-purple-600' : 'bg-gray-300'
                   }`}
                 >
@@ -347,13 +343,13 @@ const SettingsTab = () => {
               </div>
               
               <div className="flex items-center justify-between">
-                <div>
-                  <p className="font-medium text-gray-900">Auto-approve Customers</p>
-                  <p className="text-sm text-gray-600">Instant approval for customer accounts</p>
+                <div className="min-w-0 flex-1 mr-4">
+                  <p className="font-medium text-gray-900 text-sm sm:text-base">Auto-approve Customers</p>
+                  <p className="text-xs sm:text-sm text-gray-600">Instant approval for customer accounts</p>
                 </div>
                 <button
                   onClick={() => handleToggle('autoApproveCustomers')}
-                  className={`relative inline-flex h-6 w-11 items-center rounded-full ${
+                  className={`relative inline-flex h-6 w-11 items-center rounded-full flex-shrink-0 ${
                     settings.autoApproveCustomers ? 'bg-purple-600' : 'bg-gray-300'
                   }`}
                 >
@@ -366,7 +362,7 @@ const SettingsTab = () => {
           </div>
 
           {/* System Info */}
-          <div className="bg-gray-50 border border-gray-200 rounded-xl p-6">
+          <div className="bg-gray-50 border border-gray-200 rounded-xl p-4 sm:p-6">
             <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
               <Database size={20} className="text-gray-600 mr-2" />
               System Information

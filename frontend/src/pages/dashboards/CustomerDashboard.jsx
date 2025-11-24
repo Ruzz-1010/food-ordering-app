@@ -194,7 +194,7 @@ const HeroSlideshow = () => {
     };
 
     return (
-        <div className="relative h-80 md:h-96 lg:h-[500px] xl:h-[550px] overflow-hidden">
+        <div className="relative h-64 sm:h-80 md:h-96 lg:h-[500px] xl:h-[550px] overflow-hidden">
             {/* Slides */}
             <div 
                 className="flex transition-transform duration-700 ease-in-out h-full"
@@ -216,24 +216,24 @@ const HeroSlideshow = () => {
             {/* Navigation Arrows */}
             <button
                 onClick={prevSlide}
-                className="absolute left-2 md:left-4 top-1/2 transform -translate-y-1/2 bg-white bg-opacity-30 hover:bg-opacity-50 text-white p-2 rounded-full transition-all duration-300 backdrop-blur-sm"
+                className="absolute left-2 sm:left-4 top-1/2 transform -translate-y-1/2 bg-white bg-opacity-30 hover:bg-opacity-50 text-white p-1 sm:p-2 rounded-full transition-all duration-300 backdrop-blur-sm"
             >
-                <ChevronLeft size={20} className="md:w-6 md:h-6" />
+                <ChevronLeft size={16} className="sm:w-5 sm:h-5 md:w-6 md:h-6" />
             </button>
             <button
                 onClick={nextSlide}
-                className="absolute right-2 md:right-4 top-1/2 transform -translate-y-1/2 bg-white bg-opacity-30 hover:bg-opacity-50 text-white p-2 rounded-full transition-all duration-300 backdrop-blur-sm"
+                className="absolute right-2 sm:right-4 top-1/2 transform -translate-y-1/2 bg-white bg-opacity-30 hover:bg-opacity-50 text-white p-1 sm:p-2 rounded-full transition-all duration-300 backdrop-blur-sm"
             >
-                <ChevronRight size={20} className="md:w-6 md:h-6" />
+                <ChevronRight size={16} className="sm:w-5 sm:h-5 md:w-6 md:h-6" />
             </button>
 
             {/* Slide Indicators */}
-            <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex space-x-2">
+            <div className="absolute bottom-3 sm:bottom-4 left-1/2 transform -translate-x-1/2 flex space-x-2">
                 {slides.map((_, index) => (
                     <button
                         key={index}
                         onClick={() => goToSlide(index)}
-                        className={`w-2 h-2 md:w-3 md:h-3 rounded-full transition-all duration-300 ${
+                        className={`w-2 h-2 sm:w-3 sm:h-3 rounded-full transition-all duration-300 ${
                             index === currentSlide 
                                 ? 'bg-white scale-125' 
                                 : 'bg-white bg-opacity-50'
@@ -2502,35 +2502,35 @@ const CustomerDashboard = () => {
                     <div className="absolute inset-0 flex items-center justify-center">
                         <div className="text-center text-white px-4 max-w-4xl mx-auto">
                             {/* Logo in Hero Section - MUCH LARGER */}
-                            <div className="mb-8 flex justify-center">
+                            <div className="mb-4 sm:mb-6 md:mb-8 flex justify-center">
                                 <img 
                                     src="/logo.png" 
                                     alt="FoodExpress Logo" 
-                                    className="h-32 md:h-40 lg:h-48 w-auto bg-white bg-opacity-20 rounded-2xl p-4 shadow-2xl"
+                                    className="h-20 sm:h-24 md:h-32 lg:h-40 w-auto bg-white bg-opacity-20 rounded-2xl p-3 sm:p-4 shadow-2xl"
                                     onError={(e) => {
                                         e.target.style.display = 'none';
                                         e.target.nextSibling.style.display = 'flex';
                                     }}
                                 />
-                                <div className="h-32 md:h-40 lg:h-48 w-32 md:w-40 lg:w-48 bg-red-800 rounded-2xl flex items-center justify-center shadow-2xl hidden bg-opacity-90">
-                                    <span className="text-white font-bold text-4xl md:text-5xl lg:text-6xl">FX</span>
+                                <div className="h-20 sm:h-24 md:h-32 lg:h-40 w-20 sm:w-24 md:w-32 lg:w-40 bg-red-800 rounded-2xl flex items-center justify-center shadow-2xl hidden bg-opacity-90">
+                                    <span className="text-white font-bold text-2xl sm:text-3xl md:text-4xl lg:text-5xl">FX</span>
                                 </div>
                             </div>
                             
-                            <h1 className="text-3xl md:text-5xl lg:text-6xl font-bold mb-6 drop-shadow-2xl leading-tight">
+                            <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl xl:text-6xl font-bold mb-4 sm:mb-6 drop-shadow-2xl leading-tight">
                                 DELICIOUS FOOD DELIVERED TO YOUR DOORSTEP
                             </h1>
-                            <p className="text-xl md:text-2xl lg:text-3xl mb-10 opacity-95 drop-shadow-lg font-light">
+                            <p className="text-base sm:text-lg md:text-xl lg:text-2xl xl:text-3xl mb-6 sm:mb-8 md:mb-10 opacity-95 drop-shadow-lg font-light">
                                 Experience the best food delivery service in town
                             </p>
-                            <div className="flex flex-col sm:flex-row justify-center space-y-4 sm:space-y-0 sm:space-x-6">
+                            <div className="flex flex-col sm:flex-row justify-center space-y-3 sm:space-y-0 sm:space-x-4 md:space-x-6">
                                 <button 
                                     onClick={() => user ? setIsCartOpen(true) : setShowAuthModal(true)}
-                                    className="bg-white text-red-800 px-10 py-5 rounded-2xl font-bold text-xl hover:bg-gray-100 transition-all duration-300 shadow-2xl hover:scale-105 transform"
+                                    className="bg-white text-red-800 px-6 sm:px-8 md:px-10 py-3 sm:py-4 md:py-5 rounded-xl sm:rounded-2xl font-bold text-base sm:text-lg md:text-xl hover:bg-gray-100 transition-all duration-300 shadow-2xl hover:scale-105 transform"
                                 >
                                     {user ? "ORDER NOW" : "LOGIN TO ORDER"}
                                 </button>
-                                <button className="border-4 border-white text-white px-10 py-5 rounded-2xl font-bold text-xl hover:bg-white hover:text-red-800 transition-all duration-300 shadow-2xl hover:scale-105 transform">
+                                <button className="border-2 sm:border-4 border-white text-white px-6 sm:px-8 md:px-10 py-3 sm:py-4 md:py-5 rounded-xl sm:rounded-2xl font-bold text-base sm:text-lg md:text-xl hover:bg-white hover:text-red-800 transition-all duration-300 shadow-2xl hover:scale-105 transform">
                                     BROWSE RESTAURANTS
                                 </button>
                             </div>
@@ -2538,40 +2538,40 @@ const CustomerDashboard = () => {
                     </div>
                 </div>
 
-                <div className="max-w-7xl mx-auto px-4 py-8 md:py-12">
-                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
-                        <h2 className="text-2xl md:text-3xl lg:text-4xl font-bold text-gray-900">FEATURED RESTAURANTS</h2>
-                        <button className="text-red-800 hover:text-red-900 font-semibold text-lg">
+                <div className="max-w-7xl mx-auto px-4 py-6 sm:py-8 md:py-12">
+                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-4 mb-6 sm:mb-8">
+                        <h2 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-bold text-gray-900">FEATURED RESTAURANTS</h2>
+                        <button className="text-red-800 hover:text-red-900 font-semibold text-base sm:text-lg">
                             VIEW ALL →
                         </button>
                     </div>
                     
                     {loadingRestaurants ? (
-                        <div className="flex justify-center items-center py-12">
+                        <div className="flex justify-center items-center py-8 sm:py-12">
                             <div className="text-center">
-                                <div className="w-12 h-12 border-4 border-red-800 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-                                <p className="text-gray-600">Loading restaurants...</p>
+                                <div className="w-10 sm:w-12 h-10 sm:h-12 border-4 border-red-800 border-t-transparent rounded-full animate-spin mx-auto mb-3 sm:mb-4"></div>
+                                <p className="text-gray-600 text-sm sm:text-base">Loading restaurants...</p>
                             </div>
                         </div>
                     ) : apiError ? (
-                        <div className="text-center py-12">
-                            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6 max-w-md mx-auto">
-                                <p className="text-yellow-800 font-semibold mb-2"> API Connection</p>
-                                <p className="text-yellow-700 text-sm">{apiError}</p>
+                        <div className="text-center py-8 sm:py-12">
+                            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 sm:p-6 max-w-md mx-auto">
+                                <p className="text-yellow-800 font-semibold mb-2 text-sm sm:text-base"> API Connection</p>
+                                <p className="text-yellow-700 text-xs sm:text-sm">{apiError}</p>
                                 <p className="text-yellow-600 text-xs mt-2">Using real-time data from your database</p>
                             </div>
                         </div>
                     ) : filteredRestaurants.length === 0 ? (
-                        <div className="text-center py-12">
-                            <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 max-w-md mx-auto">
-                                <p className="text-blue-800 font-semibold text-lg"> No Restaurants Yet</p>
+                        <div className="text-center py-8 sm:py-12">
+                            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 sm:p-6 max-w-md mx-auto">
+                                <p className="text-blue-800 font-semibold text-base sm:text-lg"> No Restaurants Yet</p>
                                 <p className="text-blue-700 text-sm mt-2">
                                     No restaurants found in your database. Add restaurants via admin panel.
                                 </p>
                             </div>
                         </div>
                     ) : (
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
                             {filteredRestaurants.map((restaurant, index) => (
                                 <RestaurantCard 
                                     key={restaurant._id || restaurant.id || index}
@@ -2584,47 +2584,47 @@ const CustomerDashboard = () => {
                     )}
                 </div>
 
-                <div className="bg-gray-100 py-12 md:py-16">
+                <div className="bg-gray-100 py-8 sm:py-12 md:py-16">
                     <div className="max-w-7xl mx-auto px-4">
-                        <h2 className="text-3xl md:text-4xl font-bold text-center text-gray-900 mb-12">Join Our Community</h2>
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                            <div className="bg-white rounded-2xl shadow-xl p-6 text-center hover:transform hover:scale-105 transition-all duration-300">
-                                <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                                    <span className="text-2xl">🍽️</span>
+                        <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-center text-gray-900 mb-8 sm:mb-12">Join Our Community</h2>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 sm:gap-8">
+                            <div className="bg-white rounded-xl sm:rounded-2xl shadow-lg sm:shadow-xl p-4 sm:p-6 text-center hover:transform hover:scale-105 transition-all duration-300">
+                                <div className="w-12 sm:w-14 md:w-16 h-12 sm:h-14 md:h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-3 sm:mb-4">
+                                    <span className="text-xl sm:text-2xl">🍽️</span>
                                 </div>
-                                <h3 className="text-xl font-bold text-gray-900 mb-3">Food Lover</h3>
-                                <p className="text-gray-600 mb-4">Order from your favorite restaurants and enjoy delicious meals delivered to your door.</p>
+                                <h3 className="text-lg sm:text-xl font-bold text-gray-900 mb-2 sm:mb-3">Food Lover</h3>
+                                <p className="text-gray-600 text-sm sm:text-base mb-3 sm:mb-4">Order from your favorite restaurants and enjoy delicious meals delivered to your door.</p>
                                 <button 
                                     onClick={() => { setShowAuthModal(true); setAuthMode('customer'); }}
-                                    className="bg-red-800 text-white px-6 py-3 rounded-lg hover:bg-red-900 transition-colors font-semibold"
+                                    className="bg-red-800 text-white px-4 sm:px-6 py-2 sm:py-3 rounded-lg hover:bg-red-900 transition-colors font-semibold text-sm sm:text-base"
                                 >
                                     Join as Customer
                                 </button>
                             </div>
 
-                            <div className="bg-white rounded-2xl shadow-xl p-6 text-center hover:transform hover:scale-105 transition-all duration-300">
-                                <div className="w-16 h-16 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                                    <Store className="text-orange-600" size={28} />
+                            <div className="bg-white rounded-xl sm:rounded-2xl shadow-lg sm:shadow-xl p-4 sm:p-6 text-center hover:transform hover:scale-105 transition-all duration-300">
+                                <div className="w-12 sm:w-14 md:w-16 h-12 sm:h-14 md:h-16 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-3 sm:mb-4">
+                                <Store className="text-orange-600 w-5 h-5 sm:w-6 sm:h-6 md:w-7 md:h-7" />
                                 </div>
-                                <h3 className="text-xl font-bold text-gray-900 mb-3">Restaurant Owner</h3>
-                                <p className="text-gray-600 mb-4">Reach more customers and grow your business with our delivery platform.</p>
+                                <h3 className="text-lg sm:text-xl font-bold text-gray-900 mb-2 sm:mb-3">Restaurant Owner</h3>
+                                <p className="text-gray-600 text-sm sm:text-base mb-3 sm:mb-4">Reach more customers and grow your business with our delivery platform.</p>
                                 <button 
                                     onClick={() => { setShowAuthModal(true); setAuthMode('restaurant'); }}
-                                    className="bg-orange-600 text-white px-6 py-3 rounded-lg hover:bg-orange-700 transition-colors font-semibold"
+                                    className="bg-orange-600 text-white px-4 sm:px-6 py-2 sm:py-3 rounded-lg hover:bg-orange-700 transition-colors font-semibold text-sm sm:text-base"
                                 >
                                     Join as Restaurant
                                 </button>
                             </div>
 
-                            <div className="bg-white rounded-2xl shadow-xl p-6 text-center hover:transform hover:scale-105 transition-all duration-300">
-                                <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                                    <Bike className="text-blue-600" size={28} />
+                            <div className="bg-white rounded-xl sm:rounded-2xl shadow-lg sm:shadow-xl p-4 sm:p-6 text-center hover:transform hover:scale-105 transition-all duration-300">
+                                <div className="w-12 sm:w-14 md:w-16 h-12 sm:h-14 md:h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-3 sm:mb-4">
+                                <Bike className="text-blue-600 w-5 h-5 sm:w-6 sm:h-6 md:w-7 md:h-7" />
                                 </div>
-                                <h3 className="text-xl font-bold text-gray-900 mb-3">Delivery Rider</h3>
-                                <p className="text-gray-600 mb-4">Earn money by delivering food to customers in your area. Flexible hours available.</p>
+                                <h3 className="text-lg sm:text-xl font-bold text-gray-900 mb-2 sm:mb-3">Delivery Rider</h3>
+                                <p className="text-gray-600 text-sm sm:text-base mb-3 sm:mb-4">Earn money by delivering food to customers in your area. Flexible hours available.</p>
                                 <button 
                                     onClick={() => { setShowAuthModal(true); setAuthMode('rider'); }}
-                                    className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors font-semibold"
+                                    className="bg-blue-600 text-white px-4 sm:px-6 py-2 sm:py-3 rounded-lg hover:bg-blue-700 transition-colors font-semibold text-sm sm:text-base"
                                 >
                                     Join as Rider
                                 </button>
@@ -2633,13 +2633,13 @@ const CustomerDashboard = () => {
                     </div>
                 </div>
 
-                <div className="bg-red-800 text-white py-12 md:py-16">
+                <div className="bg-red-800 text-white py-8 sm:py-12 md:py-16">
                     <div className="max-w-7xl mx-auto px-4 text-center">
-                        <h2 className="text-3xl md:text-4xl font-bold mb-6">SPECIAL OFFER!</h2>
-                        <p className="text-xl md:text-2xl mb-8">Get 20% OFF on your first order with promo code: <strong>WELCOME20</strong></p>
+                        <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold mb-4 sm:mb-6">SPECIAL OFFER!</h2>
+                        <p className="text-lg sm:text-xl md:text-2xl mb-6 sm:mb-8">Get 20% OFF on your first order with promo code: <strong>WELCOME20</strong></p>
                         <button 
                             onClick={() => user ? console.log('Grab offer') : setShowAuthModal(true)}
-                            className="bg-white text-red-800 px-8 py-4 rounded-2xl font-bold text-xl hover:bg-gray-100 transition-all duration-300 shadow-2xl hover:scale-105 transform"
+                            className="bg-white text-red-800 px-6 sm:px-8 md:px-10 py-3 sm:py-4 rounded-xl sm:rounded-2xl font-bold text-base sm:text-lg md:text-xl hover:bg-gray-100 transition-all duration-300 shadow-2xl hover:scale-105 transform"
                         >
                             {user ? "GRAB THIS OFFER" : "LOGIN TO GET OFFER"}
                         </button>
@@ -2653,8 +2653,8 @@ const CustomerDashboard = () => {
         return (
             <div className="min-h-screen bg-gray-50 flex items-center justify-center">
                 <div className="text-center">
-                    <div className="w-16 h-16 border-4 border-red-800 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-                    <p className="text-gray-600 text-lg">Loading...</p>
+                    <div className="w-12 sm:w-16 h-12 sm:h-16 border-4 border-red-800 border-t-transparent rounded-full animate-spin mx-auto mb-3 sm:mb-4"></div>
+                    <p className="text-gray-600 text-sm sm:text-lg">Loading...</p>
                 </div>
             </div>
         );
@@ -2664,42 +2664,42 @@ const CustomerDashboard = () => {
         <div className="min-h-screen bg-gray-50 pb-16 lg:pb-0">
             <header className="bg-white shadow-lg sticky top-0 z-40">
                 <div className="bg-gray-800 text-white py-2">
-                    <div className="max-w-7xl mx-auto px-4 text-center text-sm">
+                    <div className="max-w-7xl mx-auto px-4 text-center text-xs sm:text-sm">
                         Free delivery on orders over ₱299! • ⭐ Rate your experience and get rewards
                     </div>
                 </div>
 
                 <div className="max-w-7xl mx-auto px-4 py-3">
                     <div className="flex items-center justify-between">
-                        <div className="flex items-center space-x-3">
+                        <div className="flex items-center space-x-2 sm:space-x-3">
                             {/* Logo in Header - LARGER */}
-                            <div className="flex items-center space-x-3">
+                            <div className="flex items-center space-x-2 sm:space-x-3">
                                 <img 
                                     src="/logo.png" 
                                     alt="FoodExpress Logo" 
-                                    className="h-10 w-auto"
+                                    className="h-12 sm:h-14 md:h-16 w-auto"
                                     onError={(e) => {
                                         e.target.style.display = 'none';
                                         e.target.nextSibling.style.display = 'flex';
                                     }}
                                 />
-                                <div className="h-10 w-10 bg-red-800 rounded-lg flex items-center justify-center text-white font-bold text-lg shadow hidden">
+                                <div className="h-12 sm:h-14 md:h-16 w-12 sm:w-14 md:w-16 bg-red-800 rounded-lg flex items-center justify-center text-white font-bold text-lg sm:text-xl md:text-2xl shadow hidden">
                                     FX
                                 </div>
                                 <div>
-                                    <h1 className="text-2xl font-bold text-red-800">FOODEXPRESS</h1>
-                                    <p className="text-sm text-gray-600 hidden sm:block">Delivery Service</p>
+                                    <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-red-800">FOODEXPRESS</h1>
+                                    <p className="text-xs sm:text-sm text-gray-600 hidden sm:block">Delivery Service</p>
                                 </div>
                             </div>
                         </div>
 
                         {renderNavigation()}
 
-                        <div className="flex items-center space-x-4">
+                        <div className="flex items-center space-x-2 sm:space-x-4">
                             {user ? (
                                 <>
                                     <div className="hidden sm:flex items-center space-x-2">
-                                        <span className="text-gray-700">Welcome, {user.name}!</span>
+                                        <span className="text-gray-700 text-sm">Welcome, {user.name}!</span>
                                         {user.role === 'restaurant' && (
                                             <span className="bg-orange-100 text-orange-800 px-2 py-1 rounded-full text-xs font-medium">
                                                 Restaurant
@@ -2713,12 +2713,12 @@ const CustomerDashboard = () => {
                                     </div>
                                     <button 
                                         onClick={() => setIsCartOpen(true)}
-                                        className="relative flex items-center space-x-2 text-gray-700 hover:text-red-800"
+                                        className="relative flex items-center space-x-1 sm:space-x-2 text-gray-700 hover:text-red-800"
                                     >
-                                        <ShoppingCart size={24} />
-                                        <span className="font-medium">CART</span>
+                                        <ShoppingCart size={20} className="sm:w-6 sm:h-6" />
+                                        <span className="font-medium text-sm sm:text-base">CART</span>
                                         {getCartItemCount() > 0 && (
-                                            <span className="absolute -top-2 -right-2 bg-red-800 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm font-bold">
+                                            <span className="absolute -top-2 -right-2 bg-red-800 text-white rounded-full w-5 h-5 sm:w-6 sm:h-6 flex items-center justify-center text-xs sm:text-sm font-bold">
                                                 {getCartItemCount()}
                                             </span>
                                         )}
@@ -2726,41 +2726,41 @@ const CustomerDashboard = () => {
                                     
                                     <button 
                                         onClick={logout}
-                                        className="bg-red-800 text-white px-4 py-2 rounded-lg hover:bg-red-900 transition-colors shadow-lg font-semibold"
+                                        className="bg-red-800 text-white px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg hover:bg-red-900 transition-colors shadow-lg font-semibold text-sm sm:text-base"
                                     >
                                         LOGOUT
                                     </button>
                                 </>
                             ) : (
-                                <div className="flex items-center space-x-4">
+                                <div className="flex items-center space-x-2 sm:space-x-4">
                                     <button 
                                         onClick={() => { setShowAuthModal(true); setAuthMode('login'); }}
-                                        className="text-gray-700 hover:text-red-800 font-semibold"
+                                        className="text-gray-700 hover:text-red-800 font-semibold text-sm sm:text-base"
                                     >
                                         LOGIN
                                     </button>
                                     <div className="relative group">
                                         <button 
-                                            className="bg-red-800 text-white px-4 py-2 rounded-lg hover:bg-red-900 transition-colors shadow-lg font-semibold"
+                                            className="bg-red-800 text-white px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg hover:bg-red-900 transition-colors shadow-lg font-semibold text-sm sm:text-base"
                                         >
                                             SIGN UP
                                         </button>
-                                        <div className="absolute top-full left-0 mt-2 w-48 bg-white shadow-xl rounded-lg py-2 hidden group-hover:block z-50">
+                                        <div className="absolute top-full left-0 mt-2 w-40 sm:w-48 bg-white shadow-xl rounded-lg py-2 hidden group-hover:block z-50">
                                             <button 
                                                 onClick={() => { setShowAuthModal(true); setAuthMode('customer'); }}
-                                                className="w-full text-left px-4 py-2 hover:bg-gray-100 text-gray-700 font-medium"
+                                                className="w-full text-left px-3 sm:px-4 py-2 hover:bg-gray-100 text-gray-700 font-medium text-sm"
                                             >
                                                  As Customer
                                             </button>
                                             <button 
                                                 onClick={() => { setShowAuthModal(true); setAuthMode('restaurant'); }}
-                                                className="w-full text-left px-4 py-2 hover:bg-gray-100 text-gray-700 font-medium"
+                                                className="w-full text-left px-3 sm:px-4 py-2 hover:bg-gray-100 text-gray-700 font-medium text-sm"
                                             >
                                                  As Restaurant
                                             </button>
                                             <button 
                                                 onClick={() => { setShowAuthModal(true); setAuthMode('rider'); }}
-                                                className="w-full text-left px-4 py-2 hover:bg-gray-100 text-gray-700 font-medium"
+                                                className="w-full text-left px-3 sm:px-4 py-2 hover:bg-gray-100 text-gray-700 font-medium text-sm"
                                             >
                                                  As Rider
                                             </button>
@@ -2778,23 +2778,23 @@ const CustomerDashboard = () => {
                             <div className="flex flex-col sm:flex-row items-center gap-3">
                                 <div className="flex-1 max-w-2xl w-full">
                                     <div className="relative">
-                                        <Search size={20} className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400" />
+                                        <Search size={18} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
                                         <input 
                                             type="text" 
                                             placeholder="Search for restaurants, cuisines, or dishes..." 
                                             value={searchQuery}
                                             onChange={(e) => setSearchQuery(e.target.value)}
-                                            className="w-full pl-12 pr-4 py-3 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-800 focus:border-red-800 text-lg"
+                                            className="w-full pl-10 sm:pl-12 pr-4 py-2 sm:py-3 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-800 focus:border-red-800 text-sm sm:text-base"
                                         />
                                     </div>
                                 </div>
-                                <div className="flex gap-3 w-full sm:w-auto">
-                                    <button className="flex items-center space-x-2 bg-red-800 text-white px-6 py-3 rounded-lg hover:bg-red-900 transition-colors text-lg w-full sm:w-auto justify-center font-semibold">
-                                        <Search size={18} />
+                                <div className="flex gap-2 sm:gap-3 w-full sm:w-auto">
+                                    <button className="flex items-center space-x-1 sm:space-x-2 bg-red-800 text-white px-4 sm:px-6 py-2 sm:py-3 rounded-lg hover:bg-red-900 transition-colors text-sm sm:text-base w-full sm:w-auto justify-center font-semibold">
+                                        <Search size={16} className="sm:w-5 sm:h-5" />
                                         <span>SEARCH</span>
                                     </button>
-                                    <button className="flex items-center space-x-2 bg-white border border-gray-300 px-6 py-3 rounded-lg hover:border-red-800 transition-colors text-lg w-full sm:w-auto justify-center font-semibold">
-                                        <Filter size={18} />
+                                    <button className="flex items-center space-x-1 sm:space-x-2 bg-white border border-gray-300 px-4 sm:px-6 py-2 sm:py-3 rounded-lg hover:border-red-800 transition-colors text-sm sm:text-base w-full sm:w-auto justify-center font-semibold">
+                                        <Filter size={16} className="sm:w-5 sm:h-5" />
                                         <span>FILTER</span>
                                     </button>
                                 </div>
@@ -2808,31 +2808,31 @@ const CustomerDashboard = () => {
 
             {renderMobileNavigation()}
 
-            <footer className="bg-gray-900 text-white mt-12">
-                <div className="max-w-7xl mx-auto px-4 py-8">
-                    <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
+            <footer className="bg-gray-900 text-white mt-8 sm:mt-12">
+                <div className="max-w-7xl mx-auto px-4 py-6 sm:py-8">
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-6 sm:gap-8">
                         <div>
-                            <h3 className="text-2xl font-bold text-white mb-4">FOODEXPRESS</h3>
-                            <p className="text-gray-400 mb-4">
+                            <h3 className="text-xl sm:text-2xl font-bold text-white mb-3 sm:mb-4">FOODEXPRESS</h3>
+                            <p className="text-gray-400 text-sm sm:text-base mb-3 sm:mb-4">
                                 Delivering delicious food to your doorstep with the best quality and service.
                             </p>
-                            <div className="flex space-x-4">
+                            <div className="flex space-x-3 sm:space-x-4">
                                 {[Facebook, Twitter, Instagram, Youtube].map((Icon, index) => (
                                     <Icon 
                                         key={index}
-                                        size={20} 
-                                        className="text-gray-400 hover:text-white cursor-pointer transition-colors" 
+                                        size={18} 
+                                        className="sm:w-5 sm:h-5 text-gray-400 hover:text-white cursor-pointer transition-colors" 
                                     />
                                 ))}
                             </div>
                         </div>
                         
                         <div>
-                            <h4 className="font-bold text-white mb-4 text-lg">QUICK LINKS</h4>
-                            <ul className="space-y-2 text-gray-400">
+                            <h4 className="font-bold text-white mb-3 sm:mb-4 text-base sm:text-lg">QUICK LINKS</h4>
+                            <ul className="space-y-1 sm:space-y-2 text-gray-400">
                                 {['About Us', 'Contact Us', 'FAQs', 'Privacy Policy'].map((link, index) => (
                                     <li key={index}>
-                                        <button className="hover:text-white transition-colors text-base">
+                                        <button className="hover:text-white transition-colors text-sm sm:text-base">
                                             {link}
                                         </button>
                                     </li>
@@ -2841,30 +2841,30 @@ const CustomerDashboard = () => {
                         </div>
 
                         <div>
-                            <h4 className="font-bold text-white mb-4 text-lg">CONTACT INFO</h4>
-                            <div className="space-y-2 text-gray-400">
-                                <div className="flex items-center space-x-2 hover:text-white transition-colors">
+                            <h4 className="font-bold text-white mb-3 sm:mb-4 text-base sm:text-lg">CONTACT INFO</h4>
+                            <div className="space-y-1 sm:space-y-2 text-gray-400">
+                                <div className="flex items-center space-x-2 hover:text-white transition-colors text-sm sm:text-base">
                                     <span>📞 09105019330</span>
                                 </div>
-                                <div className="flex items-center space-x-2 hover:text-white transition-colors">
+                                <div className="flex items-center space-x-2 hover:text-white transition-colors text-sm sm:text-base">
                                     <span>✉️ foodexpress@delivery.com</span>
                                 </div>
-                                <div className="flex items-center space-x-2 hover:text-white transition-colors">
+                                <div className="flex items-center space-x-2 hover:text-white transition-colors text-sm sm:text-base">
                                     <span>📍 Puerto Princesa City, Philippines</span>
                                 </div>
                             </div>
                         </div>
 
                         <div>
-                            <h4 className="font-bold text-white mb-4 text-lg">NEWSLETTER</h4>
-                            <p className="text-gray-400 mb-3">Subscribe to get special offers and updates</p>
+                            <h4 className="font-bold text-white mb-3 sm:mb-4 text-base sm:text-lg">NEWSLETTER</h4>
+                            <p className="text-gray-400 text-sm sm:text-base mb-2 sm:mb-3">Subscribe to get special offers and updates</p>
                             <div className="flex">
                                 <input 
                                     type="email" 
                                     placeholder="Your email" 
-                                    className="flex-1 px-3 py-2 bg-gray-800 border border-gray-700 rounded-l focus:outline-none focus:border-red-800 transition-colors"
+                                    className="flex-1 px-2 sm:px-3 py-1.5 sm:py-2 bg-gray-800 border border-gray-700 rounded-l focus:outline-none focus:border-red-800 transition-colors text-sm"
                                 />
-                                <button className="bg-red-800 text-white px-4 py-2 rounded-r hover:bg-red-900 transition-colors font-semibold">
+                                <button className="bg-red-800 text-white px-3 sm:px-4 py-1.5 sm:py-2 rounded-r hover:bg-red-900 transition-colors font-semibold text-sm">
                                     SUBSCRIBE
                                 </button>
                             </div>
@@ -2873,14 +2873,14 @@ const CustomerDashboard = () => {
                 </div>
 
                 <div className="border-t border-gray-800">
-                    <div className="max-w-7xl mx-auto px-4 py-4">
+                    <div className="max-w-7xl mx-auto px-4 py-3 sm:py-4">
                         <div className="flex flex-col md:flex-row justify-between items-center text-gray-400">
-                            <p className="text-sm">&copy; 2025 FoodExpress Delivery Service. All rights reserved.</p>
-                            <div className="flex space-x-6 mt-2 md:mt-0">
+                            <p className="text-xs sm:text-sm">&copy; 2025 FoodExpress Delivery Service. All rights reserved.</p>
+                            <div className="flex space-x-4 sm:space-x-6 mt-2 md:mt-0">
                                 {['Terms & Conditions', 'Privacy Policy', 'Sitemap'].map((item, index) => (
                                     <span 
                                         key={index}
-                                        className="hover:text-white transition-colors cursor-pointer text-sm"
+                                        className="hover:text-white transition-colors cursor-pointer text-xs sm:text-sm"
                                     >
                                         {item}
                                     </span>
