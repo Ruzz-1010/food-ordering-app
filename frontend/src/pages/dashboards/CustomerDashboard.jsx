@@ -152,8 +152,8 @@ const HeroSlideshow = () => {
         },
         {
             id: 2,
-            image: "https://images.unsplash.com/photo-1565958011703-44f9829ba187?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=800&h=600&crop=center",
-            alt: "Fresh Burger"
+            image: "https://www.manginasal.ph/wp-content/uploads/2025/07/1920-x-470.png",
+            alt: "Mang inasal"
         },
         {
             id: 3,
@@ -162,8 +162,8 @@ const HeroSlideshow = () => {
         },
         {
             id: 4,
-            image: "https://images.unsplash.com/photo-1563379926898-05f4575a45d8?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=800&h=600&crop=center",
-            alt: "Pasta Dish"
+            image: "https://img1.wsimg.com/isteam/ip/8e16088e-228d-4ec0-bf62-c38e1dd5a2ca/Screenshot%202025-01-04%20114708.png/:/cr=t:0.66%25,l:0%25,w:100%25,h:67.64%25/rs=w:515,h:234,cg:true",
+            alt: "Ribshack"
         },
         {
             id: 5,

@@ -1,5 +1,6 @@
+// SettingsTab.jsx - FIXED VERSION
 import React, { useState, useEffect } from 'react';
-import { Save, RefreshCw, Database, Shield, Bell, Mail, Globe, CreditCard, AlertCircle } from 'lucide-react';
+import { Save, RefreshCw, Database, Shield, Bell, Mail, Globe, CreditCard, AlertCircle, CheckCircle } from 'lucide-react';
 
 const SettingsTab = () => {
   const [settings, setSettings] = useState({
@@ -130,7 +131,7 @@ const SettingsTab = () => {
           <h2 className="text-xl sm:text-2xl font-bold text-gray-900">⚙️ System Settings</h2>
           <p className="text-gray-600 mt-1 text-sm sm:text-base">Configure your food delivery platform</p>
         </div>
-        <div className="flex space-x-2 sm:space-x-3 w-full sm:w-auto">
+        <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
           <button
             onClick={fetchSettings}
             className="flex items-center space-x-2 bg-gray-500 text-white px-3 sm:px-4 py-2 rounded-lg hover:bg-gray-600 transition-colors flex-1 sm:flex-none justify-center"
