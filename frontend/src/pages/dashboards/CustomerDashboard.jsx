@@ -143,31 +143,31 @@ const useCart = () => {
 const HeroSlideshow = () => {
     const [currentSlide, setCurrentSlide] = useState(0);
     
-    // Sample food images for slideshow - Replace these with your actual images
+    // Optimized food images - cropped and focused on food
     const slides = [
         {
             id: 1,
-            image: "https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1080&q=80",
+            image: "https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=800&h=600&crop=center",
             alt: "Delicious Pizza"
         },
         {
             id: 2,
-            image: "https://images.unsplash.com/photo-1565958011703-44f9829ba187?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1080&q=80",
+            image: "https://www.behance.net/gallery/203222037/Jollibee-(2024)/modules/1153070251",
             alt: "Fresh Burger"
         },
         {
             id: 3,
-            image: "https://images.unsplash.com/photo-1555949963-aa79dcee981c?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1080&q=80",
+            image: "https://images.unsplash.com/photo-1555949963-aa79dcee981c?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=800&h=600&crop=center",
             alt: "Sushi Platter"
         },
         {
             id: 4,
-            image: "https://images.unsplash.com/photo-1563379926898-05f4575a45d8?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1080&q=80",
+            image: "https://images.unsplash.com/photo-1563379926898-05f4575a45d8?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=800&h=600&crop=center",
             alt: "Pasta Dish"
         },
         {
             id: 5,
-            image: "https://images.unsplash.com/photo-1567620905732-2d1ec7ab7445?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1080&q=80",
+            image: "https://images.unsplash.com/photo-1567620905732-2d1ec7ab7445?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=800&h=600&crop=center",
             alt: "Breakfast Platter"
         }
     ];
@@ -176,7 +176,7 @@ const HeroSlideshow = () => {
     useEffect(() => {
         const timer = setInterval(() => {
             setCurrentSlide((prev) => (prev + 1) % slides.length);
-        }, 5000); // Change slide every 5 seconds
+        }, 4000); // Change slide every 4 seconds
 
         return () => clearInterval(timer);
     }, [slides.length]);
@@ -194,21 +194,21 @@ const HeroSlideshow = () => {
     };
 
     return (
-        <div className="relative h-full w-full overflow-hidden">
+        <div className="relative h-80 md:h-96 lg:h-[500px] xl:h-[550px] overflow-hidden">
             {/* Slides */}
             <div 
-                className="flex transition-transform duration-500 ease-in-out h-full"
+                className="flex transition-transform duration-700 ease-in-out h-full"
                 style={{ transform: `translateX(-${currentSlide * 100}%)` }}
             >
                 {slides.map((slide, index) => (
-                    <div key={slide.id} className="w-full h-full flex-shrink-0">
+                    <div key={slide.id} className="w-full h-full flex-shrink-0 relative">
                         <img
                             src={slide.image}
                             alt={slide.alt}
                             className="w-full h-full object-cover"
                         />
-                        {/* Overlay for better text readability */}
-                        <div className="absolute inset-0 bg-black bg-opacity-40"></div>
+                        {/* Darker overlay for better text readability */}
+                        <div className="absolute inset-0 bg-black bg-opacity-50"></div>
                     </div>
                 ))}
             </div>
@@ -216,15 +216,15 @@ const HeroSlideshow = () => {
             {/* Navigation Arrows */}
             <button
                 onClick={prevSlide}
-                className="absolute left-4 top-1/2 transform -translate-y-1/2 bg-white bg-opacity-20 hover:bg-opacity-30 text-white p-2 rounded-full transition-all duration-300"
+                className="absolute left-2 md:left-4 top-1/2 transform -translate-y-1/2 bg-white bg-opacity-30 hover:bg-opacity-50 text-white p-2 rounded-full transition-all duration-300 backdrop-blur-sm"
             >
-                <ChevronLeft size={24} />
+                <ChevronLeft size={20} className="md:w-6 md:h-6" />
             </button>
             <button
                 onClick={nextSlide}
-                className="absolute right-4 top-1/2 transform -translate-y-1/2 bg-white bg-opacity-20 hover:bg-opacity-30 text-white p-2 rounded-full transition-all duration-300"
+                className="absolute right-2 md:right-4 top-1/2 transform -translate-y-1/2 bg-white bg-opacity-30 hover:bg-opacity-50 text-white p-2 rounded-full transition-all duration-300 backdrop-blur-sm"
             >
-                <ChevronRight size={24} />
+                <ChevronRight size={20} className="md:w-6 md:h-6" />
             </button>
 
             {/* Slide Indicators */}
@@ -233,9 +233,9 @@ const HeroSlideshow = () => {
                     <button
                         key={index}
                         onClick={() => goToSlide(index)}
-                        className={`w-3 h-3 rounded-full transition-all duration-300 ${
+                        className={`w-2 h-2 md:w-3 md:h-3 rounded-full transition-all duration-300 ${
                             index === currentSlide 
-                                ? 'bg-white' 
+                                ? 'bg-white scale-125' 
                                 : 'bg-white bg-opacity-50'
                         }`}
                     />
@@ -546,41 +546,41 @@ const LoginForm = ({ onLogin, onSwitchToRegister, onClose, loading }) => {
     return (
         <div className="bg-white rounded-lg shadow-xl p-6 max-w-md w-full mx-4">
             <div className="text-center mb-6">
-                {/* Logo in Login Form */}
-                <div className="mx-auto mb-3 flex justify-center">
+                {/* Logo in Login Form - LARGER */}
+                <div className="mx-auto mb-4 flex justify-center">
                     <img 
                         src="/logo.png" 
                         alt="FoodExpress Logo" 
-                        className="h-12 w-auto"
+                        className="h-20 w-auto"
                         onError={(e) => {
                             e.target.style.display = 'none';
                             e.target.nextSibling.style.display = 'flex';
                         }}
                     />
-                    <div className="h-12 w-12 bg-red-800 rounded-lg flex items-center justify-center shadow-md hidden">
-                        <span className="text-white font-bold text-lg">FX</span>
+                    <div className="h-20 w-20 bg-red-800 rounded-lg flex items-center justify-center shadow-md hidden">
+                        <span className="text-white font-bold text-2xl">FX</span>
                     </div>
                 </div>
-                <h2 className="text-xl font-bold text-gray-900 mb-1">Welcome Back</h2>
-                <p className="text-gray-600 text-sm">Sign in to your FoodExpress account</p>
+                <h2 className="text-2xl font-bold text-gray-900 mb-2">Welcome Back</h2>
+                <p className="text-gray-600">Sign in to your FoodExpress account</p>
             </div>
 
             {error && (
-                <div className="bg-red-100 border border-red-400 text-red-700 px-3 py-2 rounded mb-4 text-sm">
+                <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
                     {error}
                 </div>
             )}
 
-            <form onSubmit={handleSubmit} className="space-y-4">
+            <form onSubmit={handleSubmit} className="space-y-6">
                 <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
                         Email Address
                     </label>
                     <input
                         type="email"
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-800 focus:border-red-800 text-sm"
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-800 focus:border-red-800"
                         placeholder="Enter your email"
                         required
                         disabled={loading}
@@ -588,14 +588,14 @@ const LoginForm = ({ onLogin, onSwitchToRegister, onClose, loading }) => {
                 </div>
                 
                 <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
                         Password
                     </label>
                     <input
                         type="password"
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-800 focus:border-red-800 text-sm"
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-800 focus:border-red-800"
                         placeholder="Enter your password"
                         required
                         disabled={loading}
@@ -605,7 +605,7 @@ const LoginForm = ({ onLogin, onSwitchToRegister, onClose, loading }) => {
                 <button
                     type="submit"
                     disabled={loading}
-                    className="w-full bg-red-800 text-white py-2 rounded-lg font-semibold hover:bg-red-900 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+                    className="w-full bg-red-800 text-white py-3 rounded-lg font-semibold hover:bg-red-900 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                     {loading ? 'Signing in...' : 'SIGN IN'}
                 </button>
@@ -614,7 +614,7 @@ const LoginForm = ({ onLogin, onSwitchToRegister, onClose, loading }) => {
                     <button
                         type="button"
                         onClick={onSwitchToRegister}
-                        className="text-red-800 hover:text-red-900 font-medium text-sm"
+                        className="text-red-800 hover:text-red-900 font-medium"
                         disabled={loading}
                     >
                         Don't have an account? Sign up now
@@ -665,42 +665,42 @@ const CustomerRegisterForm = ({ onRegister, onSwitchToLogin, onSwitchToRestauran
     };
 
     return (
-        <div className="bg-white rounded-lg shadow-xl p-6 max-w-md w-full mx-4 max-h-[90vh] overflow-y-auto">
-            <div className="text-center mb-6">
-                {/* Logo in Register Form */}
-                <div className="mx-auto mb-3 flex justify-center">
+        <div className="bg-white rounded-lg shadow-xl p-8 max-w-md w-full mx-4 max-h-[90vh] overflow-y-auto">
+            <div className="text-center mb-8">
+                {/* Logo in Register Form - LARGER */}
+                <div className="mx-auto mb-4 flex justify-center">
                     <img 
                         src="/logo.png" 
                         alt="FoodExpress Logo" 
-                        className="h-12 w-auto"
+                        className="h-20 w-auto"
                         onError={(e) => {
                             e.target.style.display = 'none';
                             e.target.nextSibling.style.display = 'flex';
                         }}
                     />
-                    <div className="h-12 w-12 bg-red-800 rounded-lg flex items-center justify-center shadow-md hidden">
-                        <span className="text-white font-bold text-lg">FX</span>
+                    <div className="h-20 w-20 bg-red-800 rounded-lg flex items-center justify-center shadow-md hidden">
+                        <span className="text-white font-bold text-2xl">FX</span>
                     </div>
                 </div>
-                <h2 className="text-xl font-bold text-gray-900 mb-1">Join as Customer</h2>
-                <p className="text-gray-600 text-sm">Create your account to start ordering food</p>
+                <h2 className="text-2xl font-bold text-gray-900 mb-2">Join as Customer</h2>
+                <p className="text-gray-600">Create your account to start ordering food</p>
             </div>
 
             {error && (
-                <div className="bg-red-100 border border-red-400 text-red-700 px-3 py-2 rounded mb-4 text-sm">
+                <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
                     {error}
                 </div>
             )}
 
-            <form onSubmit={handleSubmit} className="space-y-3">
+            <form onSubmit={handleSubmit} className="space-y-6">
                 <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Full Name</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Full Name</label>
                     <input
                         type="text"
                         name="name"
                         value={formData.name}
                         onChange={handleChange}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-800 focus:border-red-800 text-sm"
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-800 focus:border-red-800"
                         placeholder="Enter your full name"
                         required
                         disabled={loading}
@@ -708,13 +708,13 @@ const CustomerRegisterForm = ({ onRegister, onSwitchToLogin, onSwitchToRestauran
                 </div>
 
                 <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Email Address</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Email Address</label>
                     <input
                         type="email"
                         name="email"
                         value={formData.email}
                         onChange={handleChange}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-800 focus:border-red-800 text-sm"
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-800 focus:border-red-800"
                         placeholder="Enter your email"
                         required
                         disabled={loading}
@@ -722,13 +722,13 @@ const CustomerRegisterForm = ({ onRegister, onSwitchToLogin, onSwitchToRestauran
                 </div>
 
                 <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Password</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Password</label>
                     <input
                         type="password"
                         name="password"
                         value={formData.password}
                         onChange={handleChange}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-800 focus:border-red-800 text-sm"
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-800 focus:border-red-800"
                         placeholder="Create a password"
                         required
                         disabled={loading}
@@ -736,13 +736,13 @@ const CustomerRegisterForm = ({ onRegister, onSwitchToLogin, onSwitchToRestauran
                 </div>
 
                 <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Phone Number</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Phone Number</label>
                     <input
                         type="tel"
                         name="phone"
                         value={formData.phone}
                         onChange={handleChange}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-800 focus:border-red-800 text-sm"
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-800 focus:border-red-800"
                         placeholder="09XXXXXXXXX"
                         required
                         disabled={loading}
@@ -750,7 +750,7 @@ const CustomerRegisterForm = ({ onRegister, onSwitchToLogin, onSwitchToRestauran
                 </div>
 
                 <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
                         Delivery Location
                     </label>
                     <LocationMap 
@@ -762,18 +762,18 @@ const CustomerRegisterForm = ({ onRegister, onSwitchToLogin, onSwitchToRestauran
                 <button
                     type="submit"
                     disabled={loading}
-                    className="w-full bg-red-800 text-white py-2 rounded-lg font-semibold hover:bg-red-900 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+                    className="w-full bg-red-800 text-white py-3 rounded-lg font-semibold hover:bg-red-900 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                     {loading ? 'Creating account...' : 'CREATE CUSTOMER ACCOUNT'}
                 </button>
 
-                <div className="text-center space-y-2">
-                    <p className="text-gray-600 text-xs">Want to join as?</p>
-                    <div className="flex justify-center space-x-3">
+                <div className="text-center space-y-4">
+                    <p className="text-gray-600">Want to join as?</p>
+                    <div className="flex justify-center space-x-6">
                         <button
                             type="button"
                             onClick={onSwitchToRestaurant}
-                            className="text-red-800 hover:text-red-900 font-medium text-xs"
+                            className="text-red-800 hover:text-red-900 font-medium"
                             disabled={loading}
                         >
                             Restaurant Owner
@@ -781,7 +781,7 @@ const CustomerRegisterForm = ({ onRegister, onSwitchToLogin, onSwitchToRestauran
                         <button
                             type="button"
                             onClick={onSwitchToRider}
-                            className="text-red-800 hover:text-red-900 font-medium text-xs"
+                            className="text-red-800 hover:text-red-900 font-medium"
                             disabled={loading}
                         >
                             Delivery Rider
@@ -790,7 +790,7 @@ const CustomerRegisterForm = ({ onRegister, onSwitchToLogin, onSwitchToRestauran
                     <button
                         type="button"
                         onClick={onSwitchToLogin}
-                        className="text-red-800 hover:text-red-900 font-medium text-xs"
+                        className="text-red-800 hover:text-red-900 font-medium"
                         disabled={loading}
                     >
                         Already have an account? Sign in
@@ -843,42 +843,42 @@ const RestaurantRegisterForm = ({ onRegister, onSwitchToLogin, onSwitchToCustome
     };
 
     return (
-        <div className="bg-white rounded-lg shadow-xl p-6 max-w-md w-full mx-4 max-h-[90vh] overflow-y-auto">
-            <div className="text-center mb-6">
-                {/* Logo in Restaurant Register Form */}
-                <div className="mx-auto mb-3 flex justify-center">
+        <div className="bg-white rounded-lg shadow-xl p-8 max-w-md w-full mx-4 max-h-[90vh] overflow-y-auto">
+            <div className="text-center mb-8">
+                {/* Logo in Restaurant Register Form - LARGER */}
+                <div className="mx-auto mb-4 flex justify-center">
                     <img 
                         src="/logo.png" 
                         alt="FoodExpress Logo" 
-                        className="h-12 w-auto"
+                        className="h-20 w-auto"
                         onError={(e) => {
                             e.target.style.display = 'none';
                             e.target.nextSibling.style.display = 'flex';
                         }}
                     />
-                    <div className="h-12 w-12 bg-orange-600 rounded-lg flex items-center justify-center shadow-md hidden">
-                        <Store className="text-white" size={20} />
+                    <div className="h-20 w-20 bg-orange-600 rounded-lg flex items-center justify-center shadow-md hidden">
+                        <Store className="text-white" size={28} />
                     </div>
                 </div>
-                <h2 className="text-xl font-bold text-gray-900 mb-1">Join as Restaurant</h2>
-                <p className="text-gray-600 text-sm">Register your restaurant and start serving customers</p>
+                <h2 className="text-2xl font-bold text-gray-900 mb-2">Join as Restaurant</h2>
+                <p className="text-gray-600">Register your restaurant and start serving customers</p>
             </div>
 
             {error && (
-                <div className="bg-red-100 border border-red-400 text-red-700 px-3 py-2 rounded mb-4 text-sm">
+                <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
                     {error}
                 </div>
             )}
 
-            <form onSubmit={handleSubmit} className="space-y-3">
+            <form onSubmit={handleSubmit} className="space-y-6">
                 <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Restaurant Name</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Restaurant Name</label>
                     <input
                         type="text"
                         name="restaurantName"
                         value={formData.restaurantName}
                         onChange={handleChange}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-600 focus:border-orange-600 text-sm"
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-600 focus:border-orange-600"
                         placeholder="Enter your restaurant name"
                         required
                         disabled={loading}
@@ -886,12 +886,12 @@ const RestaurantRegisterForm = ({ onRegister, onSwitchToLogin, onSwitchToCustome
                 </div>
 
                 <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Cuisine Type</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Cuisine Type</label>
                     <select
                         name="cuisine"
                         value={formData.cuisine}
                         onChange={handleChange}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-600 focus:border-orange-600 text-sm"
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-600 focus:border-orange-600"
                         required
                         disabled={loading}
                     >
@@ -912,13 +912,13 @@ const RestaurantRegisterForm = ({ onRegister, onSwitchToLogin, onSwitchToCustome
                 </div>
 
                 <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Owner Name</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Owner Name</label>
                     <input
                         type="text"
                         name="name"
                         value={formData.name}
                         onChange={handleChange}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-600 focus:border-orange-600 text-sm"
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-600 focus:border-orange-600"
                         placeholder="Enter owner's full name"
                         required
                         disabled={loading}
@@ -926,13 +926,13 @@ const RestaurantRegisterForm = ({ onRegister, onSwitchToLogin, onSwitchToCustome
                 </div>
 
                 <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Email Address</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Email Address</label>
                     <input
                         type="email"
                         name="email"
                         value={formData.email}
                         onChange={handleChange}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-600 focus:border-orange-600 text-sm"
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-600 focus:border-orange-600"
                         placeholder="Enter business email"
                         required
                         disabled={loading}
@@ -940,13 +940,13 @@ const RestaurantRegisterForm = ({ onRegister, onSwitchToLogin, onSwitchToCustome
                 </div>
 
                 <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Password</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Password</label>
                     <input
                         type="password"
                         name="password"
                         value={formData.password}
                         onChange={handleChange}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-600 focus:border-orange-600 text-sm"
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-600 focus:border-orange-600"
                         placeholder="Create a password"
                         required
                         disabled={loading}
@@ -954,13 +954,13 @@ const RestaurantRegisterForm = ({ onRegister, onSwitchToLogin, onSwitchToCustome
                 </div>
 
                 <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Phone Number</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Phone Number</label>
                     <input
                         type="tel"
                         name="phone"
                         value={formData.phone}
                         onChange={handleChange}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-600 focus:border-orange-600 text-sm"
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-600 focus:border-orange-600"
                         placeholder="09XXXXXXXXX"
                         required
                         disabled={loading}
@@ -968,7 +968,7 @@ const RestaurantRegisterForm = ({ onRegister, onSwitchToLogin, onSwitchToCustome
                 </div>
 
                 <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
                         Restaurant Location
                     </label>
                     <LocationMap 
@@ -977,8 +977,8 @@ const RestaurantRegisterForm = ({ onRegister, onSwitchToLogin, onSwitchToCustome
                     />
                 </div>
 
-                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 text-xs">
-                    <p className="text-yellow-800">
+                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                    <p className="text-sm text-yellow-800">
                         <strong>Note:</strong> Restaurant accounts require admin approval before you can start accepting orders.
                         This usually takes 24-48 hours.
                     </p>
@@ -987,18 +987,18 @@ const RestaurantRegisterForm = ({ onRegister, onSwitchToLogin, onSwitchToCustome
                 <button
                     type="submit"
                     disabled={loading}
-                    className="w-full bg-orange-600 text-white py-2 rounded-lg font-semibold hover:bg-orange-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+                    className="w-full bg-orange-600 text-white py-3 rounded-lg font-semibold hover:bg-orange-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                     {loading ? 'Creating account...' : 'REGISTER RESTAURANT'}
                 </button>
 
-                <div className="text-center space-y-2">
-                    <p className="text-gray-600 text-xs">Want to join as?</p>
-                    <div className="flex justify-center space-x-3">
+                <div className="text-center space-y-4">
+                    <p className="text-gray-600">Want to join as?</p>
+                    <div className="flex justify-center space-x-6">
                         <button
                             type="button"
                             onClick={onSwitchToCustomer}
-                            className="text-orange-600 hover:text-orange-700 font-medium text-xs"
+                            className="text-orange-600 hover:text-orange-700 font-medium"
                             disabled={loading}
                         >
                             Customer
@@ -1006,7 +1006,7 @@ const RestaurantRegisterForm = ({ onRegister, onSwitchToLogin, onSwitchToCustome
                         <button
                             type="button"
                             onClick={onSwitchToRider}
-                            className="text-orange-600 hover:text-orange-700 font-medium text-xs"
+                            className="text-orange-600 hover:text-orange-700 font-medium"
                             disabled={loading}
                         >
                             Delivery Rider
@@ -1015,7 +1015,7 @@ const RestaurantRegisterForm = ({ onRegister, onSwitchToLogin, onSwitchToCustome
                     <button
                         type="button"
                         onClick={onSwitchToLogin}
-                        className="text-orange-600 hover:text-orange-700 font-medium text-xs"
+                        className="text-orange-600 hover:text-orange-700 font-medium"
                         disabled={loading}
                     >
                         Already have an account? Sign in
@@ -1083,42 +1083,42 @@ const RiderRegisterForm = ({ onRegister, onSwitchToLogin, onSwitchToCustomer, on
     };
 
     return (
-        <div className="bg-white rounded-lg shadow-xl p-6 max-w-md w-full mx-4 max-h-[90vh] overflow-y-auto">
-            <div className="text-center mb-6">
-                {/* Logo in Rider Register Form */}
-                <div className="mx-auto mb-3 flex justify-center">
+        <div className="bg-white rounded-lg shadow-xl p-8 max-w-md w-full mx-4 max-h-[90vh] overflow-y-auto">
+            <div className="text-center mb-8">
+                {/* Logo in Rider Register Form - LARGER */}
+                <div className="mx-auto mb-4 flex justify-center">
                     <img 
                         src="/logo.png" 
                         alt="FoodExpress Logo" 
-                        className="h-12 w-auto"
+                        className="h-20 w-auto"
                         onError={(e) => {
                             e.target.style.display = 'none';
                             e.target.nextSibling.style.display = 'flex';
                         }}
                     />
-                    <div className="h-12 w-12 bg-blue-600 rounded-lg flex items-center justify-center shadow-md hidden">
-                        <Bike className="text-white" size={20} />
+                    <div className="h-20 w-20 bg-blue-600 rounded-lg flex items-center justify-center shadow-md hidden">
+                        <Bike className="text-white" size={28} />
                     </div>
                 </div>
-                <h2 className="text-xl font-bold text-gray-900 mb-1">Join as Rider</h2>
-                <p className="text-gray-600 text-sm">Become a delivery rider and start earning</p>
+                <h2 className="text-2xl font-bold text-gray-900 mb-2">Join as Rider</h2>
+                <p className="text-gray-600">Become a delivery rider and start earning</p>
             </div>
 
             {error && (
-                <div className="bg-red-100 border border-red-400 text-red-700 px-3 py-2 rounded mb-4 text-sm">
+                <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
                     {error}
                 </div>
             )}
 
-            <form onSubmit={handleSubmit} className="space-y-3">
+            <form onSubmit={handleSubmit} className="space-y-6">
                 <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Full Name *</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Full Name *</label>
                     <input
                         type="text"
                         name="name"
                         value={formData.name}
                         onChange={handleChange}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600 text-sm"
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600"
                         placeholder="Enter your full name"
                         required
                         disabled={loading}
@@ -1126,13 +1126,13 @@ const RiderRegisterForm = ({ onRegister, onSwitchToLogin, onSwitchToCustomer, on
                 </div>
 
                 <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Email Address *</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Email Address *</label>
                     <input
                         type="email"
                         name="email"
                         value={formData.email}
                         onChange={handleChange}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600 text-sm"
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600"
                         placeholder="Enter your email"
                         required
                         disabled={loading}
@@ -1140,13 +1140,13 @@ const RiderRegisterForm = ({ onRegister, onSwitchToLogin, onSwitchToCustomer, on
                 </div>
 
                 <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Password *</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Password *</label>
                     <input
                         type="password"
                         name="password"
                         value={formData.password}
                         onChange={handleChange}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600 text-sm"
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600"
                         placeholder="Create a password"
                         required
                         disabled={loading}
@@ -1154,13 +1154,13 @@ const RiderRegisterForm = ({ onRegister, onSwitchToLogin, onSwitchToCustomer, on
                 </div>
 
                 <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Phone Number *</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Phone Number *</label>
                     <input
                         type="tel"
                         name="phone"
                         value={formData.phone}
                         onChange={handleChange}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600 text-sm"
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600"
                         placeholder="09XXXXXXXXX"
                         required
                         disabled={loading}
@@ -1168,12 +1168,12 @@ const RiderRegisterForm = ({ onRegister, onSwitchToLogin, onSwitchToCustomer, on
                 </div>
 
                 <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Vehicle Type *</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Vehicle Type *</label>
                     <select
                         name="vehicleType"
                         value={formData.vehicleType}
                         onChange={handleChange}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600 text-sm"
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600"
                         required
                         disabled={loading}
                     >
@@ -1184,20 +1184,20 @@ const RiderRegisterForm = ({ onRegister, onSwitchToLogin, onSwitchToCustomer, on
                 </div>
 
                 <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">License Number (Optional)</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">License Number (Optional)</label>
                     <input
                         type="text"
                         name="licenseNumber"
                         value={formData.licenseNumber}
                         onChange={handleChange}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600 text-sm"
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600"
                         placeholder="Enter license number if applicable"
                         disabled={loading}
                     />
                 </div>
 
                 <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
                         Home Location *
                     </label>
                     <LocationMap 
@@ -1206,8 +1206,8 @@ const RiderRegisterForm = ({ onRegister, onSwitchToLogin, onSwitchToCustomer, on
                     />
                 </div>
 
-                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 text-xs">
-                    <p className="text-yellow-800">
+                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                    <p className="text-sm text-yellow-800">
                         <strong>Note:</strong> Rider accounts require admin approval before you can start accepting delivery requests.
                         This usually takes 24-48 hours.
                     </p>
@@ -1216,18 +1216,18 @@ const RiderRegisterForm = ({ onRegister, onSwitchToLogin, onSwitchToCustomer, on
                 <button
                     type="submit"
                     disabled={loading}
-                    className="w-full bg-blue-600 text-white py-2 rounded-lg font-semibold hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+                    className="w-full bg-blue-600 text-white py-3 rounded-lg font-semibold hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                     {loading ? 'Creating account...' : 'REGISTER AS RIDER'}
                 </button>
 
-                <div className="text-center space-y-2">
-                    <p className="text-gray-600 text-xs">Want to join as?</p>
-                    <div className="flex justify-center space-x-3">
+                <div className="text-center space-y-4">
+                    <p className="text-gray-600">Want to join as?</p>
+                    <div className="flex justify-center space-x-6">
                         <button
                             type="button"
                             onClick={onSwitchToCustomer}
-                            className="text-blue-600 hover:text-blue-700 font-medium text-xs"
+                            className="text-blue-600 hover:text-blue-700 font-medium"
                             disabled={loading}
                         >
                             Customer
@@ -1235,7 +1235,7 @@ const RiderRegisterForm = ({ onRegister, onSwitchToLogin, onSwitchToCustomer, on
                         <button
                             type="button"
                             onClick={onSwitchToRestaurant}
-                            className="text-blue-600 hover:text-blue-700 font-medium text-xs"
+                            className="text-blue-600 hover:text-blue-700 font-medium"
                             disabled={loading}
                         >
                             Restaurant Owner
@@ -1244,7 +1244,7 @@ const RiderRegisterForm = ({ onRegister, onSwitchToLogin, onSwitchToCustomer, on
                     <button
                         type="button"
                         onClick={onSwitchToLogin}
-                        className="text-blue-600 hover:text-blue-700 font-medium text-xs"
+                        className="text-blue-600 hover:text-blue-700 font-medium"
                         disabled={loading}
                     >
                         Already have an account? Sign in
@@ -2495,42 +2495,42 @@ const CustomerDashboard = () => {
         return (
             <>
                 {/* Hero Section with Slideshow */}
-                <div className="relative h-96 md:h-[500px] lg:h-[600px] overflow-hidden">
+                <div className="relative">
                     <HeroSlideshow />
                     
                     {/* Content Overlay */}
                     <div className="absolute inset-0 flex items-center justify-center">
                         <div className="text-center text-white px-4 max-w-4xl mx-auto">
-                            {/* Logo in Hero Section */}
-                            <div className="mb-6 flex justify-center">
+                            {/* Logo in Hero Section - MUCH LARGER */}
+                            <div className="mb-8 flex justify-center">
                                 <img 
                                     src="/logo.png" 
                                     alt="FoodExpress Logo" 
-                                    className="h-16 md:h-20 w-auto bg-white bg-opacity-20 rounded-lg p-2"
+                                    className="h-32 md:h-40 lg:h-48 w-auto bg-white bg-opacity-20 rounded-2xl p-4 shadow-2xl"
                                     onError={(e) => {
                                         e.target.style.display = 'none';
                                         e.target.nextSibling.style.display = 'flex';
                                     }}
                                 />
-                                <div className="h-16 md:h-20 w-16 md:w-20 bg-red-800 rounded-lg flex items-center justify-center shadow-md hidden bg-opacity-90">
-                                    <span className="text-white font-bold text-xl md:text-2xl">FX</span>
+                                <div className="h-32 md:h-40 lg:h-48 w-32 md:w-40 lg:w-48 bg-red-800 rounded-2xl flex items-center justify-center shadow-2xl hidden bg-opacity-90">
+                                    <span className="text-white font-bold text-4xl md:text-5xl lg:text-6xl">FX</span>
                                 </div>
                             </div>
                             
-                            <h1 className="text-3xl md:text-5xl font-bold mb-4 drop-shadow-lg">
+                            <h1 className="text-3xl md:text-5xl lg:text-6xl font-bold mb-6 drop-shadow-2xl leading-tight">
                                 DELICIOUS FOOD DELIVERED TO YOUR DOORSTEP
                             </h1>
-                            <p className="text-lg md:text-xl mb-8 opacity-95 drop-shadow">
+                            <p className="text-xl md:text-2xl lg:text-3xl mb-10 opacity-95 drop-shadow-lg font-light">
                                 Experience the best food delivery service in town
                             </p>
                             <div className="flex flex-col sm:flex-row justify-center space-y-4 sm:space-y-0 sm:space-x-6">
                                 <button 
                                     onClick={() => user ? setIsCartOpen(true) : setShowAuthModal(true)}
-                                    className="bg-white text-red-800 px-8 py-4 rounded font-bold text-lg hover:bg-gray-100 transition-colors shadow-lg"
+                                    className="bg-white text-red-800 px-10 py-5 rounded-2xl font-bold text-xl hover:bg-gray-100 transition-all duration-300 shadow-2xl hover:scale-105 transform"
                                 >
                                     {user ? "ORDER NOW" : "LOGIN TO ORDER"}
                                 </button>
-                                <button className="border-2 border-white text-white px-8 py-4 rounded font-bold text-lg hover:bg-white hover:text-red-800 transition-colors shadow-lg">
+                                <button className="border-4 border-white text-white px-10 py-5 rounded-2xl font-bold text-xl hover:bg-white hover:text-red-800 transition-all duration-300 shadow-2xl hover:scale-105 transform">
                                     BROWSE RESTAURANTS
                                 </button>
                             </div>
@@ -2538,40 +2538,40 @@ const CustomerDashboard = () => {
                     </div>
                 </div>
 
-                <div className="max-w-7xl mx-auto px-4 py-6 md:py-8">
-                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-6">
-                        <h2 className="text-xl md:text-2xl font-bold text-gray-900">FEATURED RESTAURANTS</h2>
-                        <button className="text-red-800 hover:text-red-900 font-semibold text-sm">
+                <div className="max-w-7xl mx-auto px-4 py-8 md:py-12">
+                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
+                        <h2 className="text-2xl md:text-3xl lg:text-4xl font-bold text-gray-900">FEATURED RESTAURANTS</h2>
+                        <button className="text-red-800 hover:text-red-900 font-semibold text-lg">
                             VIEW ALL →
                         </button>
                     </div>
                     
                     {loadingRestaurants ? (
-                        <div className="flex justify-center items-center py-8">
+                        <div className="flex justify-center items-center py-12">
                             <div className="text-center">
-                                <div className="w-10 h-10 border-4 border-red-800 border-t-transparent rounded-full animate-spin mx-auto mb-3"></div>
-                                <p className="text-gray-600 text-sm">Loading restaurants...</p>
+                                <div className="w-12 h-12 border-4 border-red-800 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+                                <p className="text-gray-600">Loading restaurants...</p>
                             </div>
                         </div>
                     ) : apiError ? (
-                        <div className="text-center py-8">
-                            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 max-w-md mx-auto">
-                                <p className="text-yellow-800 font-semibold mb-1 text-sm"> API Connection</p>
-                                <p className="text-yellow-700 text-xs">{apiError}</p>
-                                <p className="text-yellow-600 text-xs mt-1">Using real-time data from your database</p>
+                        <div className="text-center py-12">
+                            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6 max-w-md mx-auto">
+                                <p className="text-yellow-800 font-semibold mb-2"> API Connection</p>
+                                <p className="text-yellow-700 text-sm">{apiError}</p>
+                                <p className="text-yellow-600 text-xs mt-2">Using real-time data from your database</p>
                             </div>
                         </div>
                     ) : filteredRestaurants.length === 0 ? (
-                        <div className="text-center py-8">
-                            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 max-w-md mx-auto">
-                                <p className="text-blue-800 font-semibold text-sm"> No Restaurants Yet</p>
-                                <p className="text-blue-700 text-xs mt-1">
+                        <div className="text-center py-12">
+                            <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 max-w-md mx-auto">
+                                <p className="text-blue-800 font-semibold text-lg"> No Restaurants Yet</p>
+                                <p className="text-blue-700 text-sm mt-2">
                                     No restaurants found in your database. Add restaurants via admin panel.
                                 </p>
                             </div>
                         </div>
                     ) : (
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                             {filteredRestaurants.map((restaurant, index) => (
                                 <RestaurantCard 
                                     key={restaurant._id || restaurant.id || index}
@@ -2584,47 +2584,47 @@ const CustomerDashboard = () => {
                     )}
                 </div>
 
-                <div className="bg-gray-100 py-8 md:py-12">
+                <div className="bg-gray-100 py-12 md:py-16">
                     <div className="max-w-7xl mx-auto px-4">
-                        <h2 className="text-2xl md:text-3xl font-bold text-center text-gray-900 mb-8">Join Our Community</h2>
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                            <div className="bg-white rounded-xl shadow-md p-4 text-center">
-                                <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-3">
-                                    <span className="text-xl">🍽️</span>
+                        <h2 className="text-3xl md:text-4xl font-bold text-center text-gray-900 mb-12">Join Our Community</h2>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                            <div className="bg-white rounded-2xl shadow-xl p-6 text-center hover:transform hover:scale-105 transition-all duration-300">
+                                <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                                    <span className="text-2xl">🍽️</span>
                                 </div>
-                                <h3 className="text-lg font-bold text-gray-900 mb-2">Food Lover</h3>
-                                <p className="text-gray-600 text-sm mb-3">Order from your favorite restaurants and enjoy delicious meals delivered to your door.</p>
+                                <h3 className="text-xl font-bold text-gray-900 mb-3">Food Lover</h3>
+                                <p className="text-gray-600 mb-4">Order from your favorite restaurants and enjoy delicious meals delivered to your door.</p>
                                 <button 
                                     onClick={() => { setShowAuthModal(true); setAuthMode('customer'); }}
-                                    className="bg-red-800 text-white px-4 py-2 rounded hover:bg-red-900 transition-colors text-sm"
+                                    className="bg-red-800 text-white px-6 py-3 rounded-lg hover:bg-red-900 transition-colors font-semibold"
                                 >
                                     Join as Customer
                                 </button>
                             </div>
 
-                            <div className="bg-white rounded-xl shadow-md p-4 text-center">
-                                <div className="w-12 h-12 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-3">
-                                    <Store className="text-orange-600" size={20} />
+                            <div className="bg-white rounded-2xl shadow-xl p-6 text-center hover:transform hover:scale-105 transition-all duration-300">
+                                <div className="w-16 h-16 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                                    <Store className="text-orange-600" size={28} />
                                 </div>
-                                <h3 className="text-lg font-bold text-gray-900 mb-2">Restaurant Owner</h3>
-                                <p className="text-gray-600 text-sm mb-3">Reach more customers and grow your business with our delivery platform.</p>
+                                <h3 className="text-xl font-bold text-gray-900 mb-3">Restaurant Owner</h3>
+                                <p className="text-gray-600 mb-4">Reach more customers and grow your business with our delivery platform.</p>
                                 <button 
                                     onClick={() => { setShowAuthModal(true); setAuthMode('restaurant'); }}
-                                    className="bg-orange-600 text-white px-4 py-2 rounded hover:bg-orange-700 transition-colors text-sm"
+                                    className="bg-orange-600 text-white px-6 py-3 rounded-lg hover:bg-orange-700 transition-colors font-semibold"
                                 >
                                     Join as Restaurant
                                 </button>
                             </div>
 
-                            <div className="bg-white rounded-xl shadow-md p-4 text-center">
-                                <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-3">
-                                    <Bike className="text-blue-600" size={20} />
+                            <div className="bg-white rounded-2xl shadow-xl p-6 text-center hover:transform hover:scale-105 transition-all duration-300">
+                                <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                                    <Bike className="text-blue-600" size={28} />
                                 </div>
-                                <h3 className="text-lg font-bold text-gray-900 mb-2">Delivery Rider</h3>
-                                <p className="text-gray-600 text-sm mb-3">Earn money by delivering food to customers in your area. Flexible hours available.</p>
+                                <h3 className="text-xl font-bold text-gray-900 mb-3">Delivery Rider</h3>
+                                <p className="text-gray-600 mb-4">Earn money by delivering food to customers in your area. Flexible hours available.</p>
                                 <button 
                                     onClick={() => { setShowAuthModal(true); setAuthMode('rider'); }}
-                                    className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition-colors text-sm"
+                                    className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors font-semibold"
                                 >
                                     Join as Rider
                                 </button>
@@ -2633,13 +2633,13 @@ const CustomerDashboard = () => {
                     </div>
                 </div>
 
-                <div className="bg-red-800 text-white py-6 md:py-8">
+                <div className="bg-red-800 text-white py-12 md:py-16">
                     <div className="max-w-7xl mx-auto px-4 text-center">
-                        <h2 className="text-2xl md:text-3xl font-bold mb-3">SPECIAL OFFER!</h2>
-                        <p className="text-base md:text-lg mb-4">Get 20% OFF on your first order with promo code: WELCOME20</p>
+                        <h2 className="text-3xl md:text-4xl font-bold mb-6">SPECIAL OFFER!</h2>
+                        <p className="text-xl md:text-2xl mb-8">Get 20% OFF on your first order with promo code: <strong>WELCOME20</strong></p>
                         <button 
                             onClick={() => user ? console.log('Grab offer') : setShowAuthModal(true)}
-                            className="bg-white text-red-800 px-6 py-2 rounded font-bold text-base hover:bg-gray-100 transition-colors"
+                            className="bg-white text-red-800 px-8 py-4 rounded-2xl font-bold text-xl hover:bg-gray-100 transition-all duration-300 shadow-2xl hover:scale-105 transform"
                         >
                             {user ? "GRAB THIS OFFER" : "LOGIN TO GET OFFER"}
                         </button>
@@ -2653,8 +2653,8 @@ const CustomerDashboard = () => {
         return (
             <div className="min-h-screen bg-gray-50 flex items-center justify-center">
                 <div className="text-center">
-                    <div className="w-12 h-12 border-4 border-red-800 border-t-transparent rounded-full animate-spin mx-auto mb-3"></div>
-                    <p className="text-gray-600 text-sm">Loading...</p>
+                    <div className="w-16 h-16 border-4 border-red-800 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+                    <p className="text-gray-600 text-lg">Loading...</p>
                 </div>
             </div>
         );
@@ -2662,63 +2662,63 @@ const CustomerDashboard = () => {
 
     return (
         <div className="min-h-screen bg-gray-50 pb-16 lg:pb-0">
-            <header className="bg-white shadow-md sticky top-0 z-40">
-                <div className="bg-gray-800 text-white py-1">
-                    <div className="max-w-7xl mx-auto px-4 text-center text-xs">
+            <header className="bg-white shadow-lg sticky top-0 z-40">
+                <div className="bg-gray-800 text-white py-2">
+                    <div className="max-w-7xl mx-auto px-4 text-center text-sm">
                         Free delivery on orders over ₱299! • ⭐ Rate your experience and get rewards
                     </div>
                 </div>
 
-                <div className="max-w-7xl mx-auto px-4 py-2">
+                <div className="max-w-7xl mx-auto px-4 py-3">
                     <div className="flex items-center justify-between">
-                        <div className="flex items-center space-x-2">
-                            {/* Logo in Header */}
-                            <div className="flex items-center space-x-2">
+                        <div className="flex items-center space-x-3">
+                            {/* Logo in Header - LARGER */}
+                            <div className="flex items-center space-x-3">
                                 <img 
                                     src="/logo.png" 
                                     alt="FoodExpress Logo" 
-                                    className="h-8 w-auto"
+                                    className="h-10 w-auto"
                                     onError={(e) => {
                                         e.target.style.display = 'none';
                                         e.target.nextSibling.style.display = 'flex';
                                     }}
                                 />
-                                <div className="h-8 w-8 bg-red-800 rounded flex items-center justify-center text-white font-bold text-sm shadow hidden">
+                                <div className="h-10 w-10 bg-red-800 rounded-lg flex items-center justify-center text-white font-bold text-lg shadow hidden">
                                     FX
                                 </div>
                                 <div>
-                                    <h1 className="text-lg font-bold text-red-800">FOODEXPRESS</h1>
-                                    <p className="text-xs text-gray-600 hidden sm:block">Delivery Service</p>
+                                    <h1 className="text-2xl font-bold text-red-800">FOODEXPRESS</h1>
+                                    <p className="text-sm text-gray-600 hidden sm:block">Delivery Service</p>
                                 </div>
                             </div>
                         </div>
 
                         {renderNavigation()}
 
-                        <div className="flex items-center space-x-2">
+                        <div className="flex items-center space-x-4">
                             {user ? (
                                 <>
-                                    <div className="hidden sm:flex items-center space-x-1">
-                                        <span className="text-gray-700 text-sm">Welcome, {user.name}!</span>
+                                    <div className="hidden sm:flex items-center space-x-2">
+                                        <span className="text-gray-700">Welcome, {user.name}!</span>
                                         {user.role === 'restaurant' && (
-                                            <span className="bg-orange-100 text-orange-800 px-1.5 py-0.5 rounded-full text-xs font-medium">
+                                            <span className="bg-orange-100 text-orange-800 px-2 py-1 rounded-full text-xs font-medium">
                                                 Restaurant
                                             </span>
                                         )}
                                         {user.role === 'rider' && (
-                                            <span className="bg-blue-100 text-blue-800 px-1.5 py-0.5 rounded-full text-xs font-medium">
+                                            <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs font-medium">
                                                 Rider
                                             </span>
                                         )}
                                     </div>
                                     <button 
                                         onClick={() => setIsCartOpen(true)}
-                                        className="relative flex items-center space-x-1 text-gray-700 hover:text-red-800"
+                                        className="relative flex items-center space-x-2 text-gray-700 hover:text-red-800"
                                     >
-                                        <ShoppingCart size={20} />
-                                        <span className="font-medium text-sm hidden sm:block">CART</span>
+                                        <ShoppingCart size={24} />
+                                        <span className="font-medium">CART</span>
                                         {getCartItemCount() > 0 && (
-                                            <span className="absolute -top-1 -right-1 bg-red-800 text-white rounded-full w-4 h-4 flex items-center justify-center text-xs font-bold">
+                                            <span className="absolute -top-2 -right-2 bg-red-800 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm font-bold">
                                                 {getCartItemCount()}
                                             </span>
                                         )}
@@ -2726,41 +2726,41 @@ const CustomerDashboard = () => {
                                     
                                     <button 
                                         onClick={logout}
-                                        className="bg-red-800 text-white px-3 py-1.5 rounded hover:bg-red-900 transition-colors shadow text-sm"
+                                        className="bg-red-800 text-white px-4 py-2 rounded-lg hover:bg-red-900 transition-colors shadow-lg font-semibold"
                                     >
                                         LOGOUT
                                     </button>
                                 </>
                             ) : (
-                                <div className="flex items-center space-x-2">
+                                <div className="flex items-center space-x-4">
                                     <button 
                                         onClick={() => { setShowAuthModal(true); setAuthMode('login'); }}
-                                        className="text-gray-700 hover:text-red-800 font-medium text-sm"
+                                        className="text-gray-700 hover:text-red-800 font-semibold"
                                     >
                                         LOGIN
                                     </button>
                                     <div className="relative group">
                                         <button 
-                                            className="bg-red-800 text-white px-3 py-1.5 rounded hover:bg-red-900 transition-colors shadow text-sm"
+                                            className="bg-red-800 text-white px-4 py-2 rounded-lg hover:bg-red-900 transition-colors shadow-lg font-semibold"
                                         >
                                             SIGN UP
                                         </button>
-                                        <div className="absolute top-full left-0 mt-1 w-36 bg-white shadow-lg rounded-lg py-1 hidden group-hover:block z-50">
+                                        <div className="absolute top-full left-0 mt-2 w-48 bg-white shadow-xl rounded-lg py-2 hidden group-hover:block z-50">
                                             <button 
                                                 onClick={() => { setShowAuthModal(true); setAuthMode('customer'); }}
-                                                className="w-full text-left px-3 py-1 hover:bg-gray-100 text-gray-700 text-xs"
+                                                className="w-full text-left px-4 py-2 hover:bg-gray-100 text-gray-700 font-medium"
                                             >
                                                  As Customer
                                             </button>
                                             <button 
                                                 onClick={() => { setShowAuthModal(true); setAuthMode('restaurant'); }}
-                                                className="w-full text-left px-3 py-1 hover:bg-gray-100 text-gray-700 text-xs"
+                                                className="w-full text-left px-4 py-2 hover:bg-gray-100 text-gray-700 font-medium"
                                             >
                                                  As Restaurant
                                             </button>
                                             <button 
                                                 onClick={() => { setShowAuthModal(true); setAuthMode('rider'); }}
-                                                className="w-full text-left px-3 py-1 hover:bg-gray-100 text-gray-700 text-xs"
+                                                className="w-full text-left px-4 py-2 hover:bg-gray-100 text-gray-700 font-medium"
                                             >
                                                  As Rider
                                             </button>
@@ -2773,29 +2773,29 @@ const CustomerDashboard = () => {
                 </div>
 
                 {activeSection === 'home' && (
-                    <div className="bg-gray-100 border-t border-b border-gray-200 py-2">
+                    <div className="bg-gray-100 border-t border-b border-gray-200 py-3">
                         <div className="max-w-7xl mx-auto px-4">
-                            <div className="flex flex-col sm:flex-row items-center gap-2">
+                            <div className="flex flex-col sm:flex-row items-center gap-3">
                                 <div className="flex-1 max-w-2xl w-full">
                                     <div className="relative">
-                                        <Search size={16} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+                                        <Search size={20} className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400" />
                                         <input 
                                             type="text" 
                                             placeholder="Search for restaurants, cuisines, or dishes..." 
                                             value={searchQuery}
                                             onChange={(e) => setSearchQuery(e.target.value)}
-                                            className="w-full pl-10 pr-3 py-2 bg-white border border-gray-300 rounded focus:ring-2 focus:ring-red-800 focus:border-red-800 text-sm"
+                                            className="w-full pl-12 pr-4 py-3 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-800 focus:border-red-800 text-lg"
                                         />
                                     </div>
                                 </div>
-                                <div className="flex gap-2 w-full sm:w-auto">
-                                    <button className="flex items-center space-x-1 bg-red-800 text-white px-3 py-2 rounded hover:bg-red-900 transition-colors text-sm w-full sm:w-auto justify-center">
-                                        <Search size={14} />
+                                <div className="flex gap-3 w-full sm:w-auto">
+                                    <button className="flex items-center space-x-2 bg-red-800 text-white px-6 py-3 rounded-lg hover:bg-red-900 transition-colors text-lg w-full sm:w-auto justify-center font-semibold">
+                                        <Search size={18} />
                                         <span>SEARCH</span>
                                     </button>
-                                    <button className="flex items-center space-x-1 bg-white border border-gray-300 px-3 py-2 rounded hover:border-red-800 transition-colors text-sm w-full sm:w-auto justify-center">
-                                        <Filter size={14} />
-                                        <span className="font-semibold">FILTER</span>
+                                    <button className="flex items-center space-x-2 bg-white border border-gray-300 px-6 py-3 rounded-lg hover:border-red-800 transition-colors text-lg w-full sm:w-auto justify-center font-semibold">
+                                        <Filter size={18} />
+                                        <span>FILTER</span>
                                     </button>
                                 </div>
                             </div>
@@ -2808,31 +2808,31 @@ const CustomerDashboard = () => {
 
             {renderMobileNavigation()}
 
-            <footer className="bg-gray-900 text-white mt-8">
-                <div className="max-w-7xl mx-auto px-4 py-6">
-                    <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+            <footer className="bg-gray-900 text-white mt-12">
+                <div className="max-w-7xl mx-auto px-4 py-8">
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
                         <div>
-                            <h3 className="text-lg font-bold text-white mb-3">FOODEXPRESS</h3>
-                            <p className="text-gray-400 text-sm mb-3">
+                            <h3 className="text-2xl font-bold text-white mb-4">FOODEXPRESS</h3>
+                            <p className="text-gray-400 mb-4">
                                 Delivering delicious food to your doorstep with the best quality and service.
                             </p>
-                            <div className="flex space-x-3">
+                            <div className="flex space-x-4">
                                 {[Facebook, Twitter, Instagram, Youtube].map((Icon, index) => (
                                     <Icon 
                                         key={index}
-                                        size={16} 
-                                        className="text-gray-400 hover:text-white cursor-pointer" 
+                                        size={20} 
+                                        className="text-gray-400 hover:text-white cursor-pointer transition-colors" 
                                     />
                                 ))}
                             </div>
                         </div>
                         
                         <div>
-                            <h4 className="font-bold text-white mb-3 text-sm">QUICK LINKS</h4>
-                            <ul className="space-y-1 text-gray-400">
+                            <h4 className="font-bold text-white mb-4 text-lg">QUICK LINKS</h4>
+                            <ul className="space-y-2 text-gray-400">
                                 {['About Us', 'Contact Us', 'FAQs', 'Privacy Policy'].map((link, index) => (
                                     <li key={index}>
-                                        <button className="hover:text-white transition-colors text-xs">
+                                        <button className="hover:text-white transition-colors text-base">
                                             {link}
                                         </button>
                                     </li>
@@ -2841,30 +2841,30 @@ const CustomerDashboard = () => {
                         </div>
 
                         <div>
-                            <h4 className="font-bold text-white mb-3 text-sm">CONTACT INFO</h4>
-                            <div className="space-y-1 text-gray-400 text-xs">
-                                <div className="flex items-center space-x-1 hover:text-white transition-colors">
+                            <h4 className="font-bold text-white mb-4 text-lg">CONTACT INFO</h4>
+                            <div className="space-y-2 text-gray-400">
+                                <div className="flex items-center space-x-2 hover:text-white transition-colors">
                                     <span>📞 09105019330</span>
                                 </div>
-                                <div className="flex items-center space-x-1 hover:text-white transition-colors">
+                                <div className="flex items-center space-x-2 hover:text-white transition-colors">
                                     <span>✉️ foodexpress@delivery.com</span>
                                 </div>
-                                <div className="flex items-center space-x-1 hover:text-white transition-colors">
+                                <div className="flex items-center space-x-2 hover:text-white transition-colors">
                                     <span>📍 Puerto Princesa City, Philippines</span>
                                 </div>
                             </div>
                         </div>
 
                         <div>
-                            <h4 className="font-bold text-white mb-3 text-sm">NEWSLETTER</h4>
-                            <p className="text-gray-400 text-xs mb-2">Subscribe to get special offers and updates</p>
+                            <h4 className="font-bold text-white mb-4 text-lg">NEWSLETTER</h4>
+                            <p className="text-gray-400 mb-3">Subscribe to get special offers and updates</p>
                             <div className="flex">
                                 <input 
                                     type="email" 
                                     placeholder="Your email" 
-                                    className="flex-1 px-2 py-1 bg-gray-800 border border-gray-700 rounded-l focus:outline-none focus:border-red-800 transition-colors text-xs"
+                                    className="flex-1 px-3 py-2 bg-gray-800 border border-gray-700 rounded-l focus:outline-none focus:border-red-800 transition-colors"
                                 />
-                                <button className="bg-red-800 text-white px-2 py-1 rounded-r hover:bg-red-900 transition-colors text-xs">
+                                <button className="bg-red-800 text-white px-4 py-2 rounded-r hover:bg-red-900 transition-colors font-semibold">
                                     SUBSCRIBE
                                 </button>
                             </div>
@@ -2873,14 +2873,14 @@ const CustomerDashboard = () => {
                 </div>
 
                 <div className="border-t border-gray-800">
-                    <div className="max-w-7xl mx-auto px-4 py-2">
-                        <div className="flex flex-col md:flex-row justify-between items-center text-xs text-gray-400">
-                            <p>&copy; 2025 FoodExpress Delivery Service. All rights reserved.</p>
-                            <div className="flex space-x-3 mt-1 md:mt-0">
+                    <div className="max-w-7xl mx-auto px-4 py-4">
+                        <div className="flex flex-col md:flex-row justify-between items-center text-gray-400">
+                            <p className="text-sm">&copy; 2025 FoodExpress Delivery Service. All rights reserved.</p>
+                            <div className="flex space-x-6 mt-2 md:mt-0">
                                 {['Terms & Conditions', 'Privacy Policy', 'Sitemap'].map((item, index) => (
                                     <span 
                                         key={index}
-                                        className="hover:text-white transition-colors cursor-pointer"
+                                        className="hover:text-white transition-colors cursor-pointer text-sm"
                                     >
                                         {item}
                                     </span>
