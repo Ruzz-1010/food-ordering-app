@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import {
   Navigation, Package, DollarSign, Clock, CheckCircle, Phone, 
-  X, LogOut, RefreshCw, MapPin, Store, User, Eye
+  X, LogOut, RefreshCw, MapPin, Store, User, Eye, Map, Wifi, WifiOff,
+  Truck, Home, MessageCircle, AlertCircle, ChevronRight
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
-// 1.  FIXED – no trailing space
+
 const API_URL = 'https://food-ordering-app-production-35eb.up.railway.app/api';
+
 const RiderDashboard = () => {
   const { user, logout } = useAuth();
   const [loading, setLoading] = useState(true);
@@ -14,10 +16,64 @@ const RiderDashboard = () => {
   const [activeTab, setActiveTab] = useState('available');
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [showOrderDetails, setShowOrderDetails] = useState(false);
+  const [showMap, setShowMap] = useState(false);
+  const [riderStatus, setRiderStatus] = useState('online'); // online, offline
+  const [currentLocation, setCurrentLocation] = useState(null);
+  const [customerLocation, setCustomerLocation] = useState(null);
 
   const token = localStorage.getItem('token');
 
-  // ✅ Fetch available orders
+  // Get rider's current location
+  const getCurrentLocation = () => {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const { latitude, longitude } = position.coords;
+          setCurrentLocation({ lat: latitude, lng: longitude });
+          console.log('📍 Rider location:', { lat: latitude, lng: longitude });
+        },
+        (error) => {
+          console.error('Error getting location:', error);
+          alert('Unable to get your current location. Please enable location services.');
+        }
+      );
+    } else {
+      alert('Geolocation is not supported by this browser.');
+    }
+  };
+
+  // Toggle rider status
+  const toggleRiderStatus = async () => {
+    const newStatus = riderStatus === 'online' ? 'offline' : 'online';
+    
+    try {
+      // Update rider status in backend
+      const res = await fetch(`${API_URL}/riders/status`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({ status: newStatus })
+      });
+
+      if (res.ok) {
+        setRiderStatus(newStatus);
+        if (newStatus === 'online') {
+          getCurrentLocation();
+          alert('✅ You are now ONLINE and ready to accept orders');
+        } else {
+          alert('🔴 You are now OFFLINE');
+        }
+      }
+    } catch (error) {
+      console.error('Error updating rider status:', error);
+      // Still update UI even if backend fails
+      setRiderStatus(newStatus);
+    }
+  };
+
+  // Fetch available orders
   const fetchAvailable = async () => {
     try {
       const res = await fetch(`${API_URL}/orders/rider/available`, {
@@ -36,7 +92,7 @@ const RiderDashboard = () => {
     }
   };
 
-  // ✅ Fetch my deliveries
+  // Fetch my deliveries
   const fetchMyDeliveries = async () => {
     try {
       const res = await fetch(`${API_URL}/orders/rider/my-deliveries`, {
@@ -56,6 +112,11 @@ const RiderDashboard = () => {
   };
 
   const acceptOrder = async (orderId) => {
+    if (riderStatus === 'offline') {
+      alert('❌ Please go online to accept orders');
+      return;
+    }
+
     const riderId = user?._id;
     if (!riderId) { alert('❌ Rider ID not found'); return; }
   
@@ -83,7 +144,7 @@ const RiderDashboard = () => {
     }
   };
 
-  // ✅ Update delivery status
+  // Update delivery status
   const updateStatus = async (orderId, status) => {
     try {
       const res = await fetch(`${API_URL}/orders/${orderId}/delivery-status`, {
@@ -109,7 +170,7 @@ const RiderDashboard = () => {
     }
   };
 
-  // 🔄 Load data
+  // Load data
   const loadData = async () => {
     setLoading(true);
     try {
@@ -121,9 +182,10 @@ const RiderDashboard = () => {
     }
   };
 
-  // 🔄 Load on mount
+  // Load on mount
   useEffect(() => {
     if (user && user.role === 'rider') {
+      getCurrentLocation();
       loadData();
     }
   }, [user]);
@@ -145,6 +207,25 @@ const RiderDashboard = () => {
     });
   };
 
+  // Get customer location coordinates (simulated - in real app, get from order data)
+  const getCustomerLocation = (order) => {
+    // This would typically come from the order data
+    // For demo, using random coordinates near Puerto Princesa
+    return {
+      lat: 9.7392 + (Math.random() - 0.5) * 0.1,
+      lng: 118.7353 + (Math.random() - 0.5) * 0.1
+    };
+  };
+
+  // Show order details with map
+  const showOrderWithMap = (order) => {
+    setSelectedOrder(order);
+    const customerLoc = getCustomerLocation(order);
+    setCustomerLocation(customerLoc);
+    setShowOrderDetails(true);
+    setShowMap(true);
+  };
+
   // Stats
   const stats = {
     availableOrders: available.length,
@@ -155,6 +236,220 @@ const RiderDashboard = () => {
     completedDeliveries: myDeliveries.filter(order => 
       order.status === 'delivered'
     ).length,
+  };
+
+  // Map Component
+  const OrderMap = ({ order, currentLocation, customerLocation }) => {
+    if (!currentLocation || !customerLocation) {
+      return (
+        <div className="h-64 bg-gray-100 rounded-lg flex items-center justify-center">
+          <div className="text-center">
+            <Map className="mx-auto text-gray-400 mb-2" size={32} />
+            <p className="text-gray-500">Loading map...</p>
+          </div>
+        </div>
+      );
+    }
+
+    return (
+      <div className="h-64 bg-gray-100 rounded-lg overflow-hidden relative">
+        <iframe
+          width="100%"
+          height="100%"
+          frameBorder="0"
+          scrolling="no"
+          marginHeight="0"
+          marginWidth="0"
+          src={`https://www.openstreetmap.org/export/embed.html?bbox=${currentLocation.lng - 0.02}%2C${currentLocation.lat - 0.02}%2C${currentLocation.lng + 0.02}%2C${currentLocation.lat + 0.02}&layer=mapnik&marker=${currentLocation.lat}%2C${currentLocation.lng}&marker=${customerLocation.lat}%2C${customerLocation.lng}`}
+          style={{ border: 0 }}
+          title="Delivery Route Map"
+        />
+        <div className="absolute bottom-2 left-2 bg-white bg-opacity-90 px-3 py-1 rounded text-sm shadow">
+          <div className="flex items-center space-x-2">
+            <div className="w-3 h-3 bg-blue-600 rounded-full"></div>
+            <span>You</span>
+          </div>
+          <div className="flex items-center space-x-2">
+            <div className="w-3 h-3 bg-red-600 rounded-full"></div>
+            <span>Customer</span>
+          </div>
+        </div>
+        
+        <div className="absolute bottom-2 right-2 bg-white bg-opacity-90 px-2 py-1 rounded text-xs">
+          <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">
+            © OpenStreetMap
+          </a>
+        </div>
+      </div>
+    );
+  };
+
+  // Order Details Modal
+  const OrderDetailsModal = ({ order, onClose, showMap }) => {
+    if (!order) return null;
+
+    const customerLoc = customerLocation || getCustomerLocation(order);
+
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+          <div className="p-6 border-b">
+            <div className="flex justify-between items-center">
+              <h2 className="text-xl font-bold text-gray-900">
+                Order Details - #{order.orderId || order._id}
+              </h2>
+              <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded">
+                <X size={24} />
+              </button>
+            </div>
+          </div>
+
+          <div className="p-6">
+            {/* Order Summary */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+              <div className="space-y-4">
+                <div className="bg-gray-50 p-4 rounded-lg">
+                  <h3 className="font-semibold text-gray-900 mb-3 flex items-center">
+                    <User className="mr-2" size={18} />
+                    Customer Information
+                  </h3>
+                  <div className="space-y-2">
+                    <p><strong>Name:</strong> {order.user?.name || 'Customer'}</p>
+                    <p><strong>Phone:</strong> {order.user?.phone || 'Not provided'}</p>
+                    <p><strong>Address:</strong> {order.deliveryAddress || 'No address provided'}</p>
+                  </div>
+                </div>
+
+                <div className="bg-gray-50 p-4 rounded-lg">
+                  <h3 className="font-semibold text-gray-900 mb-3 flex items-center">
+                    <Store className="mr-2" size={18} />
+                    Restaurant Information
+                  </h3>
+                  <div className="space-y-2">
+                    <p><strong>Name:</strong> {order.restaurant?.name || 'Unknown Restaurant'}</p>
+                    <p><strong>Address:</strong> {order.restaurant?.address || 'No address'}</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <div className="bg-gray-50 p-4 rounded-lg">
+                  <h3 className="font-semibold text-gray-900 mb-3 flex items-center">
+                    <Package className="mr-2" size={18} />
+                    Order Information
+                  </h3>
+                  <div className="space-y-2">
+                    <p><strong>Order ID:</strong> {order.orderId || order._id}</p>
+                    <p><strong>Order Date:</strong> {formatDate(order.createdAt)}</p>
+                    <p><strong>Status:</strong> 
+                      <span className={`ml-2 px-2 py-1 text-xs rounded ${
+                        order.status === 'delivered' ? 'bg-green-100 text-green-800' : 
+                        order.status === 'out_for_delivery' ? 'bg-blue-100 text-blue-800' :
+                        order.status === 'ready' ? 'bg-green-100 text-green-800' :
+                        'bg-orange-100 text-orange-800'
+                      }`}>
+                        {order.status}
+                      </span>
+                    </p>
+                    <p><strong>Total Amount:</strong> {formatCurrency(order.total || order.totalAmount)}</p>
+                  </div>
+                </div>
+
+                <div className="bg-gray-50 p-4 rounded-lg">
+                  <h3 className="font-semibold text-gray-900 mb-3 flex items-center">
+                    <DollarSign className="mr-2" size={18} />
+                    Payment Information
+                  </h3>
+                  <div className="space-y-2">
+                    <p><strong>Payment Method:</strong> {order.paymentMethod || 'Cash on Delivery'}</p>
+                    <p><strong>Delivery Fee:</strong> {formatCurrency(order.deliveryFee || 35)}</p>
+                    {order.specialInstructions && (
+                      <p><strong>Instructions:</strong> {order.specialInstructions}</p>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Order Items */}
+            <div className="mb-6">
+              <h3 className="font-semibold text-gray-900 mb-3">Order Items</h3>
+              <div className="bg-gray-50 rounded-lg p-4">
+                {order.items?.length > 0 ? (
+                  <div className="space-y-2">
+                    {order.items.map((item, index) => (
+                      <div key={index} className="flex justify-between items-center py-2 border-b last:border-b-0">
+                        <div>
+                          <p className="font-medium">{item.productName || item.product?.name || `Item ${index + 1}`}</p>
+                          <p className="text-sm text-gray-600">Quantity: {item.quantity}</p>
+                        </div>
+                        <p className="font-semibold">{formatCurrency(item.price * item.quantity)}</p>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-gray-500">No items information available</p>
+                )}
+              </div>
+            </div>
+
+            {/* Map Section */}
+            {showMap && (
+              <div className="mb-6">
+                <h3 className="font-semibold text-gray-900 mb-3 flex items-center">
+                  <Map className="mr-2" size={18} />
+                  Delivery Route
+                </h3>
+                <OrderMap 
+                  order={order} 
+                  currentLocation={currentLocation} 
+                  customerLocation={customerLoc}
+                />
+                <div className="mt-3 grid grid-cols-2 gap-4 text-sm">
+                  <div className="flex items-center space-x-2">
+                    <MapPin className="text-blue-600" size={16} />
+                    <span>Your Location: {currentLocation ? `${currentLocation.lat.toFixed(4)}, ${currentLocation.lng.toFixed(4)}` : 'Unknown'}</span>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Home className="text-red-600" size={16} />
+                    <span>Customer Location: {customerLoc ? `${customerLoc.lat.toFixed(4)}, ${customerLoc.lng.toFixed(4)}` : 'Unknown'}</span>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Action Buttons */}
+            <div className="flex justify-end space-x-3 pt-4 border-t">
+              {order.user?.phone && (
+                <a 
+                  href={`tel:${order.user.phone}`}
+                  className="flex items-center space-x-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
+                >
+                  <Phone size={16} />
+                  <span>Call Customer</span>
+                </a>
+              )}
+              {order.user?.phone && (
+                <a 
+                  href={`sms:${order.user.phone}`}
+                  className="flex items-center space-x-2 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700"
+                >
+                  <MessageCircle size={16} />
+                  <span>Send SMS</span>
+                </a>
+              )}
+              <button 
+                onClick={() => setShowMap(!showMap)}
+                className="flex items-center space-x-2 bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700"
+              >
+                <Map size={16} />
+                <span>{showMap ? 'Hide Map' : 'Show Map'}</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
   };
 
   if (loading) {
@@ -213,6 +508,27 @@ const RiderDashboard = () => {
             </div>
 
             <div className="flex items-center space-x-3">
+              {/* Online/Offline Toggle */}
+              <button 
+                onClick={toggleRiderStatus}
+                className={`flex items-center space-x-2 px-4 py-2 rounded-lg font-medium ${
+                  riderStatus === 'online' 
+                    ? 'bg-green-600 text-white hover:bg-green-700' 
+                    : 'bg-gray-600 text-white hover:bg-gray-700'
+                }`}
+              >
+                {riderStatus === 'online' ? <Wifi size={16} /> : <WifiOff size={16} />}
+                <span>{riderStatus === 'online' ? 'Online' : 'Offline'}</span>
+              </button>
+
+              <button 
+                onClick={getCurrentLocation}
+                className="flex items-center space-x-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
+              >
+                <MapPin size={16} />
+                <span>Update Location</span>
+              </button>
+
               <button 
                 onClick={loadData} 
                 className="flex items-center space-x-2 bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700"
@@ -256,6 +572,39 @@ const RiderDashboard = () => {
             <p className="text-xs text-green-600">delivered</p>
           </div>
         </div>
+
+        {/* Status Alert */}
+        {riderStatus === 'offline' && (
+          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
+            <div className="flex items-center">
+              <AlertCircle className="text-yellow-600 mr-3" size={20} />
+              <div>
+                <p className="text-yellow-800 font-medium">You are currently offline</p>
+                <p className="text-yellow-700 text-sm">Go online to receive and accept delivery orders.</p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Current Location Display */}
+        {currentLocation && (
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-3">
+                <MapPin className="text-blue-600" size={20} />
+                <div>
+                  <p className="text-blue-800 font-medium">Your Current Location</p>
+                  <p className="text-blue-700 text-sm">
+                    {currentLocation.lat.toFixed(6)}, {currentLocation.lng.toFixed(6)}
+                  </p>
+                </div>
+              </div>
+              <span className="bg-green-100 text-green-800 px-2 py-1 rounded text-xs font-medium">
+                Location Active
+              </span>
+            </div>
+          </div>
+        )}
 
         {/* Tabs */}
         <div className="flex space-x-4 mb-6">
@@ -356,14 +705,11 @@ const RiderDashboard = () => {
 
                   <div className="flex justify-between items-center pt-4 border-t">
                     <button 
-                      onClick={() => {
-                        setSelectedOrder(order);
-                        setShowOrderDetails(true);
-                      }}
+                      onClick={() => showOrderWithMap(order)}
                       className="flex items-center space-x-2 text-orange-600 hover:text-orange-700"
                     >
                       <Eye size={16} />
-                      <span>View Details</span>
+                      <span>View Details & Map</span>
                     </button>
                     
                     <div className="flex space-x-3">
@@ -378,7 +724,12 @@ const RiderDashboard = () => {
                       )}
                       <button 
                         onClick={() => acceptOrder(order._id)}
-                        className="flex items-center space-x-2 bg-orange-600 text-white px-4 py-2 rounded-lg hover:bg-orange-700"
+                        disabled={riderStatus === 'offline'}
+                        className={`flex items-center space-x-2 px-4 py-2 rounded-lg ${
+                          riderStatus === 'offline'
+                            ? 'bg-gray-400 text-gray-200 cursor-not-allowed'
+                            : 'bg-orange-600 text-white hover:bg-orange-700'
+                        }`}
                       >
                         <CheckCircle size={16} />
                         <span>Accept Order</span>
@@ -471,14 +822,11 @@ const RiderDashboard = () => {
 
                   <div className="flex justify-between items-center pt-4 border-t">
                     <button 
-                      onClick={() => {
-                        setSelectedOrder(order);
-                        setShowOrderDetails(true);
-                      }}
+                      onClick={() => showOrderWithMap(order)}
                       className="flex items-center space-x-2 text-orange-600 hover:text-orange-700"
                     >
                       <Eye size={16} />
-                      <span>View Details</span>
+                      <span>View Details & Map</span>
                     </button>
                     
                     <div className="flex space-x-3">
@@ -519,6 +867,19 @@ const RiderDashboard = () => {
           </div>
         )}
       </div>
+
+      {/* Order Details Modal */}
+      {showOrderDetails && (
+        <OrderDetailsModal 
+          order={selectedOrder} 
+          onClose={() => {
+            setShowOrderDetails(false);
+            setShowMap(false);
+            setSelectedOrder(null);
+          }} 
+          showMap={showMap}
+        />
+      )}
     </div>
   );
 };
