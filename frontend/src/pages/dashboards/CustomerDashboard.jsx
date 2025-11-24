@@ -7,7 +7,8 @@ import {
     Phone, Mail, Map, Home, Settings, LogOut,
     BarChart3, Users, DollarSign, ChevronDown,
     Eye, Edit, Trash2, CheckCircle, XCircle,
-    Truck, CreditCard, MessageCircle, Heart
+    Truck, CreditCard, MessageCircle, Heart,
+    ChevronLeft, ChevronRight
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 
@@ -136,6 +137,112 @@ const useCart = () => {
         getCartItemCount,
         getCurrentRestaurant
     };
+};
+
+// Image Slideshow Component for Hero Section
+const HeroSlideshow = () => {
+    const [currentSlide, setCurrentSlide] = useState(0);
+    
+    // Sample food images for slideshow - Replace these with your actual images
+    const slides = [
+        {
+            id: 1,
+            image: "https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1080&q=80",
+            alt: "Delicious Pizza"
+        },
+        {
+            id: 2,
+            image: "https://images.unsplash.com/photo-1565958011703-44f9829ba187?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1080&q=80",
+            alt: "Fresh Burger"
+        },
+        {
+            id: 3,
+            image: "https://images.unsplash.com/photo-1555949963-aa79dcee981c?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1080&q=80",
+            alt: "Sushi Platter"
+        },
+        {
+            id: 4,
+            image: "https://images.unsplash.com/photo-1563379926898-05f4575a45d8?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1080&q=80",
+            alt: "Pasta Dish"
+        },
+        {
+            id: 5,
+            image: "https://images.unsplash.com/photo-1567620905732-2d1ec7ab7445?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1080&q=80",
+            alt: "Breakfast Platter"
+        }
+    ];
+
+    // Auto-advance slides
+    useEffect(() => {
+        const timer = setInterval(() => {
+            setCurrentSlide((prev) => (prev + 1) % slides.length);
+        }, 5000); // Change slide every 5 seconds
+
+        return () => clearInterval(timer);
+    }, [slides.length]);
+
+    const nextSlide = () => {
+        setCurrentSlide((prev) => (prev + 1) % slides.length);
+    };
+
+    const prevSlide = () => {
+        setCurrentSlide((prev) => (prev - 1 + slides.length) % slides.length);
+    };
+
+    const goToSlide = (index) => {
+        setCurrentSlide(index);
+    };
+
+    return (
+        <div className="relative h-full w-full overflow-hidden">
+            {/* Slides */}
+            <div 
+                className="flex transition-transform duration-500 ease-in-out h-full"
+                style={{ transform: `translateX(-${currentSlide * 100}%)` }}
+            >
+                {slides.map((slide, index) => (
+                    <div key={slide.id} className="w-full h-full flex-shrink-0">
+                        <img
+                            src={slide.image}
+                            alt={slide.alt}
+                            className="w-full h-full object-cover"
+                        />
+                        {/* Overlay for better text readability */}
+                        <div className="absolute inset-0 bg-black bg-opacity-40"></div>
+                    </div>
+                ))}
+            </div>
+
+            {/* Navigation Arrows */}
+            <button
+                onClick={prevSlide}
+                className="absolute left-4 top-1/2 transform -translate-y-1/2 bg-white bg-opacity-20 hover:bg-opacity-30 text-white p-2 rounded-full transition-all duration-300"
+            >
+                <ChevronLeft size={24} />
+            </button>
+            <button
+                onClick={nextSlide}
+                className="absolute right-4 top-1/2 transform -translate-y-1/2 bg-white bg-opacity-20 hover:bg-opacity-30 text-white p-2 rounded-full transition-all duration-300"
+            >
+                <ChevronRight size={24} />
+            </button>
+
+            {/* Slide Indicators */}
+            <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex space-x-2">
+                {slides.map((_, index) => (
+                    <button
+                        key={index}
+                        onClick={() => goToSlide(index)}
+                        className={`w-3 h-3 rounded-full transition-all duration-300 ${
+                            index === currentSlide 
+                                ? 'bg-white' 
+                                : 'bg-white bg-opacity-50'
+                        }`}
+                    />
+                ))}
+            </div>
+        </div>
+    );
 };
 
 // Cart Component
@@ -439,8 +546,20 @@ const LoginForm = ({ onLogin, onSwitchToRegister, onClose, loading }) => {
     return (
         <div className="bg-white rounded-lg shadow-xl p-6 max-w-md w-full mx-4">
             <div className="text-center mb-6">
-                <div className="mx-auto h-12 w-12 bg-red-800 rounded-lg flex items-center justify-center shadow-md mb-3">
-                    <span className="text-white font-bold text-lg">FX</span>
+                {/* Logo in Login Form */}
+                <div className="mx-auto mb-3 flex justify-center">
+                    <img 
+                        src="/logo.png" 
+                        alt="FoodExpress Logo" 
+                        className="h-12 w-auto"
+                        onError={(e) => {
+                            e.target.style.display = 'none';
+                            e.target.nextSibling.style.display = 'flex';
+                        }}
+                    />
+                    <div className="h-12 w-12 bg-red-800 rounded-lg flex items-center justify-center shadow-md hidden">
+                        <span className="text-white font-bold text-lg">FX</span>
+                    </div>
                 </div>
                 <h2 className="text-xl font-bold text-gray-900 mb-1">Welcome Back</h2>
                 <p className="text-gray-600 text-sm">Sign in to your FoodExpress account</p>
@@ -548,8 +667,20 @@ const CustomerRegisterForm = ({ onRegister, onSwitchToLogin, onSwitchToRestauran
     return (
         <div className="bg-white rounded-lg shadow-xl p-6 max-w-md w-full mx-4 max-h-[90vh] overflow-y-auto">
             <div className="text-center mb-6">
-                <div className="mx-auto h-12 w-12 bg-red-800 rounded-lg flex items-center justify-center shadow-md mb-3">
-                    <span className="text-white font-bold text-lg">FX</span>
+                {/* Logo in Register Form */}
+                <div className="mx-auto mb-3 flex justify-center">
+                    <img 
+                        src="/logo.png" 
+                        alt="FoodExpress Logo" 
+                        className="h-12 w-auto"
+                        onError={(e) => {
+                            e.target.style.display = 'none';
+                            e.target.nextSibling.style.display = 'flex';
+                        }}
+                    />
+                    <div className="h-12 w-12 bg-red-800 rounded-lg flex items-center justify-center shadow-md hidden">
+                        <span className="text-white font-bold text-lg">FX</span>
+                    </div>
                 </div>
                 <h2 className="text-xl font-bold text-gray-900 mb-1">Join as Customer</h2>
                 <p className="text-gray-600 text-sm">Create your account to start ordering food</p>
@@ -714,8 +845,20 @@ const RestaurantRegisterForm = ({ onRegister, onSwitchToLogin, onSwitchToCustome
     return (
         <div className="bg-white rounded-lg shadow-xl p-6 max-w-md w-full mx-4 max-h-[90vh] overflow-y-auto">
             <div className="text-center mb-6">
-                <div className="mx-auto h-12 w-12 bg-orange-600 rounded-lg flex items-center justify-center shadow-md mb-3">
-                    <Store className="text-white" size={20} />
+                {/* Logo in Restaurant Register Form */}
+                <div className="mx-auto mb-3 flex justify-center">
+                    <img 
+                        src="/logo.png" 
+                        alt="FoodExpress Logo" 
+                        className="h-12 w-auto"
+                        onError={(e) => {
+                            e.target.style.display = 'none';
+                            e.target.nextSibling.style.display = 'flex';
+                        }}
+                    />
+                    <div className="h-12 w-12 bg-orange-600 rounded-lg flex items-center justify-center shadow-md hidden">
+                        <Store className="text-white" size={20} />
+                    </div>
                 </div>
                 <h2 className="text-xl font-bold text-gray-900 mb-1">Join as Restaurant</h2>
                 <p className="text-gray-600 text-sm">Register your restaurant and start serving customers</p>
@@ -942,8 +1085,20 @@ const RiderRegisterForm = ({ onRegister, onSwitchToLogin, onSwitchToCustomer, on
     return (
         <div className="bg-white rounded-lg shadow-xl p-6 max-w-md w-full mx-4 max-h-[90vh] overflow-y-auto">
             <div className="text-center mb-6">
-                <div className="mx-auto h-12 w-12 bg-blue-600 rounded-lg flex items-center justify-center shadow-md mb-3">
-                    <Bike className="text-white" size={20} />
+                {/* Logo in Rider Register Form */}
+                <div className="mx-auto mb-3 flex justify-center">
+                    <img 
+                        src="/logo.png" 
+                        alt="FoodExpress Logo" 
+                        className="h-12 w-auto"
+                        onError={(e) => {
+                            e.target.style.display = 'none';
+                            e.target.nextSibling.style.display = 'flex';
+                        }}
+                    />
+                    <div className="h-12 w-12 bg-blue-600 rounded-lg flex items-center justify-center shadow-md hidden">
+                        <Bike className="text-white" size={20} />
+                    </div>
                 </div>
                 <h2 className="text-xl font-bold text-gray-900 mb-1">Join as Rider</h2>
                 <p className="text-gray-600 text-sm">Become a delivery rider and start earning</p>
@@ -2339,24 +2494,46 @@ const CustomerDashboard = () => {
     const renderHomeSection = () => {
         return (
             <>
-                <div className="bg-gradient-to-r from-red-800 to-red-900 text-white py-8 md:py-12">
-                    <div className="max-w-7xl mx-auto px-4 text-center">
-                        <h1 className="text-2xl md:text-4xl font-bold mb-4">
-                            DELICIOUS FOOD DELIVERED TO YOUR DOORSTEP
-                        </h1>
-                        <p className="text-base md:text-lg mb-6 opacity-90">
-                            Experience the best food delivery service in town
-                        </p>
-                        <div className="flex flex-col sm:flex-row justify-center space-y-3 sm:space-y-0 sm:space-x-4">
-                            <button 
-                                onClick={() => user ? setIsCartOpen(true) : setShowAuthModal(true)}
-                                className="bg-white text-red-800 px-6 py-3 rounded font-bold text-base hover:bg-gray-100 transition-colors"
-                            >
-                                {user ? "ORDER NOW" : "LOGIN TO ORDER"}
-                            </button>
-                            <button className="border-2 border-white text-white px-6 py-3 rounded font-bold text-base hover:bg-white hover:text-red-800 transition-colors">
-                                BROWSE RESTAURANTS
-                            </button>
+                {/* Hero Section with Slideshow */}
+                <div className="relative h-96 md:h-[500px] lg:h-[600px] overflow-hidden">
+                    <HeroSlideshow />
+                    
+                    {/* Content Overlay */}
+                    <div className="absolute inset-0 flex items-center justify-center">
+                        <div className="text-center text-white px-4 max-w-4xl mx-auto">
+                            {/* Logo in Hero Section */}
+                            <div className="mb-6 flex justify-center">
+                                <img 
+                                    src="/logo.png" 
+                                    alt="FoodExpress Logo" 
+                                    className="h-16 md:h-20 w-auto bg-white bg-opacity-20 rounded-lg p-2"
+                                    onError={(e) => {
+                                        e.target.style.display = 'none';
+                                        e.target.nextSibling.style.display = 'flex';
+                                    }}
+                                />
+                                <div className="h-16 md:h-20 w-16 md:w-20 bg-red-800 rounded-lg flex items-center justify-center shadow-md hidden bg-opacity-90">
+                                    <span className="text-white font-bold text-xl md:text-2xl">FX</span>
+                                </div>
+                            </div>
+                            
+                            <h1 className="text-3xl md:text-5xl font-bold mb-4 drop-shadow-lg">
+                                DELICIOUS FOOD DELIVERED TO YOUR DOORSTEP
+                            </h1>
+                            <p className="text-lg md:text-xl mb-8 opacity-95 drop-shadow">
+                                Experience the best food delivery service in town
+                            </p>
+                            <div className="flex flex-col sm:flex-row justify-center space-y-4 sm:space-y-0 sm:space-x-6">
+                                <button 
+                                    onClick={() => user ? setIsCartOpen(true) : setShowAuthModal(true)}
+                                    className="bg-white text-red-800 px-8 py-4 rounded font-bold text-lg hover:bg-gray-100 transition-colors shadow-lg"
+                                >
+                                    {user ? "ORDER NOW" : "LOGIN TO ORDER"}
+                                </button>
+                                <button className="border-2 border-white text-white px-8 py-4 rounded font-bold text-lg hover:bg-white hover:text-red-800 transition-colors shadow-lg">
+                                    BROWSE RESTAURANTS
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -2495,12 +2672,24 @@ const CustomerDashboard = () => {
                 <div className="max-w-7xl mx-auto px-4 py-2">
                     <div className="flex items-center justify-between">
                         <div className="flex items-center space-x-2">
-                            <div className="w-8 h-8 bg-red-800 rounded flex items-center justify-center text-white font-bold text-sm shadow">
-                                FX
-                            </div>
-                            <div>
-                                <h1 className="text-lg font-bold text-red-800">FOODEXPRESS</h1>
-                                <p className="text-xs text-gray-600 hidden sm:block">Delivery Service</p>
+                            {/* Logo in Header */}
+                            <div className="flex items-center space-x-2">
+                                <img 
+                                    src="/logo.png" 
+                                    alt="FoodExpress Logo" 
+                                    className="h-8 w-auto"
+                                    onError={(e) => {
+                                        e.target.style.display = 'none';
+                                        e.target.nextSibling.style.display = 'flex';
+                                    }}
+                                />
+                                <div className="h-8 w-8 bg-red-800 rounded flex items-center justify-center text-white font-bold text-sm shadow hidden">
+                                    FX
+                                </div>
+                                <div>
+                                    <h1 className="text-lg font-bold text-red-800">FOODEXPRESS</h1>
+                                    <p className="text-xs text-gray-600 hidden sm:block">Delivery Service</p>
+                                </div>
                             </div>
                         </div>
 
