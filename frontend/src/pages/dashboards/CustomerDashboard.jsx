@@ -147,18 +147,18 @@ const HeroSlideshow = () => {
     const slides = [
         {
             id: 1,
-            image: "https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=800&h=600&crop=center",
-            alt: "Delicious Pizza"
+            image: "https://d3bjzufjcawald.cloudfront.net/public/web/2025-05-17/68283ae88bb40/McDo_Employer_Branding_2025_McDo_PH_Career_Portal_Banner_Web-banner.jpg",
+            alt: "Mcdonalds"
         },
         {
             id: 2,
-            image: "https://www.behance.net/gallery/203222037/Jollibee-(2024)/modules/1153070251",
+            image: "https://images.unsplash.com/photo-1565958011703-44f9829ba187?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=800&h=600&crop=center",
             alt: "Fresh Burger"
         },
         {
             id: 3,
-            image: "https://images.unsplash.com/photo-1555949963-aa79dcee981c?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=800&h=600&crop=center",
-            alt: "Sushi Platter"
+            image: "https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEgx41qCVW92irwBVq9gWwdO6MP_uGL7yZxsfpD-Pr_aFySu_yiK9PpNZAyDOuAkhv1qdQpAlYLnS4pjyJjyGQBwW9718xogeTSG7GcagV3x9VtC161qvW3K5ioyOjfJrIlGfOX4iEQVG_ZTQeyIlB_esY5eWl3WpwcT53SvT0xqczqWWFeei3MdL7seCLs/s1200/JOY%20ng%20Pamilya.jpg",
+            alt: "Jollibee"
         },
         {
             id: 4,
