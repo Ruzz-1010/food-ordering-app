@@ -1,6 +1,9 @@
-// OrdersTab.jsx - UPDATED VERSION WITH DIRECT BACKEND CALLS
+// OrdersTab.jsx - CLEANED AND OPTIMIZED VERSION
 import React, { useState, useEffect } from 'react';
-import { Package, RefreshCw, CheckCircle, XCircle, Truck, Clock, MapPin, User, ChevronDown, ChevronUp, AlertCircle } from 'lucide-react';
+import { 
+  Package, RefreshCw, CheckCircle, Truck, 
+  Clock, MapPin, User, ChevronDown, ChevronUp, AlertCircle 
+} from 'lucide-react';
 
 const OrdersTab = () => {
   const [orders, setOrders] = useState([]);
@@ -11,7 +14,6 @@ const OrdersTab = () => {
 
   const RAILWAY_BACKEND_URL = 'https://food-ordering-app-production-35eb.up.railway.app/api';
 
-  // Fetch orders data from admin endpoint
   const fetchOrders = async () => {
     try {
       setRefreshing(true);
@@ -19,14 +21,11 @@ const OrdersTab = () => {
       
       const token = localStorage.getItem('token');
       
-      console.log('📦 Fetching orders from admin endpoint...');
-      
       if (!token) {
         setError('Please login to access orders');
         return;
       }
 
-      // Try admin endpoint first
       const response = await fetch(`${RAILWAY_BACKEND_URL}/admin/orders`, {
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -34,16 +33,12 @@ const OrdersTab = () => {
         }
       });
 
-      console.log('📦 Orders response status:', response.status);
-
       if (!response.ok) {
-        throw new Error(`Orders API failed: ${response.status}`);
+        throw new Error(`Failed to load orders: ${response.status}`);
       }
 
       const data = await response.json();
-      console.log('📦 Orders API Response:', data);
       
-      // Process different response formats
       let ordersArray = [];
       if (data.success && Array.isArray(data.orders)) {
         ordersArray = data.orders;
@@ -51,15 +46,11 @@ const OrdersTab = () => {
         ordersArray = data.data;
       } else if (Array.isArray(data)) {
         ordersArray = data;
-      } else {
-        ordersArray = [];
       }
       
-      console.log('✅ Processed orders:', ordersArray.length);
       setOrders(ordersArray);
       
     } catch (error) {
-      console.error('❌ Error fetching orders:', error);
       setError(`Failed to load orders: ${error.message}`);
       setOrders([]);
     } finally {
@@ -76,7 +67,6 @@ const OrdersTab = () => {
     try {
       const token = localStorage.getItem('token');
       
-      // Direct backend call to update order status
       const response = await fetch(`${RAILWAY_BACKEND_URL}/admin/orders/${orderId}/status`, {
         method: 'PUT',
         headers: {
@@ -87,20 +77,18 @@ const OrdersTab = () => {
       });
 
       if (!response.ok) {
-        throw new Error(`Failed to update order status: ${response.status}`);
+        throw new Error(`Failed to update order status`);
       }
 
       const data = await response.json();
       
       if (data.success) {
-        await fetchOrders(); // Refresh data
-        alert(`✅ Order status updated to ${newStatus}!`);
+        await fetchOrders();
       } else {
         throw new Error(data.error || 'Failed to update order status');
       }
     } catch (error) {
-      console.error('Error updating order status:', error);
-      alert(`❌ Failed to update order status: ${error.message}`);
+      alert(`Failed to update order status: ${error.message}`);
     }
   };
 
@@ -147,11 +135,11 @@ const OrdersTab = () => {
     return (
       <div className="bg-white rounded-xl shadow-sm border border-orange-200 p-4 sm:p-6">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
-          <h2 className="text-xl sm:text-2xl font-bold text-gray-900">📦 Order Management</h2>
+          <h2 className="text-xl sm:text-2xl font-bold text-gray-900">Order Management</h2>
         </div>
         <div className="text-center py-8">
           <div className="w-8 h-8 border-2 border-orange-300 border-t-orange-500 rounded-full animate-spin mx-auto"></div>
-          <p className="text-gray-500 mt-2">Loading orders from database...</p>
+          <p className="text-gray-500 mt-2">Loading orders...</p>
         </div>
       </div>
     );
@@ -159,8 +147,9 @@ const OrdersTab = () => {
 
   return (
     <div className="bg-white rounded-xl shadow-sm border border-orange-200 p-4 sm:p-6">
+      {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
-        <h2 className="text-xl sm:text-2xl font-bold text-gray-900">📦 Order Management</h2>
+        <h2 className="text-xl sm:text-2xl font-bold text-gray-900">Order Management</h2>
         <button
           onClick={handleRefresh}
           disabled={refreshing}
@@ -175,9 +164,9 @@ const OrdersTab = () => {
       {error && (
         <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-start space-x-3">
           <AlertCircle size={20} className="text-red-600 mt-0.5 flex-shrink-0" />
-          <div className="flex-1 min-w-0">
+          <div className="flex-1">
             <p className="text-red-800 font-medium">Failed to load orders</p>
-            <p className="text-red-700 text-sm break-words">{error}</p>
+            <p className="text-red-700 text-sm">{error}</p>
             <button 
               onClick={fetchOrders}
               className="mt-2 text-red-600 hover:text-red-800 text-sm font-medium"
@@ -188,29 +177,13 @@ const OrdersTab = () => {
         </div>
       )}
 
-      {/* Connection Status */}
-      <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-6">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
-          <p className="text-xs text-blue-800">
-            <strong>Backend:</strong> Railway • 
-            <strong> Endpoint:</strong> /api/admin/orders •
-            <strong> Orders Found:</strong> {orders.length}
-          </p>
-          <div className="flex items-center space-x-3 text-xs text-blue-600">
-            <span>Pending: {pendingOrders}</span>
-            <span>In Progress: {inProgressOrders}</span>
-            <span>Completed: {completedOrders}</span>
-          </div>
-        </div>
-      </div>
-
-      {/* Stats Summary */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-4 mb-6">
+      {/* Stats Summary - Optimized for all devices */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
         <div className="bg-orange-50 border border-orange-200 rounded-lg p-3">
           <div className="flex items-center justify-between">
-            <div className="min-w-0">
-              <p className="text-xs sm:text-sm font-medium text-orange-600 truncate">Total Orders</p>
-              <p className="text-lg sm:text-xl font-bold text-orange-800">{orders.length}</p>
+            <div>
+              <p className="text-xs font-medium text-orange-600">Total Orders</p>
+              <p className="text-lg font-bold text-orange-800">{orders.length}</p>
             </div>
             <Package size={16} className="text-orange-600 flex-shrink-0 ml-2" />
           </div>
@@ -218,11 +191,9 @@ const OrdersTab = () => {
         
         <div className="bg-green-50 border border-green-200 rounded-lg p-3">
           <div className="flex items-center justify-between">
-            <div className="min-w-0">
-              <p className="text-xs sm:text-sm font-medium text-green-600 truncate">Completed</p>
-              <p className="text-lg sm:text-xl font-bold text-green-800">
-                {completedOrders}
-              </p>
+            <div>
+              <p className="text-xs font-medium text-green-600">Completed</p>
+              <p className="text-lg font-bold text-green-800">{completedOrders}</p>
             </div>
             <CheckCircle size={16} className="text-green-600 flex-shrink-0 ml-2" />
           </div>
@@ -230,11 +201,9 @@ const OrdersTab = () => {
         
         <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
           <div className="flex items-center justify-between">
-            <div className="min-w-0">
-              <p className="text-xs sm:text-sm font-medium text-blue-600 truncate">In Progress</p>
-              <p className="text-lg sm:text-xl font-bold text-blue-800">
-                {inProgressOrders}
-              </p>
+            <div>
+              <p className="text-xs font-medium text-blue-600">In Progress</p>
+              <p className="text-lg font-bold text-blue-800">{inProgressOrders}</p>
             </div>
             <Truck size={16} className="text-blue-600 flex-shrink-0 ml-2" />
           </div>
@@ -242,9 +211,9 @@ const OrdersTab = () => {
         
         <div className="bg-purple-50 border border-purple-200 rounded-lg p-3">
           <div className="flex items-center justify-between">
-            <div className="min-w-0">
-              <p className="text-xs sm:text-sm font-medium text-purple-600 truncate">Total Revenue</p>
-              <p className="text-lg sm:text-xl font-bold text-purple-800">
+            <div>
+              <p className="text-xs font-medium text-purple-600">Total Revenue</p>
+              <p className="text-lg font-bold text-purple-800">
                 ₱{getTotalRevenue().toLocaleString()}
               </p>
             </div>
@@ -253,14 +222,14 @@ const OrdersTab = () => {
         </div>
       </div>
 
-      {/* Orders List - Mobile Responsive */}
+      {/* Orders List */}
       <div className="space-y-4">
         {orders.length === 0 ? (
           <div className="text-center py-8">
             <Package size={48} className="mx-auto mb-2 text-gray-300" />
-            <p className="text-gray-500">No orders found in database</p>
+            <p className="text-gray-500">No orders found</p>
             <p className="text-sm text-gray-500">
-              {error ? 'Check backend connection' : 'Orders will appear here when customers place orders'}
+              {error ? 'Check backend connection' : 'Orders will appear here when placed'}
             </p>
             {error && (
               <button 
@@ -274,7 +243,7 @@ const OrdersTab = () => {
         ) : (
           orders.map((order) => (
             <div key={order._id || order.id} className="border border-orange-200 rounded-lg p-4 hover:shadow-md transition-shadow">
-              {/* Mobile Card Header */}
+              {/* Order Header */}
               <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center space-x-3 flex-1 min-w-0">
                   <div className="w-10 h-10 bg-orange-100 rounded-full flex items-center justify-center flex-shrink-0">
@@ -291,13 +260,13 @@ const OrdersTab = () => {
                 </div>
                 <button
                   onClick={() => toggleOrderExpand(order._id || order.id)}
-                  className="p-1 hover:bg-orange-100 rounded"
+                  className="p-1 hover:bg-orange-100 rounded transition-colors"
                 >
                   {expandedOrder === (order._id || order.id) ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
                 </button>
               </div>
 
-              {/* Basic Info - Always Visible */}
+              {/* Basic Info */}
               <div className="grid grid-cols-2 gap-4 mb-3">
                 <div>
                   <p className="text-xs text-gray-500">Amount</p>
@@ -315,18 +284,18 @@ const OrdersTab = () => {
               <div className="grid grid-cols-2 gap-4 mb-3">
                 <div>
                   <p className="text-xs text-gray-500">Restaurant</p>
-                  <p className="text-sm text-gray-900">{order.restaurant?.name || 'N/A'}</p>
+                  <p className="text-sm text-gray-900 truncate">{order.restaurant?.name || 'N/A'}</p>
                 </div>
                 <div>
                   <p className="text-xs text-gray-500">Customer</p>
-                  <p className="text-sm text-gray-900">{order.customer?.name || order.user?.name || 'N/A'}</p>
+                  <p className="text-sm text-gray-900 truncate">{order.customer?.name || order.user?.name || 'N/A'}</p>
                 </div>
               </div>
 
               {/* Expanded Details */}
               {expandedOrder === (order._id || order.id) && (
                 <div className="border-t border-orange-200 pt-3 space-y-3">
-                  <div className="grid grid-cols-1 gap-2">
+                  <div className="space-y-2">
                     <div className="flex items-center space-x-2">
                       <User size={14} className="text-gray-400" />
                       <span className="text-sm text-gray-700">
@@ -353,6 +322,7 @@ const OrdersTab = () => {
                     </div>
                   </div>
                   
+                  {/* Action Buttons */}
                   <div className="grid grid-cols-2 gap-2 pt-2">
                     {order.status === 'pending' && (
                       <button 
@@ -390,7 +360,7 @@ const OrdersTab = () => {
                 </div>
               )}
 
-              {/* Action Buttons - Collapsed State */}
+              {/* Quick Action Buttons - Collapsed State */}
               {expandedOrder !== (order._id || order.id) && (
                 <div className="flex space-x-2 border-t border-orange-200 pt-3">
                   {order.status === 'pending' && (

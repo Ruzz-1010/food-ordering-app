@@ -66,12 +66,12 @@ const AdminDashboard = () => {
             
             <div className="flex items-center space-x-2 sm:space-x-4 flex-1 min-w-0">
               <h1 className="text-lg sm:text-xl font-semibold text-gray-900 capitalize truncate">
-                {activeTab === 'dashboard' ? '🍽️ Dashboard' : 
-                 activeTab === 'restaurants' ? '🏪 Restaurants' :
-                 activeTab === 'orders' ? '📦 Orders' :
-                 activeTab === 'users' ? '👥 Users' : 
-                 activeTab === 'riders' ? '🚴 Riders' :
-                 `📊 ${activeTab.charAt(0).toUpperCase() + activeTab.slice(1)}`}
+                {activeTab === 'dashboard' ? ' Dashboard' : 
+                 activeTab === 'restaurants' ? ' Restaurants' :
+                 activeTab === 'orders' ? ' Orders' :
+                 activeTab === 'users' ? ' Users' : 
+                 activeTab === 'riders' ? ' Riders' :
+                 ` ${activeTab.charAt(0).toUpperCase() + activeTab.slice(1)}`}
               </h1>
             </div>
 
