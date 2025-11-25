@@ -1,6 +1,6 @@
+// AnalyticsTab.jsx - UPDATED VERSION WITH DIRECT BACKEND CALLS
 import React, { useState, useEffect } from 'react';
-import { TrendingUp, Users, Store, Package, DollarSign, Calendar, ChefHat, Utensils, RefreshCw, Clock, BarChart3, PieChart } from 'lucide-react';
-import { apiService } from '../../services/api';
+import { TrendingUp, Users, Store, Package, DollarSign, Calendar, ChefHat, Utensils, RefreshCw, Clock, BarChart3, PieChart, AlertCircle } from 'lucide-react';
 
 const AnalyticsTab = () => {
   const [analytics, setAnalytics] = useState({
@@ -12,82 +12,121 @@ const AnalyticsTab = () => {
     topRestaurants: [],
     orderStats: {}
   });
-  const [timeRange, setTimeRange] = useState('week');
+  const [timeRange, setTimeRange] = useState('all');
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [error, setError] = useState('');
+
+  const RAILWAY_BACKEND_URL = 'https://food-ordering-app-production-35eb.up.railway.app/api';
+
+  // Direct fetch functions for admin endpoints
+  const fetchAdminData = async (endpoint, endpointName) => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`${RAILWAY_BACKEND_URL}/admin${endpoint}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error(`${endpointName} API failed: ${response.status}`);
+      }
+
+      const data = await response.json();
+      console.log(`✅ ${endpointName} API Response:`, data);
+
+      // Process response format
+      if (data.success && Array.isArray(data.data)) {
+        return data.data;
+      } else if (data.success && Array.isArray(data[endpointName.toLowerCase()])) {
+        return data[endpointName.toLowerCase()];
+      } else if (data.success && data.data && typeof data.data === 'object') {
+        // For dashboard stats
+        return data.data;
+      } else if (Array.isArray(data)) {
+        return data;
+      }
+      
+      return data.data || [];
+    } catch (error) {
+      console.error(`❌ ${endpointName} fetch error:`, error);
+      throw error;
+    }
+  };
 
   const fetchAnalytics = async () => {
     try {
       setRefreshing(true);
+      setError('');
       
-      // Fetch all necessary data
+      const token = localStorage.getItem('token');
+      
+      console.log('📊 Fetching analytics data from admin endpoints...');
+
+      if (!token) {
+        setError('Please login to access analytics');
+        return;
+      }
+
+      // Fetch all necessary data from admin endpoints
       const [ordersData, usersData, restaurantsData] = await Promise.all([
-        apiService.getOrders(),
-        apiService.getUsers(),
-        apiService.getRestaurants()
+        fetchAdminData('/orders', 'Orders'),
+        fetchAdminData('/users', 'Users'),
+        fetchAdminData('/restaurants', 'Restaurants')
       ]);
 
-      // Process orders data
-      let orders = [];
-      if (ordersData.success && Array.isArray(ordersData.orders)) {
-        orders = ordersData.orders;
-      } else if (Array.isArray(ordersData)) {
-        orders = ordersData;
-      } else if (ordersData.data && Array.isArray(ordersData.data)) {
-        orders = ordersData.data;
-      }
-
-      // Process users data
-      let users = [];
-      if (usersData.success && Array.isArray(usersData.users)) {
-        users = usersData.users;
-      } else if (Array.isArray(usersData)) {
-        users = usersData;
-      } else if (usersData.users && Array.isArray(usersData.users)) {
-        users = usersData.users;
-      }
-
-      // Process restaurants data
-      let restaurants = [];
-      if (restaurantsData.success && Array.isArray(restaurantsData.restaurants)) {
-        restaurants = restaurantsData.restaurants;
-      } else if (Array.isArray(restaurantsData)) {
-        restaurants = restaurantsData;
-      } else if (restaurantsData.data && Array.isArray(restaurantsData.data)) {
-        restaurants = restaurantsData.data;
-      }
+      console.log('📦 Analytics data fetched:', {
+        orders: ordersData.length,
+        users: usersData.length,
+        restaurants: restaurantsData.length
+      });
 
       // Calculate total revenue from delivered orders
-      const deliveredOrders = orders.filter(order => order.status === 'delivered');
-      const totalRevenue = deliveredOrders.reduce((total, order) => 
-        total + (order.totalAmount || order.total || 0), 0
+      // Include service fee calculation (₱10 per order)
+      const deliveredOrders = ordersData.filter(order => 
+        order.status === 'delivered' || order.status === 'completed'
       );
+      
+      const totalRevenue = deliveredOrders.reduce((total, order) => {
+        const orderAmount = order.totalAmount || order.total || order.amount || 0;
+        const serviceFee = 10; // ₱10 service fee per order
+        return total + Number(orderAmount) + serviceFee;
+      }, 0);
 
       // Calculate order statistics
       const orderStats = {
-        pending: orders.filter(o => o.status === 'pending').length,
-        confirmed: orders.filter(o => o.status === 'confirmed').length,
-        preparing: orders.filter(o => o.status === 'preparing').length,
-        ready: orders.filter(o => o.status === 'ready').length,
-        out_for_delivery: orders.filter(o => o.status === 'out_for_delivery').length,
+        pending: ordersData.filter(o => o.status === 'pending').length,
+        confirmed: ordersData.filter(o => o.status === 'confirmed').length,
+        preparing: ordersData.filter(o => o.status === 'preparing').length,
+        ready: ordersData.filter(o => o.status === 'ready').length,
+        out_for_delivery: ordersData.filter(o => o.status === 'out_for_delivery').length,
         delivered: deliveredOrders.length,
-        cancelled: orders.filter(o => o.status === 'cancelled').length
+        cancelled: ordersData.filter(o => o.status === 'cancelled').length
       };
 
-      // Get top restaurants by order count
+      // Get top restaurants by order count and revenue
       const restaurantOrderCount = {};
-      orders.forEach(order => {
+      ordersData.forEach(order => {
         const restaurantId = order.restaurant?._id || order.restaurant?.id || 'unknown';
+        const restaurantName = order.restaurant?.name || 'Unknown Restaurant';
+        
         if (!restaurantOrderCount[restaurantId]) {
           restaurantOrderCount[restaurantId] = {
             count: 0,
             revenue: 0,
-            name: order.restaurant?.name || 'Unknown Restaurant'
+            name: restaurantName
           };
         }
+        
         restaurantOrderCount[restaurantId].count++;
-        if (order.status === 'delivered') {
-          restaurantOrderCount[restaurantId].revenue += order.totalAmount || order.total || 0;
+        
+        // Calculate revenue including service fee
+        if (order.status === 'delivered' || order.status === 'completed') {
+          const orderAmount = order.totalAmount || order.total || order.amount || 0;
+          const serviceFee = 10; // ₱10 service fee
+          restaurantOrderCount[restaurantId].revenue += Number(orderAmount) + serviceFee;
         }
       });
 
@@ -102,15 +141,15 @@ const AnalyticsTab = () => {
         .slice(0, 5);
 
       // Get recent orders
-      const recentOrders = orders
+      const recentOrders = ordersData
         .sort((a, b) => new Date(b.createdAt || b.orderDate) - new Date(a.createdAt || a.orderDate))
         .slice(0, 5);
 
       setAnalytics({
         totalRevenue,
-        totalOrders: orders.length,
-        totalUsers: users.length,
-        totalRestaurants: restaurants.length,
+        totalOrders: ordersData.length,
+        totalUsers: usersData.length,
+        totalRestaurants: restaurantsData.length,
         recentOrders,
         topRestaurants,
         orderStats
@@ -118,6 +157,7 @@ const AnalyticsTab = () => {
 
     } catch (error) {
       console.error('❌ Error fetching analytics:', error);
+      setError(`Failed to load analytics data: ${error.message}`);
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -140,9 +180,28 @@ const AnalyticsTab = () => {
       ready: 'bg-purple-100 text-purple-800',
       out_for_delivery: 'bg-indigo-100 text-indigo-800',
       delivered: 'bg-green-100 text-green-800',
+      completed: 'bg-green-100 text-green-800',
       cancelled: 'bg-red-100 text-red-800'
     };
     return colors[status] || 'bg-gray-100 text-gray-800';
+  };
+
+  const calculateCompletionRate = () => {
+    return analytics.totalOrders > 0 
+      ? ((analytics.orderStats.delivered / analytics.totalOrders) * 100).toFixed(1)
+      : 0;
+  };
+
+  const calculateAverageOrderValue = () => {
+    return analytics.orderStats.delivered > 0 
+      ? (analytics.totalRevenue / analytics.orderStats.delivered).toFixed(0)
+      : 0;
+  };
+
+  const calculateOrdersPerUser = () => {
+    return analytics.totalUsers > 0 
+      ? (analytics.totalOrders / analytics.totalUsers).toFixed(1)
+      : 0;
   };
 
   if (loading) {
@@ -165,7 +224,10 @@ const AnalyticsTab = () => {
       <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 mb-6">
         <div className="min-w-0 flex-1">
           <h2 className="text-xl sm:text-2xl font-bold text-gray-900">📊 Analytics & Reports</h2>
-          <p className="text-gray-600 mt-1 text-sm sm:text-base">Real-time business insights from your database</p>
+          <p className="text-gray-600 mt-1 text-sm sm:text-base">
+            Real-time business insights with service fee calculation
+            {error && ' • Some data may be unavailable'}
+          </p>
         </div>
         <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
           <select 
@@ -188,6 +250,39 @@ const AnalyticsTab = () => {
         </div>
       </div>
 
+      {/* Error Message */}
+      {error && (
+        <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-start space-x-3">
+          <AlertCircle size={20} className="text-red-600 mt-0.5 flex-shrink-0" />
+          <div className="flex-1 min-w-0">
+            <p className="text-red-800 font-medium">Analytics Data Error</p>
+            <p className="text-red-700 text-sm break-words">{error}</p>
+            <button 
+              onClick={fetchAnalytics}
+              className="mt-2 text-red-600 hover:text-red-800 text-sm font-medium"
+            >
+              Try Again
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Connection Status */}
+      <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-6">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+          <p className="text-xs text-blue-800">
+            <strong>Backend:</strong> Railway • 
+            <strong> Service Fee:</strong> ₱10 per order •
+            <strong> Data:</strong> Real-time from admin endpoints
+          </p>
+          <div className="flex items-center space-x-3 text-xs text-blue-600">
+            <span>Orders: {analytics.totalOrders}</span>
+            <span>Users: {analytics.totalUsers}</span>
+            <span>Restaurants: {analytics.totalRestaurants}</span>
+          </div>
+        </div>
+      </div>
+
       {/* Key Metrics */}
       <div className="grid grid-cols-1 xs:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6">
         <div className="bg-gradient-to-r from-orange-500 to-orange-600 text-white rounded-xl p-4 shadow-lg">
@@ -195,7 +290,7 @@ const AnalyticsTab = () => {
             <div className="min-w-0 flex-1">
               <p className="text-xs sm:text-sm font-medium opacity-90 truncate">Total Revenue</p>
               <p className="text-xl sm:text-2xl font-bold mt-1 truncate">₱{analytics.totalRevenue.toLocaleString()}</p>
-              <p className="text-xs opacity-90 mt-1 truncate">From delivered orders</p>
+              <p className="text-xs opacity-90 mt-1 truncate">Includes ₱10 service fee per order</p>
             </div>
             <DollarSign size={20} className="opacity-90 flex-shrink-0 ml-2" />
           </div>
@@ -277,6 +372,9 @@ const AnalyticsTab = () => {
           <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
             <BarChart3 size={20} className="text-green-600 mr-2" />
             Top Restaurants
+            <span className="ml-2 text-xs text-green-600 bg-green-100 px-2 py-1 rounded-full">
+              Revenue includes service fee
+            </span>
           </h3>
           <div className="space-y-3">
             {analytics.topRestaurants.map((restaurant, index) => (
@@ -316,16 +414,21 @@ const AnalyticsTab = () => {
                   <p className="font-medium text-gray-900 text-sm truncate">
                     Order #{order.orderNumber || order._id?.substring(0, 8)}
                   </p>
-                  <p className="text-xs text-gray-500 truncate">{order.customer?.name || 'Customer'}</p>
+                  <p className="text-xs text-gray-500 truncate">
+                    {order.customer?.name || order.user?.name || 'Customer'}
+                  </p>
                 </div>
                 <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(order.status)} flex-shrink-0 ml-2`}>
                   {order.status}
                 </span>
               </div>
               <div className="flex items-center justify-between">
-                <p className="text-sm font-bold text-orange-600">
-                  ₱{(order.totalAmount || order.total || 0).toLocaleString()}
-                </p>
+                <div>
+                  <p className="text-sm font-bold text-orange-600">
+                    ₱{(order.totalAmount || order.total || order.amount || 0).toLocaleString()}
+                  </p>
+                  <p className="text-xs text-gray-500">+ ₱10 service fee</p>
+                </div>
                 <p className="text-xs text-gray-600">
                   {order.createdAt ? new Date(order.createdAt).toLocaleDateString() : 'N/A'}
                 </p>
@@ -345,21 +448,32 @@ const AnalyticsTab = () => {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6 mt-6">
         <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 text-center">
           <div className="text-2xl font-bold text-blue-600">
-            {analytics.totalOrders > 0 ? ((analytics.orderStats.delivered / analytics.totalOrders) * 100).toFixed(1) : 0}%
+            {calculateCompletionRate()}%
           </div>
           <div className="text-sm text-blue-800 mt-1">Completion Rate</div>
         </div>
         <div className="bg-green-50 border border-green-200 rounded-xl p-4 text-center">
           <div className="text-2xl font-bold text-green-600">
-            ₱{analytics.totalOrders > 0 ? (analytics.totalRevenue / analytics.orderStats.delivered).toFixed(0) : 0}
+            ₱{calculateAverageOrderValue()}
           </div>
           <div className="text-sm text-green-800 mt-1">Avg. Order Value</div>
+          <div className="text-xs text-green-600 mt-1">Includes service fee</div>
         </div>
         <div className="bg-purple-50 border border-purple-200 rounded-xl p-4 text-center">
           <div className="text-2xl font-bold text-purple-600">
-            {analytics.totalUsers > 0 ? (analytics.totalOrders / analytics.totalUsers).toFixed(1) : 0}
+            {calculateOrdersPerUser()}
           </div>
           <div className="text-sm text-purple-800 mt-1">Orders per User</div>
+        </div>
+      </div>
+
+      {/* Revenue Breakdown Info */}
+      <div className="mt-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+        <h4 className="font-medium text-yellow-900 mb-2">💰 Revenue Calculation</h4>
+        <div className="text-sm text-yellow-800 space-y-1">
+          <p><strong>Service Fee:</strong> ₱10 per delivered order</p>
+          <p><strong>Total Revenue:</strong> Order amount + Service fees from all delivered orders</p>
+          <p><strong>Sample:</strong> 5 delivered orders = ₱50 service fee revenue</p>
         </div>
       </div>
 
@@ -367,13 +481,12 @@ const AnalyticsTab = () => {
       <div className="mt-4 p-3 bg-gray-50 rounded-lg border">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
           <p className="text-xs text-gray-600">
-            <strong>Data Source:</strong> Real database | 
+            <strong>Data Source:</strong> Admin Endpoints | 
             <strong> Last Update:</strong> {new Date().toLocaleTimeString()}
           </p>
           <div className="flex items-center space-x-3 text-xs text-gray-500">
-            <span>Orders: {analytics.totalOrders}</span>
-            <span>Users: {analytics.totalUsers}</span>
-            <span>Restaurants: {analytics.totalRestaurants}</span>
+            <span>Delivered Orders: {analytics.orderStats.delivered}</span>
+            <span>Service Fee Revenue: ₱{analytics.orderStats.delivered * 10}</span>
           </div>
         </div>
       </div>

@@ -1,30 +1,66 @@
+// OrdersTab.jsx - UPDATED VERSION WITH DIRECT BACKEND CALLS
 import React, { useState, useEffect } from 'react';
-import { Package, RefreshCw, CheckCircle, XCircle, Truck, Clock, MapPin, User, ChevronDown, ChevronUp } from 'lucide-react';
-import { apiService } from '../../services/api';
+import { Package, RefreshCw, CheckCircle, XCircle, Truck, Clock, MapPin, User, ChevronDown, ChevronUp, AlertCircle } from 'lucide-react';
 
 const OrdersTab = () => {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [expandedOrder, setExpandedOrder] = useState(null);
+  const [error, setError] = useState('');
 
-  // Fetch orders data
+  const RAILWAY_BACKEND_URL = 'https://food-ordering-app-production-35eb.up.railway.app/api';
+
+  // Fetch orders data from admin endpoint
   const fetchOrders = async () => {
     try {
       setRefreshing(true);
-      const data = await apiService.getOrders();
+      setError('');
       
-      console.log('📦 Orders data:', data);
+      const token = localStorage.getItem('token');
       
-      if (data.success && Array.isArray(data.orders)) {
-        setOrders(data.orders);
-      } else if (Array.isArray(data)) {
-        setOrders(data);
-      } else {
-        setOrders([]);
+      console.log('📦 Fetching orders from admin endpoint...');
+      
+      if (!token) {
+        setError('Please login to access orders');
+        return;
       }
+
+      // Try admin endpoint first
+      const response = await fetch(`${RAILWAY_BACKEND_URL}/admin/orders`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      console.log('📦 Orders response status:', response.status);
+
+      if (!response.ok) {
+        throw new Error(`Orders API failed: ${response.status}`);
+      }
+
+      const data = await response.json();
+      console.log('📦 Orders API Response:', data);
+      
+      // Process different response formats
+      let ordersArray = [];
+      if (data.success && Array.isArray(data.orders)) {
+        ordersArray = data.orders;
+      } else if (data.success && Array.isArray(data.data)) {
+        ordersArray = data.data;
+      } else if (Array.isArray(data)) {
+        ordersArray = data;
+      } else {
+        ordersArray = [];
+      }
+      
+      console.log('✅ Processed orders:', ordersArray.length);
+      setOrders(ordersArray);
+      
     } catch (error) {
       console.error('❌ Error fetching orders:', error);
+      setError(`Failed to load orders: ${error.message}`);
       setOrders([]);
     } finally {
       setLoading(false);
@@ -38,12 +74,33 @@ const OrdersTab = () => {
 
   const handleUpdateOrderStatus = async (orderId, newStatus) => {
     try {
-      await apiService.updateOrderStatus(orderId, newStatus);
-      fetchOrders(); // Refresh data
-      alert(`Order status updated to ${newStatus}!`);
+      const token = localStorage.getItem('token');
+      
+      // Direct backend call to update order status
+      const response = await fetch(`${RAILWAY_BACKEND_URL}/admin/orders/${orderId}/status`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ status: newStatus })
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to update order status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      
+      if (data.success) {
+        await fetchOrders(); // Refresh data
+        alert(`✅ Order status updated to ${newStatus}!`);
+      } else {
+        throw new Error(data.error || 'Failed to update order status');
+      }
     } catch (error) {
       console.error('Error updating order status:', error);
-      alert('Failed to update order status');
+      alert(`❌ Failed to update order status: ${error.message}`);
     }
   };
 
@@ -63,6 +120,7 @@ const OrdersTab = () => {
       ready: { color: 'bg-purple-100 text-purple-800', label: '📦 Ready' },
       out_for_delivery: { color: 'bg-indigo-100 text-indigo-800', label: '🚚 Out for Delivery' },
       delivered: { color: 'bg-green-100 text-green-800', label: '🎉 Delivered' },
+      completed: { color: 'bg-green-100 text-green-800', label: '✅ Completed' },
       cancelled: { color: 'bg-red-100 text-red-800', label: '❌ Cancelled' }
     };
     
@@ -76,19 +134,24 @@ const OrdersTab = () => {
 
   const getTotalRevenue = () => {
     return orders
-      .filter(order => order.status === 'delivered')
-      .reduce((total, order) => total + (order.totalAmount || 0), 0);
+      .filter(order => order.status === 'delivered' || order.status === 'completed')
+      .reduce((total, order) => total + (order.totalAmount || order.total || order.amount || 0), 0);
   };
+
+  // Calculate statistics
+  const completedOrders = orders.filter(o => o.status === 'delivered' || o.status === 'completed').length;
+  const inProgressOrders = orders.filter(o => ['preparing', 'ready', 'out_for_delivery', 'confirmed'].includes(o.status)).length;
+  const pendingOrders = orders.filter(o => o.status === 'pending').length;
 
   if (loading) {
     return (
       <div className="bg-white rounded-xl shadow-sm border border-orange-200 p-4 sm:p-6">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
-          <h2 className="text-xl sm:text-2xl font-bold text-gray-900">Order Management</h2>
+          <h2 className="text-xl sm:text-2xl font-bold text-gray-900">📦 Order Management</h2>
         </div>
         <div className="text-center py-8">
           <div className="w-8 h-8 border-2 border-orange-300 border-t-orange-500 rounded-full animate-spin mx-auto"></div>
-          <p className="text-gray-500 mt-2">Loading orders...</p>
+          <p className="text-gray-500 mt-2">Loading orders from database...</p>
         </div>
       </div>
     );
@@ -108,6 +171,39 @@ const OrdersTab = () => {
         </button>
       </div>
 
+      {/* Error Message */}
+      {error && (
+        <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-start space-x-3">
+          <AlertCircle size={20} className="text-red-600 mt-0.5 flex-shrink-0" />
+          <div className="flex-1 min-w-0">
+            <p className="text-red-800 font-medium">Failed to load orders</p>
+            <p className="text-red-700 text-sm break-words">{error}</p>
+            <button 
+              onClick={fetchOrders}
+              className="mt-2 text-red-600 hover:text-red-800 text-sm font-medium"
+            >
+              Try Again
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Connection Status */}
+      <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-6">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+          <p className="text-xs text-blue-800">
+            <strong>Backend:</strong> Railway • 
+            <strong> Endpoint:</strong> /api/admin/orders •
+            <strong> Orders Found:</strong> {orders.length}
+          </p>
+          <div className="flex items-center space-x-3 text-xs text-blue-600">
+            <span>Pending: {pendingOrders}</span>
+            <span>In Progress: {inProgressOrders}</span>
+            <span>Completed: {completedOrders}</span>
+          </div>
+        </div>
+      </div>
+
       {/* Stats Summary */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-4 mb-6">
         <div className="bg-orange-50 border border-orange-200 rounded-lg p-3">
@@ -125,7 +221,7 @@ const OrdersTab = () => {
             <div className="min-w-0">
               <p className="text-xs sm:text-sm font-medium text-green-600 truncate">Completed</p>
               <p className="text-lg sm:text-xl font-bold text-green-800">
-                {orders.filter(o => o.status === 'delivered').length}
+                {completedOrders}
               </p>
             </div>
             <CheckCircle size={16} className="text-green-600 flex-shrink-0 ml-2" />
@@ -137,7 +233,7 @@ const OrdersTab = () => {
             <div className="min-w-0">
               <p className="text-xs sm:text-sm font-medium text-blue-600 truncate">In Progress</p>
               <p className="text-lg sm:text-xl font-bold text-blue-800">
-                {orders.filter(o => ['preparing', 'ready', 'out_for_delivery'].includes(o.status)).length}
+                {inProgressOrders}
               </p>
             </div>
             <Truck size={16} className="text-blue-600 flex-shrink-0 ml-2" />
@@ -163,7 +259,17 @@ const OrdersTab = () => {
           <div className="text-center py-8">
             <Package size={48} className="mx-auto mb-2 text-gray-300" />
             <p className="text-gray-500">No orders found in database</p>
-            <p className="text-sm text-gray-500">Orders will appear here when customers place orders</p>
+            <p className="text-sm text-gray-500">
+              {error ? 'Check backend connection' : 'Orders will appear here when customers place orders'}
+            </p>
+            {error && (
+              <button 
+                onClick={fetchOrders}
+                className="mt-3 bg-orange-600 text-white px-4 py-2 rounded-lg hover:bg-orange-700 transition-colors"
+              >
+                Retry Connection
+              </button>
+            )}
           </div>
         ) : (
           orders.map((order) => (
@@ -176,10 +282,10 @@ const OrdersTab = () => {
                   </div>
                   <div className="min-w-0 flex-1">
                     <p className="font-medium text-gray-900 truncate">
-                      Order #{order.orderNumber || order._id?.substring(0, 8)}
+                      Order #{order.orderNumber || order._id?.substring(0, 8) || 'N/A'}
                     </p>
                     <p className="text-xs text-gray-500 truncate">
-                      {order.customer?.name || 'Customer'}
+                      {order.customer?.name || order.user?.name || 'Customer'}
                     </p>
                   </div>
                 </div>
@@ -195,7 +301,9 @@ const OrdersTab = () => {
               <div className="grid grid-cols-2 gap-4 mb-3">
                 <div>
                   <p className="text-xs text-gray-500">Amount</p>
-                  <p className="text-lg font-bold text-orange-600">₱{(order.totalAmount || 0).toLocaleString()}</p>
+                  <p className="text-lg font-bold text-orange-600">
+                    ₱{(order.totalAmount || order.total || order.amount || 0).toLocaleString()}
+                  </p>
                 </div>
                 <div>
                   <p className="text-xs text-gray-500">Status</p>
@@ -203,10 +311,16 @@ const OrdersTab = () => {
                 </div>
               </div>
 
-              {/* Restaurant Info */}
-              <div className="mb-3">
-                <p className="text-xs text-gray-500">Restaurant</p>
-                <p className="text-sm text-gray-900">{order.restaurant?.name || 'N/A'}</p>
+              {/* Restaurant & Customer Info */}
+              <div className="grid grid-cols-2 gap-4 mb-3">
+                <div>
+                  <p className="text-xs text-gray-500">Restaurant</p>
+                  <p className="text-sm text-gray-900">{order.restaurant?.name || 'N/A'}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-gray-500">Customer</p>
+                  <p className="text-sm text-gray-900">{order.customer?.name || order.user?.name || 'N/A'}</p>
+                </div>
               </div>
 
               {/* Expanded Details */}
@@ -215,22 +329,26 @@ const OrdersTab = () => {
                   <div className="grid grid-cols-1 gap-2">
                     <div className="flex items-center space-x-2">
                       <User size={14} className="text-gray-400" />
-                      <span className="text-sm text-gray-700">{order.customer?.name || 'Customer'}</span>
+                      <span className="text-sm text-gray-700">
+                        {order.customer?.name || order.user?.name || 'Customer'}
+                      </span>
                     </div>
                     <div className="flex items-start space-x-2">
                       <MapPin size={14} className="text-gray-400 mt-0.5" />
-                      <span className="text-sm text-gray-500 break-words">{order.deliveryAddress || 'No address'}</span>
+                      <span className="text-sm text-gray-500 break-words">
+                        {order.deliveryAddress || order.address || 'No address provided'}
+                      </span>
                     </div>
                     <div className="flex items-center space-x-2">
                       <Clock size={14} className="text-gray-400" />
                       <span className="text-sm text-gray-700">
-                        {order.createdAt ? new Date(order.createdAt).toLocaleDateString() : 'N/A'}
+                        {order.createdAt ? new Date(order.createdAt).toLocaleString() : 'N/A'}
                       </span>
                     </div>
                     <div>
                       <p className="text-xs text-gray-500">Items ({order.items?.length || 0})</p>
                       <p className="text-sm text-gray-700">
-                        {order.items?.map(item => item.name).join(', ') || 'No items'}
+                        {order.items?.map(item => item.name || item.product?.name).join(', ') || 'No items listed'}
                       </p>
                     </div>
                   </div>
@@ -260,7 +378,7 @@ const OrdersTab = () => {
                         Mark Delivered
                       </button>
                     )}
-                    {!['delivered', 'cancelled'].includes(order.status) && (
+                    {!['delivered', 'completed', 'cancelled'].includes(order.status) && (
                       <button 
                         onClick={() => handleUpdateOrderStatus(order._id || order.id, 'cancelled')}
                         className="bg-red-600 text-white px-3 py-2 rounded text-sm font-medium hover:bg-red-700 transition-colors"
@@ -299,7 +417,7 @@ const OrdersTab = () => {
                       Deliver
                     </button>
                   )}
-                  {!['delivered', 'cancelled'].includes(order.status) && (
+                  {!['delivered', 'completed', 'cancelled'].includes(order.status) && (
                     <button 
                       onClick={() => handleUpdateOrderStatus(order._id || order.id, 'cancelled')}
                       className="flex-1 bg-red-600 text-white px-2 py-1 rounded text-xs font-medium hover:bg-red-700 transition-colors"

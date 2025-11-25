@@ -1,4 +1,4 @@
-// routes/admin.js - CORRECTED VERSION
+// routes/admin.js - UPDATED VERSION WITH STATUS UPDATE AND SERVICE FEE
 const express = require('express');
 const router = express.Router();
 const User = require('../models/User');
@@ -9,21 +9,6 @@ const Product = require('../models/Product');
 // Admin authentication middleware (if you have one)
 const adminAuth = require('../middleware/adminAuth');
 
-// Remove these problematic lines:
-// GET /api/admin/dashboard/stats       // Overall statistics
-// GET /api/admin/users                 // All users data  
-// GET /api/admin/restaurants          // All restaurants
-// GET /api/admin/orders               // All orders
-// GET /api/dmin/products               //all menu
-
-// Or comment them properly:
-// Available endpoints:
-// - GET /api/admin/dashboard/stats       // Overall statistics
-// - GET /api/admin/users                 // All users data  
-// - GET /api/admin/restaurants          // All restaurants
-// - GET /api/admin/orders               // All orders
-// - GET /api/admin/products              // All menu items
-
 // GET /api/admin/dashboard/stats
 router.get('/dashboard/stats', adminAuth, async (req, res) => {
     try {
@@ -32,10 +17,15 @@ router.get('/dashboard/stats', adminAuth, async (req, res) => {
       const orderCount = await Order.countDocuments();
       const productCount = await Product.countDocuments();
       
-      const revenue = await Order.aggregate([
-        { $match: { status: 'delivered' } },
-        { $group: { _id: null, total: { $sum: '$totalAmount' } } }
-      ]);
+      // Calculate revenue including ₱10 service fee per delivered order
+      const deliveredOrders = await Order.find({ status: 'delivered' });
+      let totalRevenue = 0;
+      
+      deliveredOrders.forEach(order => {
+        const orderAmount = order.totalAmount || 0;
+        const serviceFee = 10; // ₱10 service fee
+        totalRevenue += orderAmount + serviceFee;
+      });
   
       res.json({
         success: true,
@@ -44,7 +34,7 @@ router.get('/dashboard/stats', adminAuth, async (req, res) => {
           totalRestaurants: restaurantCount,
           totalOrders: orderCount,
           totalProducts: productCount,
-          totalRevenue: revenue[0]?.total || 0
+          totalRevenue: totalRevenue
         }
       });
     } catch (error) {
@@ -80,6 +70,26 @@ router.get('/dashboard/stats', adminAuth, async (req, res) => {
         .populate('restaurant', 'name')
         .sort({ createdAt: -1 });
       res.json({ success: true, orders });
+    } catch (error) {
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+
+  // PUT /api/admin/orders/:id/status - FOR ORDER STATUS UPDATES
+  router.put('/orders/:id/status', adminAuth, async (req, res) => {
+    try {
+      const { status } = req.body;
+      const order = await Order.findByIdAndUpdate(
+        req.params.id,
+        { status },
+        { new: true }
+      ).populate('user', 'name email').populate('restaurant', 'name');
+
+      if (!order) {
+        return res.status(404).json({ success: false, error: 'Order not found' });
+      }
+
+      res.json({ success: true, order });
     } catch (error) {
       res.status(500).json({ success: false, error: error.message });
     }
