@@ -5,7 +5,7 @@ import {
   CheckCircle, Users, TrendingUp, Phone, MessageCircle, Settings,
   User, Edit, Camera, Upload, Map, Crosshair, Trash2, 
   ToggleLeft, ToggleRight, BarChart3, Calendar, FileText, 
-  Truck, UserCheck, Ban, Filter, Download
+  Truck, UserCheck, Ban, Filter, Download, AlertTriangle
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 
@@ -40,6 +40,9 @@ const RestaurantDashboard = () => {
   const [selectedOrderForRider, setSelectedOrderForRider] = useState(null);
   const [reportPeriod, setReportPeriod] = useState('today');
   const [showReports, setShowReports] = useState(false);
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
+  const [confirmAction, setConfirmAction] = useState(null);
+  const [confirmMessage, setConfirmMessage] = useState('');
 
   // Profile state with location fields
   const [profileData, setProfileData] = useState({
@@ -62,6 +65,30 @@ const RestaurantDashboard = () => {
       coordinates: [0, 0]
     }
   });
+
+  // Custom confirmation function
+  const showConfirmation = (message, onConfirm) => {
+    setConfirmMessage(message);
+    setConfirmAction(() => onConfirm);
+    setShowConfirmDialog(true);
+  };
+
+  // Handle confirmation
+  const handleConfirm = () => {
+    if (confirmAction) {
+      confirmAction();
+    }
+    setShowConfirmDialog(false);
+    setConfirmAction(null);
+    setConfirmMessage('');
+  };
+
+  // Handle cancellation
+  const handleCancelConfirm = () => {
+    setShowConfirmDialog(false);
+    setConfirmAction(null);
+    setConfirmMessage('');
+  };
 
   // Get current location using GPS
   const getCurrentLocation = () => {
@@ -429,33 +456,36 @@ const RestaurantDashboard = () => {
 
   // NEW: Delete product
   const handleDeleteProduct = async (productId) => {
-    if (!confirm('Are you sure you want to delete this product?')) return;
-    
-    const token = localStorage.getItem('token');
-    setLoading(true);
-    
-    try {
-      const res = await fetch(`${API_URL}/products/${productId}`, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${token}`
+    showConfirmation(
+      'Are you sure you want to delete this product? This action cannot be undone.',
+      async () => {
+        const token = localStorage.getItem('token');
+        setLoading(true);
+        
+        try {
+          const res = await fetch(`${API_URL}/products/${productId}`, {
+            method: 'DELETE',
+            headers: {
+              'Authorization': `Bearer ${token}`
+            }
+          });
+          
+          const data = await res.json();
+          
+          if (res.ok) {
+            alert('✅ Product deleted successfully!');
+            await fetchMenu(restaurantId);
+          } else {
+            alert(`❌ Failed: ${data.message || 'Error deleting product'}`);
+          }
+        } catch (error) {
+          console.error('❌ Error deleting product:', error);
+          alert('❌ Network error. Please try again.');
+        } finally {
+          setLoading(false);
         }
-      });
-      
-      const data = await res.json();
-      
-      if (res.ok) {
-        alert('✅ Product deleted successfully!');
-        await fetchMenu(restaurantId);
-      } else {
-        alert(`❌ Failed: ${data.message || 'Error deleting product'}`);
       }
-    } catch (error) {
-      console.error('❌ Error deleting product:', error);
-      alert('❌ Network error. Please try again.');
-    } finally {
-      setLoading(false);
-    }
+    );
   };
 
   // NEW: Toggle product availability
@@ -517,33 +547,36 @@ const RestaurantDashboard = () => {
 
   // NEW: Reject order
   const handleRejectOrder = async (orderId) => {
-    if (!confirm('Are you sure you want to reject this order?')) return;
-    
-    const token = localStorage.getItem('token');
-    
-    try {
-      const res = await fetch(`${API_URL}/orders/${orderId}/status`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({ status: 'rejected' })
-      });
-      
-      const data = await res.json();
-      
-      if (res.ok) {
-        await fetchData();
-        alert('✅ Order rejected');
-        setShowOrderDetails(false);
-      } else {
-        alert(`❌ Failed to reject order: ${data.message || 'Unknown error'}`);
+    showConfirmation(
+      'Are you sure you want to reject this order? The customer will be notified.',
+      async () => {
+        const token = localStorage.getItem('token');
+        
+        try {
+          const res = await fetch(`${API_URL}/orders/${orderId}/status`, {
+            method: 'PUT',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({ status: 'rejected' })
+          });
+          
+          const data = await res.json();
+          
+          if (res.ok) {
+            await fetchData();
+            alert('✅ Order rejected');
+            setShowOrderDetails(false);
+          } else {
+            alert(`❌ Failed to reject order: ${data.message || 'Unknown error'}`);
+          }
+        } catch (error) {
+          console.error('❌ Error rejecting order:', error);
+          alert('❌ Network error. Please try again.');
+        }
       }
-    } catch (error) {
-      console.error('❌ Error rejecting order:', error);
-      alert('❌ Network error. Please try again.');
-    }
+    );
   };
 
   // NEW: Assign rider to order
@@ -1863,6 +1896,37 @@ const RestaurantDashboard = () => {
                     </a>
                   )}
                 </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Custom Confirmation Dialog */}
+      {showConfirmDialog && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-lg max-w-md w-full">
+            <div className="p-6">
+              <div className="flex items-center space-x-3 mb-4">
+                <div className="w-10 h-10 bg-yellow-100 rounded-full flex items-center justify-center flex-shrink-0">
+                  <AlertTriangle className="text-yellow-600 w-5 h-5" />
+                </div>
+                <h3 className="text-lg font-bold text-gray-900">Confirm Action</h3>
+              </div>
+              <p className="text-gray-600 mb-6">{confirmMessage}</p>
+              <div className="flex space-x-3">
+                <button 
+                  onClick={handleCancelConfirm}
+                  className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 text-sm"
+                >
+                  Cancel
+                </button>
+                <button 
+                  onClick={handleConfirm}
+                  className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 text-sm"
+                >
+                  Confirm
+                </button>
               </div>
             </div>
           </div>
