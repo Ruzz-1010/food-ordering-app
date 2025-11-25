@@ -1,4 +1,4 @@
-// AdminSidebar.jsx - UPDATED WITH YOUR LOGO.PNG
+// AdminSidebar.jsx - FIXED VERSION WITH NON-SCROLLING HEADER
 import React from 'react';
 import { 
     Users, Store, BarChart3, 
@@ -32,38 +32,21 @@ const AdminSidebar = ({ activeTab, setActiveTab, isOpen, setIsOpen, onLogout }) 
                 fixed lg:static inset-y-0 left-0 z-50
                 w-64 bg-gray-900 text-white transform transition-transform
                 ${isOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0
-                flex flex-col
+                flex flex-col h-full
             `}>
                 {/* Fixed Header - Won't scroll */}
                 <div className="flex-shrink-0 p-4 border-b border-gray-700 bg-gray-900">
                     <div className="flex items-center justify-between">
                         <div className="flex items-center space-x-3">
                             {/* Your Logo from Public Folder */}
-                            <div className="flex items-center space-x-3">
-                                <img 
-                                    src="/logo.png" 
-                                    alt="FoodExpress Logo" 
-                                    className="w-10 h-10 rounded-lg object-contain"
-                                    onError={(e) => {
-                                        // Fallback if logo doesn't load
-                                        e.target.style.display = 'none';
-                                        // Show fallback logo
-                                        const fallback = document.getElementById('logo-fallback');
-                                        if (fallback) fallback.style.display = 'flex';
-                                    }}
-                                />
-                                {/* Fallback Logo - Hidden by default */}
-                                <div 
-                                    id="logo-fallback"
-                                    className="w-10 h-10 bg-gradient-to-r from-orange-500 to-red-500 rounded-lg items-center justify-center hidden"
-                                >
-                                    <span className="font-bold text-white text-sm">FE</span>
-                                </div>
-                                
-                                <div>
-                                    <h1 className="text-lg font-bold text-white">FoodExpress</h1>
-                                    <p className="text-xs text-gray-400">Admin Panel</p>
-                                </div>
+                            <img 
+                                src="/logo.png" 
+                                alt="FoodExpress Logo" 
+                                className="w-15 h-15 rounded-lg object-contain bg-white p-1"
+                            />
+                            <div>
+                                <h1 className="text-lg font-bold text-white">FoodExpress</h1>
+                                <p className="text-xs text-gray-400">Admin Panel</p>
                             </div>
                         </div>
                         <button 
@@ -75,7 +58,7 @@ const AdminSidebar = ({ activeTab, setActiveTab, isOpen, setIsOpen, onLogout }) 
                     </div>
                 </div>
 
-                {/* Scrollable Menu Area */}
+                {/* Scrollable Menu Area - This part scrolls */}
                 <div className="flex-1 overflow-y-auto">
                     <nav className="p-4 space-y-2">
                         {menuItems.map((item) => {
