@@ -1,4 +1,4 @@
-// AdminDashboard.jsx - FIXED SYNTAX ERROR VERSION
+// AdminDashboard.jsx - CLEANED VERSION WITH SINGLE SIDEBAR
 import React, { useState, useEffect } from 'react';
 import { Menu, X } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
@@ -100,7 +100,7 @@ const AdminDashboard = () => {
         />
       )}
 
-      {/* Sidebar - Fixed position that doesn't affect header */}
+      {/* Single Sidebar */}
       <div className={`
         fixed lg:static inset-y-0 left-0 z-50
         transform transition-transform duration-300 ease-in-out
@@ -117,18 +117,16 @@ const AdminDashboard = () => {
         />
       </div>
 
-      {/* Main Content Area - Independent of sidebar */}
-      <div className={`flex-1 flex flex-col min-w-0 transition-all duration-300 ${
-        sidebarOpen && !isMobile ? 'lg:ml-64' : 'lg:ml-0'
-      }`}>
-        {/* Fixed Header - Doesn't move with sidebar */}
+      {/* Main Content Area */}
+      <div className="flex-1 flex flex-col min-w-0 lg:ml-0">
+        {/* Header */}
         <header className="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-30">
           <div className="flex items-center justify-between px-4 py-3 sm:px-6">
             {/* Left Section - Menu Button, Logo and Title */}
             <div className="flex items-center space-x-3 sm:space-x-4 flex-1 min-w-0">
               <button 
                 onClick={() => setSidebarOpen(!sidebarOpen)}
-                className="p-2 hover:bg-orange-50 rounded-lg transition-colors border border-gray-200"
+                className="p-2 hover:bg-orange-50 rounded-lg transition-colors border border-gray-200 lg:hidden"
               >
                 {sidebarOpen ? (
                   <X size={20} className="text-orange-600" />
@@ -137,7 +135,7 @@ const AdminDashboard = () => {
                 )}
               </button>
               
-              {/* Logo from public folder */}
+              {/* Logo */}
               <div className="flex items-center space-x-3">
                 <div className="w-10 h-10 rounded-lg flex items-center justify-center overflow-hidden">
                   <img 
@@ -145,7 +143,6 @@ const AdminDashboard = () => {
                     alt="FoodApp Logo" 
                     className="w-full h-full object-cover"
                     onError={(e) => {
-                      // Fallback if logo doesn't exist
                       e.target.style.display = 'none';
                       const fallback = e.target.nextSibling;
                       if (fallback) {
@@ -209,7 +206,7 @@ const AdminDashboard = () => {
           </div>
         </header>
 
-        {/* Scrollable Main Content */}
+        {/* Main Content */}
         <main className="flex-1 p-4 sm:p-6 overflow-auto bg-gray-50">
           <div className="max-w-7xl mx-auto">
             {renderContent()}

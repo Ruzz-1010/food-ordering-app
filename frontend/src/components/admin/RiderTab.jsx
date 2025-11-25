@@ -12,7 +12,7 @@ const RiderTab = () => {
   const [refreshing, setRefreshing] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState({ show: false, rider: null });
   const [expandedRider, setExpandedRider] = useState(null);
-  const [imagePreview, setImagePreview] = useState({ show: false, imageUrl: '', riderName: '' });
+  const [imagePreview, setImagePreview] = useState({ show: false, imageData: '', riderName: '' });
 
   const fetchRiders = async () => {
     try {
@@ -26,6 +26,17 @@ const RiderTab = () => {
       } else if (Array.isArray(data)) {
         ridersArray = data.filter(user => user.role === 'rider');
       }
+      
+      // 🐛 DEBUG: Check license data
+      console.log('🚴 Riders data from backend:', ridersArray);
+      ridersArray.forEach(rider => {
+        if (rider.licensePhoto) {
+          console.log(`📸 Rider ${rider.name} licensePhoto type:`, 
+            rider.licensePhoto.startsWith('data:image/') ? 'Base64' : 'URL',
+            'Length:', rider.licensePhoto.length
+          );
+        }
+      });
       
       setRiders(ridersArray);
       
@@ -41,6 +52,57 @@ const RiderTab = () => {
   useEffect(() => {
     fetchRiders();
   }, []);
+
+  // ✅ UPDATED: Handle both Base64 and URL images
+  const getLicenseImageData = (rider) => {
+    // Check if it's a Base64 string (new format)
+    if (rider.licensePhoto && rider.licensePhoto.startsWith('data:image/')) {
+      return {
+        data: rider.licensePhoto,
+        type: 'base64'
+      };
+    }
+    
+    // Fallback to other possible image fields (old format)
+    if (rider.licenseImage) return { data: rider.licenseImage, type: 'url' };
+    if (rider.licenseImageUrl) return { data: rider.licenseImageUrl, type: 'url' };
+    if (rider.licensePhotoUrl) return { data: rider.licensePhotoUrl, type: 'url' };
+    if (rider.image) return { data: rider.image, type: 'url' };
+    
+    return null;
+  };
+
+  // ✅ UPDATED: Download both Base64 and URL images
+  const downloadImage = async (imageData, imageType, riderName) => {
+    try {
+      let blob;
+      
+      if (imageType === 'base64') {
+        // Handle Base64 string
+        const response = await fetch(imageData);
+        blob = await response.blob();
+      } else {
+        // Handle regular URL
+        const response = await fetch(imageData);
+        blob = await response.blob();
+      }
+      
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `${riderName}-license.jpg`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+      
+      alert('✅ License photo downloaded successfully!');
+      
+    } catch (error) {
+      console.error('Error downloading image:', error);
+      alert('❌ Failed to download image');
+    }
+  };
 
   const handleApproveRider = async (riderId, riderName) => {
     try {
@@ -111,50 +173,16 @@ const RiderTab = () => {
     setExpandedRider(expandedRider === riderId ? null : riderId);
   };
 
-  const showImagePreview = (imageUrl, riderName) => {
+  const showImagePreview = (imageData, riderName) => {
     setImagePreview({
       show: true,
-      imageUrl: imageUrl,
+      imageData: imageData,
       riderName: riderName
     });
   };
 
   const hideImagePreview = () => {
-    setImagePreview({ show: false, imageUrl: '', riderName: '' });
-  };
-
-  const downloadImage = async (imageUrl, riderName) => {
-    try {
-      const response = await fetch(imageUrl);
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `${riderName}-license.jpg`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      window.URL.revokeObjectURL(url);
-    } catch (error) {
-      console.error('Error downloading image:', error);
-      alert('❌ Failed to download image');
-    }
-  };
-
-  // Get image URL - handle different backend response formats
-  const getLicenseImageUrl = (rider) => {
-    // Try different possible image field names
-    if (rider.licenseImage) return rider.licenseImage;
-    if (rider.licensePhoto) return rider.licensePhoto;
-    if (rider.licenseImageUrl) return rider.licenseImageUrl;
-    if (rider.licensePhotoUrl) return rider.licensePhotoUrl;
-    if (rider.image) return rider.image;
-    
-    // Check if there's a nested license object
-    if (rider.license && rider.license.imageUrl) return rider.license.imageUrl;
-    if (rider.license && rider.license.photoUrl) return rider.license.photoUrl;
-    
-    return null;
+    setImagePreview({ show: false, imageData: '', riderName: '' });
   };
 
   // Calculate statistics
@@ -163,7 +191,7 @@ const RiderTab = () => {
     approved: riders.filter(r => r.isApproved).length,
     pending: riders.filter(r => !r.isApproved).length,
     active: riders.filter(r => r.isActive).length,
-    withLicense: riders.filter(r => getLicenseImageUrl(r)).length
+    withLicense: riders.filter(r => getLicenseImageData(r)).length
   };
 
   if (loading) {
@@ -265,7 +293,7 @@ const RiderTab = () => {
           </div>
         ) : (
           riders.map((rider) => {
-            const licenseImageUrl = getLicenseImageUrl(rider);
+            const licenseData = getLicenseImageData(rider);
             
             return (
               <div key={rider._id || rider.id} className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
@@ -333,16 +361,16 @@ const RiderTab = () => {
                 </div>
 
                 {/* License Image Preview - Always Visible if available */}
-                {licenseImageUrl && (
+                {licenseData && (
                   <div className="mb-3">
                     <p className="text-xs text-gray-500 mb-2">License Photo</p>
                     <div className="flex items-center space-x-2">
                       <div 
                         className="w-16 h-16 border border-gray-300 rounded-lg overflow-hidden cursor-pointer hover:opacity-80 transition-opacity"
-                        onClick={() => showImagePreview(licenseImageUrl, rider.name)}
+                        onClick={() => showImagePreview(licenseData.data, rider.name)}
                       >
                         <img 
-                          src={licenseImageUrl} 
+                          src={licenseData.data} 
                           alt={`${rider.name}'s license`}
                           className="w-full h-full object-cover"
                           onError={(e) => {
@@ -355,7 +383,7 @@ const RiderTab = () => {
                         </div>
                       </div>
                       <button
-                        onClick={() => showImagePreview(licenseImageUrl, rider.name)}
+                        onClick={() => showImagePreview(licenseData.data, rider.name)}
                         className="text-xs text-blue-600 hover:text-blue-800 font-medium"
                       >
                         View Full Size
@@ -365,7 +393,7 @@ const RiderTab = () => {
                 )}
 
                 {/* No License Warning */}
-                {!licenseImageUrl && (
+                {!licenseData && (
                   <div className="mb-3">
                     <p className="text-xs text-gray-500 mb-2">License Photo</p>
                     <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-2">
@@ -400,19 +428,19 @@ const RiderTab = () => {
                     </div>
                     
                     {/* License Image Actions in Expanded View */}
-                    {licenseImageUrl && (
+                    {licenseData && (
                       <div className="bg-gray-50 rounded-lg p-3">
                         <p className="text-xs font-medium text-gray-700 mb-2">License Photo Actions</p>
                         <div className="flex space-x-2">
                           <button
-                            onClick={() => showImagePreview(licenseImageUrl, rider.name)}
+                            onClick={() => showImagePreview(licenseData.data, rider.name)}
                             className="flex-1 bg-blue-600 text-white px-2 py-1 rounded text-xs font-medium hover:bg-blue-700 transition-colors flex items-center justify-center space-x-1"
                           >
                             <Image size={12} />
                             <span>View</span>
                           </button>
                           <button
-                            onClick={() => downloadImage(licenseImageUrl, rider.name)}
+                            onClick={() => downloadImage(licenseData.data, licenseData.type, rider.name)}
                             className="flex-1 bg-green-600 text-white px-2 py-1 rounded text-xs font-medium hover:bg-green-700 transition-colors flex items-center justify-center space-x-1"
                           >
                             <Download size={12} />
@@ -529,7 +557,10 @@ const RiderTab = () => {
               </h3>
               <div className="flex space-x-2">
                 <button
-                  onClick={() => downloadImage(imagePreview.imageUrl, imagePreview.riderName)}
+                  onClick={() => {
+                    const imageType = imagePreview.imageData.startsWith('data:image/') ? 'base64' : 'url';
+                    downloadImage(imagePreview.imageData, imageType, imagePreview.riderName);
+                  }}
                   className="bg-green-600 text-white px-3 py-1 rounded text-sm font-medium hover:bg-green-700 transition-colors flex items-center space-x-1"
                 >
                   <Download size={14} />
@@ -543,11 +574,11 @@ const RiderTab = () => {
                 </button>
               </div>
             </div>
-            <div className="p-4 max-h-[calc(90vh-80px)] overflow-auto">
+            <div className="p-4 max-h-[calc(90vh-80px)] overflow-auto flex items-center justify-center">
               <img 
-                src={imagePreview.imageUrl} 
+                src={imagePreview.imageData} 
                 alt={`${imagePreview.riderName}'s license`}
-                className="w-full h-auto max-w-full rounded-lg"
+                className="max-w-full max-h-full object-contain rounded-lg"
                 onError={(e) => {
                   e.target.style.display = 'none';
                   document.getElementById('image-error').style.display = 'block';

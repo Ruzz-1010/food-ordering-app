@@ -1,4 +1,4 @@
-// AnalyticsTab.jsx - CLEANED AND OPTIMIZED VERSION
+// AnalyticsTab.jsx - FIXED VERSION
 import React, { useState, useEffect } from 'react';
 import { 
   TrendingUp, Users, Store, Package, DollarSign, 
@@ -22,32 +22,41 @@ const AnalyticsTab = () => {
 
   const RAILWAY_BACKEND_URL = 'https://food-ordering-app-production-35eb.up.railway.app/api';
 
-  const fetchAdminData = async (endpoint) => {
+  // Enhanced fetch function with better error handling
+  const fetchData = async (endpoint) => {
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch(`${RAILWAY_BACKEND_URL}/admin${endpoint}`, {
+      console.log(`🔄 Fetching from: ${RAILWAY_BACKEND_URL}${endpoint}`);
+      
+      const response = await fetch(`${RAILWAY_BACKEND_URL}${endpoint}`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         }
       });
 
+      console.log(`📊 Response status for ${endpoint}:`, response.status);
+
       if (!response.ok) {
-        throw new Error(`API request failed: ${response.status}`);
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
 
       const data = await response.json();
+      console.log(`📦 Data received from ${endpoint}:`, data);
 
-      if (data.success && Array.isArray(data.data)) {
-        return data.data;
-      } else if (data.success && data.data && typeof data.data === 'object') {
-        return data.data;
-      } else if (Array.isArray(data)) {
+      // Handle different response structures
+      if (data.success) {
+        return data.data || data.orders || data.users || data.restaurants || [];
+      }
+      
+      if (Array.isArray(data)) {
         return data;
       }
       
-      return data.data || [];
+      return data || [];
+
     } catch (error) {
+      console.error(`❌ Error fetching ${endpoint}:`, error);
       throw error;
     }
   };
@@ -61,56 +70,108 @@ const AnalyticsTab = () => {
       
       if (!token) {
         setError('Please login to access analytics');
+        setLoading(false);
+        setRefreshing(false);
         return;
       }
 
-      const [ordersData, usersData, restaurantsData] = await Promise.all([
-        fetchAdminData('/orders'),
-        fetchAdminData('/users'),
-        fetchAdminData('/restaurants')
-      ]);
+      console.log('🚀 Starting analytics data fetch...');
 
-      const deliveredOrders = ordersData.filter(order => 
+      // Try different endpoint variations
+      let ordersData = [];
+      let usersData = [];
+      let restaurantsData = [];
+
+      try {
+        // Try multiple possible endpoints for orders
+        ordersData = await fetchData('/orders') || 
+                    await fetchData('/admin/orders') || 
+                    [];
+      } catch (orderError) {
+        console.error('Failed to fetch orders:', orderError);
+        // Continue with empty orders data
+      }
+
+      try {
+        // Try multiple possible endpoints for users
+        usersData = await fetchData('/users') || 
+                   await fetchData('/admin/users') || 
+                   [];
+      } catch (userError) {
+        console.error('Failed to fetch users:', userError);
+        // Continue with empty users data
+      }
+
+      try {
+        // Try multiple possible endpoints for restaurants
+        restaurantsData = await fetchData('/restaurants') || 
+                        await fetchData('/admin/restaurants') || 
+                        [];
+      } catch (restaurantError) {
+        console.error('Failed to fetch restaurants:', restaurantError);
+        // Continue with empty restaurants data
+      }
+
+      console.log('📊 Raw data received:', {
+        orders: ordersData,
+        users: usersData,
+        restaurants: restaurantsData
+      });
+
+      // Process orders data
+      const deliveredOrders = Array.isArray(ordersData) ? ordersData.filter(order => 
         order.status === 'delivered' || order.status === 'completed'
-      );
-      
+      ) : [];
+
+      console.log('✅ Delivered orders:', deliveredOrders);
+
+      // Calculate total revenue (including service fee)
       const totalRevenue = deliveredOrders.reduce((total, order) => {
-        const orderAmount = order.totalAmount || order.total || order.amount || 0;
-        const serviceFee = 10;
-        return total + Number(orderAmount) + serviceFee;
+        const orderAmount = parseFloat(order.totalAmount || order.total || order.amount || 0);
+        const serviceFee = 10; // ₱10 service fee per order
+        return total + orderAmount + serviceFee;
       }, 0);
 
+      console.log('💰 Total revenue calculated:', totalRevenue);
+
+      // Calculate order statistics
       const orderStats = {
-        pending: ordersData.filter(o => o.status === 'pending').length,
-        confirmed: ordersData.filter(o => o.status === 'confirmed').length,
-        preparing: ordersData.filter(o => o.status === 'preparing').length,
-        ready: ordersData.filter(o => o.status === 'ready').length,
-        out_for_delivery: ordersData.filter(o => o.status === 'out_for_delivery').length,
+        pending: Array.isArray(ordersData) ? ordersData.filter(o => o.status === 'pending').length : 0,
+        confirmed: Array.isArray(ordersData) ? ordersData.filter(o => o.status === 'confirmed').length : 0,
+        preparing: Array.isArray(ordersData) ? ordersData.filter(o => o.status === 'preparing').length : 0,
+        ready: Array.isArray(ordersData) ? ordersData.filter(o => o.status === 'ready').length : 0,
+        out_for_delivery: Array.isArray(ordersData) ? ordersData.filter(o => o.status === 'out_for_delivery').length : 0,
         delivered: deliveredOrders.length,
-        cancelled: ordersData.filter(o => o.status === 'cancelled').length
+        cancelled: Array.isArray(ordersData) ? ordersData.filter(o => o.status === 'cancelled').length : 0
       };
 
+      console.log('📈 Order stats:', orderStats);
+
+      // Calculate top restaurants
       const restaurantOrderCount = {};
-      ordersData.forEach(order => {
-        const restaurantId = order.restaurant?._id || order.restaurant?.id || 'unknown';
-        const restaurantName = order.restaurant?.name || 'Unknown Restaurant';
-        
-        if (!restaurantOrderCount[restaurantId]) {
-          restaurantOrderCount[restaurantId] = {
-            count: 0,
-            revenue: 0,
-            name: restaurantName
-          };
-        }
-        
-        restaurantOrderCount[restaurantId].count++;
-        
-        if (order.status === 'delivered' || order.status === 'completed') {
-          const orderAmount = order.totalAmount || order.total || order.amount || 0;
-          const serviceFee = 10;
-          restaurantOrderCount[restaurantId].revenue += Number(orderAmount) + serviceFee;
-        }
-      });
+      
+      if (Array.isArray(ordersData)) {
+        ordersData.forEach(order => {
+          const restaurantId = order.restaurant?._id || order.restaurant?.id || order.restaurantId || 'unknown';
+          const restaurantName = order.restaurant?.name || 'Unknown Restaurant';
+          
+          if (!restaurantOrderCount[restaurantId]) {
+            restaurantOrderCount[restaurantId] = {
+              count: 0,
+              revenue: 0,
+              name: restaurantName
+            };
+          }
+          
+          restaurantOrderCount[restaurantId].count++;
+          
+          if (order.status === 'delivered' || order.status === 'completed') {
+            const orderAmount = parseFloat(order.totalAmount || order.total || order.amount || 0);
+            const serviceFee = 10;
+            restaurantOrderCount[restaurantId].revenue += orderAmount + serviceFee;
+          }
+        });
+      }
 
       const topRestaurants = Object.entries(restaurantOrderCount)
         .map(([id, data]) => ({
@@ -122,21 +183,33 @@ const AnalyticsTab = () => {
         .sort((a, b) => b.orders - a.orders)
         .slice(0, 5);
 
-      const recentOrders = ordersData
-        .sort((a, b) => new Date(b.createdAt || b.orderDate) - new Date(a.createdAt || a.orderDate))
-        .slice(0, 5);
+      console.log('🏆 Top restaurants:', topRestaurants);
 
-      setAnalytics({
+      // Get recent orders
+      const recentOrders = Array.isArray(ordersData) 
+        ? ordersData
+            .sort((a, b) => new Date(b.createdAt || b.orderDate || b.date) - new Date(a.createdAt || a.orderDate || a.date))
+            .slice(0, 5)
+        : [];
+
+      console.log('🕒 Recent orders:', recentOrders);
+
+      // Update analytics state
+      const newAnalytics = {
         totalRevenue,
-        totalOrders: ordersData.length,
-        totalUsers: usersData.length,
-        totalRestaurants: restaurantsData.length,
+        totalOrders: Array.isArray(ordersData) ? ordersData.length : 0,
+        totalUsers: Array.isArray(usersData) ? usersData.length : 0,
+        totalRestaurants: Array.isArray(restaurantsData) ? restaurantsData.length : 0,
         recentOrders,
         topRestaurants,
         orderStats
-      });
+      };
+
+      console.log('🎯 Final analytics data:', newAnalytics);
+      setAnalytics(newAnalytics);
 
     } catch (error) {
+      console.error('❌ Analytics fetch error:', error);
       setError(`Failed to load analytics data: ${error.message}`);
     } finally {
       setLoading(false);
@@ -184,6 +257,33 @@ const AnalyticsTab = () => {
       : 0;
   };
 
+  // Test API endpoints function
+  const testEndpoints = async () => {
+    console.log('🧪 Testing API endpoints...');
+    const endpoints = [
+      '/orders',
+      '/admin/orders',
+      '/users', 
+      '/admin/users',
+      '/restaurants',
+      '/admin/restaurants'
+    ];
+
+    for (const endpoint of endpoints) {
+      try {
+        const data = await fetchData(endpoint);
+        console.log(`✅ ${endpoint}:`, Array.isArray(data) ? `${data.length} items` : 'Data received');
+      } catch (error) {
+        console.log(`❌ ${endpoint}:`, error.message);
+      }
+    }
+  };
+
+  // Call test on component mount for debugging
+  useEffect(() => {
+    testEndpoints();
+  }, []);
+
   if (loading) {
     return (
       <div className="bg-white rounded-xl shadow-sm border border-orange-200 p-4 sm:p-6">
@@ -193,6 +293,12 @@ const AnalyticsTab = () => {
         <div className="text-center py-8">
           <div className="w-8 h-8 border-2 border-orange-300 border-t-orange-500 rounded-full animate-spin mx-auto"></div>
           <p className="text-gray-500 mt-2">Loading analytics data...</p>
+          <button 
+            onClick={testEndpoints}
+            className="mt-4 text-orange-600 hover:text-orange-800 text-sm"
+          >
+            Test API Endpoints
+          </button>
         </div>
       </div>
     );
@@ -207,6 +313,12 @@ const AnalyticsTab = () => {
           <p className="text-gray-600 mt-1 text-sm">
             Business insights with service fee calculation
           </p>
+          <button 
+            onClick={testEndpoints}
+            className="mt-2 text-xs text-orange-600 hover:text-orange-800"
+          >
+            Debug: Test API Endpoints
+          </button>
         </div>
         <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
           <select 
@@ -236,15 +348,41 @@ const AnalyticsTab = () => {
           <div className="flex-1">
             <p className="text-red-800 font-medium">Analytics Data Error</p>
             <p className="text-red-700 text-sm">{error}</p>
-            <button 
-              onClick={fetchAnalytics}
-              className="mt-2 text-red-600 hover:text-red-800 text-sm font-medium"
-            >
-              Try Again
-            </button>
+            <div className="mt-2 space-x-2">
+              <button 
+                onClick={fetchAnalytics}
+                className="text-red-600 hover:text-red-800 text-sm font-medium"
+              >
+                Try Again
+              </button>
+              <button 
+                onClick={testEndpoints}
+                className="text-red-600 hover:text-red-800 text-sm font-medium"
+              >
+                Test Endpoints
+              </button>
+            </div>
           </div>
         </div>
       )}
+
+      {/* Data Status */}
+      <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs">
+          <div className="text-center">
+            <span className="font-medium">Orders:</span> {analytics.totalOrders}
+          </div>
+          <div className="text-center">
+            <span className="font-medium">Users:</span> {analytics.totalUsers}
+          </div>
+          <div className="text-center">
+            <span className="font-medium">Restaurants:</span> {analytics.totalRestaurants}
+          </div>
+          <div className="text-center">
+            <span className="font-medium">Revenue:</span> ₱{analytics.totalRevenue.toLocaleString()}
+          </div>
+        </div>
+      </div>
 
       {/* Key Metrics */}
       <div className="grid grid-cols-1 xs:grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
@@ -317,7 +455,7 @@ const AnalyticsTab = () => {
                         'bg-orange-500'
                       }`}
                       style={{ 
-                        width: `${Math.max((count / analytics.totalOrders) * 100, 5)}%` 
+                        width: `${analytics.totalOrders > 0 ? Math.max((count / analytics.totalOrders) * 100, 5) : 0}%` 
                       }}
                     ></div>
                   </div>
@@ -372,20 +510,20 @@ const AnalyticsTab = () => {
               <div className="flex items-center justify-between mb-2">
                 <div className="flex-1 min-w-0">
                   <p className="font-medium text-gray-900 text-sm truncate">
-                    Order #{order.orderNumber || order._id?.substring(0, 8)}
+                    Order #{order.orderNumber || order._id?.substring(0, 8) || 'N/A'}
                   </p>
                   <p className="text-xs text-gray-500 truncate">
                     {order.customer?.name || order.user?.name || 'Customer'}
                   </p>
                 </div>
                 <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(order.status)} ml-2`}>
-                  {order.status}
+                  {order.status || 'unknown'}
                 </span>
               </div>
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-bold text-orange-600">
-                    ₱{(order.totalAmount || order.total || order.amount || 0).toLocaleString()}
+                    ₱{parseFloat(order.totalAmount || order.total || order.amount || 0).toLocaleString()}
                   </p>
                 </div>
                 <p className="text-xs text-gray-600">
@@ -430,6 +568,7 @@ const AnalyticsTab = () => {
         <h4 className="font-medium text-yellow-900 mb-2">Revenue Calculation</h4>
         <div className="text-sm text-yellow-800">
           <p>Includes ₱10 service fee per delivered order</p>
+          <p className="mt-1">Total Orders: {analytics.totalOrders} | Delivered: {analytics.orderStats.delivered}</p>
         </div>
       </div>
     </div>
