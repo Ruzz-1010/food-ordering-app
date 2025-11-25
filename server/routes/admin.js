@@ -7,7 +7,18 @@ GET /api/dmin/products               //all menu
 
 
 
-// routes/admin.js
+// routes/admin.js - COMPLETE VERSION
+const express = require('express');
+const router = express.Router();
+const User = require('../models/User');
+const Restaurant = require('../models/Restaurant');
+const Order = require('../models/Order');
+const Product = require('../models/Product');
+
+// Admin authentication middleware (if you have one)
+const adminAuth = require('../middleware/adminAuth');
+
+// GET /api/admin/dashboard/stats
 router.get('/dashboard/stats', adminAuth, async (req, res) => {
     try {
       const userCount = await User.countDocuments();
@@ -35,6 +46,7 @@ router.get('/dashboard/stats', adminAuth, async (req, res) => {
     }
   });
   
+  // GET /api/admin/users
   router.get('/users', adminAuth, async (req, res) => {
     try {
       const users = await User.find().select('-password');
@@ -44,4 +56,37 @@ router.get('/dashboard/stats', adminAuth, async (req, res) => {
     }
   });
   
-  // Add similar routes for restaurants, orders, products
+  // GET /api/admin/restaurants
+  router.get('/restaurants', adminAuth, async (req, res) => {
+    try {
+      const restaurants = await Restaurant.find();
+      res.json({ success: true, restaurants });
+    } catch (error) {
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+  
+  // GET /api/admin/orders
+  router.get('/orders', adminAuth, async (req, res) => {
+    try {
+      const orders = await Order.find()
+        .populate('user', 'name email')
+        .populate('restaurant', 'name')
+        .sort({ createdAt: -1 });
+      res.json({ success: true, orders });
+    } catch (error) {
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+  
+  // GET /api/admin/products
+  router.get('/products', adminAuth, async (req, res) => {
+    try {
+      const products = await Product.find().populate('restaurant', 'name');
+      res.json({ success: true, products });
+    } catch (error) {
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+
+module.exports = router;

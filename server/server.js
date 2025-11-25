@@ -1,3 +1,4 @@
+// server.js - UPDATED VERSION
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
@@ -26,7 +27,10 @@ const userRoutes = require('./routes/users');
 const restaurantRoutes = require('./routes/restaurants');
 const orderRoutes = require('./routes/orders');
 const productRoutes = require('./routes/products');
-const cartRoutes = require('./routes/cart'); // This should work now
+const cartRoutes = require('./routes/cart');
+
+// ✅ ADD THIS LINE - IMPORT ADMIN ROUTES
+const adminRoutes = require('./routes/admin');
 
 // USE ROUTES
 app.use('/api', healthRoutes);
@@ -36,6 +40,9 @@ app.use('/api/restaurants', restaurantRoutes);
 app.use('/api/orders', orderRoutes);
 app.use('/api/products', productRoutes);
 app.use('/api/cart', cartRoutes);
+
+// ✅ ADD THIS LINE - USE ADMIN ROUTES
+app.use('/api/admin', adminRoutes);
 
 // Basic route
 app.get('/', (req, res) => {
