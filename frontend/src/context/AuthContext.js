@@ -8,7 +8,6 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
   const [authChecked, setAuthChecked] = useState(false);
 
-  // ✅ FIXED – no trailing space
   const API_URL = 'https://food-ordering-app-production-35eb.up.railway.app/api';
 
   // Function to fetch restaurant data
@@ -161,6 +160,104 @@ export const AuthProvider = ({ children }) => {
     checkAuthStatus();
   }, []);
 
+  // ✅ UPDATED REGISTER FUNCTION - Support for FormData (rider license photos)
+  const register = async (userData) => {
+    setLoading(true);
+    
+    try {
+      console.log('📝 Registering user:', userData);
+      
+      // Check if it's FormData (for rider registration with file)
+      const isFormData = userData instanceof FormData;
+      
+      const config = {
+        method: 'POST',
+      };
+      
+      if (isFormData) {
+        // For FormData, let browser set Content-Type with boundary
+        console.log('📸 FormData detected (rider registration with file)');
+        config.body = userData;
+      } else {
+        // For JSON data
+        console.log('📝 JSON data detected (customer/restaurant registration)');
+        config.headers = {
+          'Content-Type': 'application/json',
+        };
+        config.body = JSON.stringify(userData);
+      }
+      
+      const response = await fetch(`${API_URL}/auth/register`, config);
+      const data = await response.json();
+      
+      console.log('📝 Registration API Response:', data);
+
+      if (response.ok && data.success) {
+        const userInfo = {
+          _id: data.user._id,
+          name: data.user.name,
+          email: data.user.email,
+          role: data.user.role,
+          isApproved: data.user.isApproved !== false,
+          phone: data.user.phone,
+          address: data.user.address
+        };
+        
+        // Add rider-specific fields if available
+        if (data.user.vehicleType) {
+          userInfo.vehicleType = data.user.vehicleType;
+        }
+        if (data.user.licenseNumber) {
+          userInfo.licenseNumber = data.user.licenseNumber;
+        }
+        if (data.user.licensePhoto) {
+          userInfo.licensePhoto = data.user.licensePhoto;
+        }
+        
+        if ((userInfo.role === 'rider' || userInfo.role === 'restaurant') && !userInfo.isApproved) {
+          return { 
+            success: true, 
+            message: data.message || 'Registration successful! Your account is pending approval.', 
+            user: userInfo,
+            needsApproval: true
+          };
+        }
+        
+        // For restaurant owners, fetch restaurant data
+        if (userInfo.role === 'restaurant') {
+          const restaurantInfo = await fetchRestaurantData(userInfo._id, userInfo.email);
+          if (restaurantInfo) {
+            userInfo.restaurantId = restaurantInfo.restaurantId;
+            userInfo.restaurantData = restaurantInfo.restaurantData;
+          }
+        }
+        
+        setUser(userInfo);
+        localStorage.setItem('token', data.token);
+        localStorage.setItem('user', JSON.stringify(userInfo));
+        
+        return { 
+          success: true, 
+          message: data.message || 'Registration successful! 🎉', 
+          user: userInfo 
+        };
+      } else {
+        return { 
+          success: false, 
+          message: data.message || 'Registration failed.' 
+        };
+      }
+    } catch (error) {
+      console.error('❌ Registration error:', error);
+      return { 
+        success: false, 
+        message: 'Network error during registration.' 
+      };
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // Login function - UPDATED WITH SYNC
   const login = async (email, password) => {
     setLoading(true);
@@ -189,6 +286,17 @@ export const AuthProvider = ({ children }) => {
           phone: data.user.phone,
           address: data.user.address
         };
+        
+        // Add rider-specific fields if available
+        if (data.user.vehicleType) {
+          userData.vehicleType = data.user.vehicleType;
+        }
+        if (data.user.licenseNumber) {
+          userData.licenseNumber = data.user.licenseNumber;
+        }
+        if (data.user.licensePhoto) {
+          userData.licensePhoto = data.user.licensePhoto;
+        }
         
         console.log('✅ Login successful, user:', userData);
         
@@ -250,76 +358,6 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  // Register function
-  const register = async (userData) => {
-    setLoading(true);
-    
-    try {
-      const response = await fetch(`${API_URL}/auth/register`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(userData),
-      });
-      
-      const data = await response.json();
-
-      if (response.ok && data.success) {
-        const userInfo = {
-          _id: data.user._id,
-          name: data.user.name,
-          email: data.user.email,
-          role: data.user.role,
-          isApproved: data.user.isApproved !== false,
-          phone: data.user.phone,
-          address: data.user.address
-        };
-        
-        if ((userInfo.role === 'rider' || userInfo.role === 'restaurant') && !userInfo.isApproved) {
-          return { 
-            success: true, 
-            message: 'Registration successful! Your account is pending approval.', 
-            user: userInfo,
-            needsApproval: true
-          };
-        }
-        
-        // For restaurant owners, fetch restaurant data
-        if (userInfo.role === 'restaurant') {
-          const restaurantInfo = await fetchRestaurantData(userInfo._id, userInfo.email);
-          if (restaurantInfo) {
-            userInfo.restaurantId = restaurantInfo.restaurantId;
-            userInfo.restaurantData = restaurantInfo.restaurantData;
-          }
-        }
-        
-        setUser(userInfo);
-        localStorage.setItem('token', data.token);
-        localStorage.setItem('user', JSON.stringify(userInfo));
-        
-        return { 
-          success: true, 
-          message: 'Registration successful! 🎉', 
-          user: userInfo 
-        };
-      } else {
-        return { 
-          success: false, 
-          message: data.message || 'Registration failed.' 
-        };
-      }
-    } catch (error) {
-      console.error('❌ Registration error:', error);
-      return { 
-        success: false, 
-        message: 'Network error.' 
-      };
-    } finally {
-      setLoading(false);
-    }
-  };
-
   // Logout function
   const logout = () => {
     console.log('🚪 Logging out user');
@@ -360,6 +398,17 @@ export const AuthProvider = ({ children }) => {
             phone: data.user.phone,
             address: data.user.address
           };
+          
+          // Add rider-specific fields if available
+          if (data.user.vehicleType) {
+            userData.vehicleType = data.user.vehicleType;
+          }
+          if (data.user.licenseNumber) {
+            userData.licenseNumber = data.user.licenseNumber;
+          }
+          if (data.user.licensePhoto) {
+            userData.licensePhoto = data.user.licensePhoto;
+          }
           
           if (userData.role === 'restaurant') {
             const restaurantInfo = await fetchRestaurantData(userData._id, userData.email);
