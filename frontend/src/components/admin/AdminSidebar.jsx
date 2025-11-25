@@ -1,8 +1,7 @@
-// AdminSidebar.jsx  –  no-more-moving header
+// AdminSidebar.jsx  –  header never moves
 import React from 'react';
 import {
-  Users, Store, BarChart3,
-  Package, Settings, LogOut, X,
+  Users, Store, BarChart3, Package, Settings, LogOut, X,
   TrendingUp, Bike
 } from 'lucide-react';
 
@@ -27,17 +26,17 @@ const AdminSidebar = ({ activeTab, setActiveTab, isOpen, setIsOpen, onLogout }) 
         />
       )}
 
-      {/* Sidebar shell – never scrolls */}
+      {/* Sidebar shell – fixed to viewport, never scrolls */}
       <aside
         className={`
-          fixed lg:static inset-y-0 left-0 z-50
+          fixed inset-y-0 left-0 z-50
           w-64 bg-gray-900 text-white
           transform transition-transform
           ${isOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0
-          flex flex-col h-screen
+          flex flex-col
         `}
       >
-        {/* Header – fixed in place */}
+        {/* Header – locked in place */}
         <header className="shrink-0 h-20 border-b border-gray-700">
           <div className="flex items-center justify-between h-full px-4">
             <div className="flex items-center space-x-3">
@@ -84,7 +83,7 @@ const AdminSidebar = ({ activeTab, setActiveTab, isOpen, setIsOpen, onLogout }) 
           ))}
         </nav>
 
-        {/* Footer – fixed in place */}
+        {/* Footer – locked in place */}
         <footer className="shrink-0 h-20 border-t border-gray-700">
           <div className="flex items-center h-full px-4">
             <button

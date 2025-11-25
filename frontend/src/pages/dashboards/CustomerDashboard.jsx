@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { 
     Search, MapPin, Clock, Star, 
@@ -8,7 +9,7 @@ import {
     BarChart3, Users, DollarSign, ChevronDown,
     Eye, EyeOff, Edit, Trash2, CheckCircle, XCircle,
     Truck, CreditCard, MessageCircle, Heart,
-    ChevronLeft, ChevronRight, Locate
+    ChevronLeft, ChevronRight, Locate, Upload, FileText
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 
@@ -137,6 +138,271 @@ const useCart = () => {
         getCartItemCount,
         getCurrentRestaurant
     };
+};
+
+// Password Strength Indicator Component
+const PasswordStrengthIndicator = ({ password }) => {
+    const getStrength = (password) => {
+        let score = 0;
+        if (!password) return 0;
+
+        // Length check
+        if (password.length >= 8) score += 1;
+        if (password.length >= 12) score += 1;
+
+        // Character variety checks
+        if (/[a-z]/.test(password)) score += 1;
+        if (/[A-Z]/.test(password)) score += 1;
+        if (/[0-9]/.test(password)) score += 1;
+        if (/[^A-Za-z0-9]/.test(password)) score += 1;
+
+        return Math.min(score, 5);
+    };
+
+    const strength = getStrength(password);
+    const strengthLabels = ['Very Weak', 'Weak', 'Fair', 'Good', 'Strong', 'Very Strong'];
+    const strengthColors = ['bg-red-500', 'bg-orange-500', 'bg-yellow-500', 'bg-blue-500', 'bg-green-500', 'bg-green-600'];
+
+    if (!password) return null;
+
+    return (
+        <div className="mt-2">
+            <div className="flex space-x-1 mb-1">
+                {[1, 2, 3, 4, 5].map((index) => (
+                    <div
+                        key={index}
+                        className={`h-1 flex-1 rounded-full transition-colors ${
+                            index <= strength ? strengthColors[strength - 1] : 'bg-gray-200'
+                        }`}
+                    />
+                ))}
+            </div>
+            <p className={`text-xs ${
+                strength <= 1 ? 'text-red-600' :
+                strength <= 2 ? 'text-orange-600' :
+                strength <= 3 ? 'text-yellow-600' :
+                strength <= 4 ? 'text-blue-600' : 'text-green-600'
+            } font-medium`}>
+                Password Strength: {strengthLabels[strength]}
+            </p>
+        </div>
+    );
+};
+
+// Password Requirements Component
+const PasswordRequirements = ({ password }) => {
+    const requirements = [
+        { test: password?.length >= 8, text: 'At least 8 characters' },
+        { test: /[a-z]/.test(password), text: 'One lowercase letter' },
+        { test: /[A-Z]/.test(password), text: 'One uppercase letter' },
+        { test: /[0-9]/.test(password), text: 'One number' },
+        { test: /[^A-Za-z0-9]/.test(password), text: 'One special character' }
+    ];
+
+    return (
+        <div className="mt-2 space-y-1">
+            <p className="text-xs text-gray-600 font-medium">Password Requirements:</p>
+            {requirements.map((req, index) => (
+                <div key={index} className="flex items-center space-x-2">
+                    {req.test ? (
+                        <CheckCircle size={12} className="text-green-500" />
+                    ) : (
+                        <XCircle size={12} className="text-gray-400" />
+                    )}
+                    <span className={`text-xs ${req.test ? 'text-green-600' : 'text-gray-500'}`}>
+                        {req.text}
+                    </span>
+                </div>
+            ))}
+        </div>
+    );
+};
+
+// Image Upload Component for License
+const LicenseUpload = ({ onFileSelect, currentFile }) => {
+    const [preview, setPreview] = useState(null);
+    const [dragActive, setDragActive] = useState(false);
+
+    const handleFile = (file) => {
+        if (file && file.type.startsWith('image/')) {
+            onFileSelect(file);
+            const reader = new FileReader();
+            reader.onload = (e) => setPreview(e.target.result);
+            reader.readAsDataURL(file);
+        }
+    };
+
+    const handleDrag = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (e.type === "dragenter" || e.type === "dragover") {
+            setDragActive(true);
+        } else if (e.type === "dragleave") {
+            setDragActive(false);
+        }
+    };
+
+    const handleDrop = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setDragActive(false);
+        if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+            handleFile(e.dataTransfer.files[0]);
+        }
+    };
+
+    const handleChange = (e) => {
+        e.preventDefault();
+        if (e.target.files && e.target.files[0]) {
+            handleFile(e.target.files[0]);
+        }
+    };
+
+    return (
+        <div className="space-y-3">
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+                License Photo (Required)
+            </label>
+            
+            <div
+                className={`border-2 border-dashed rounded-lg p-4 text-center transition-colors ${
+                    dragActive 
+                        ? 'border-blue-500 bg-blue-50' 
+                        : 'border-gray-300 hover:border-gray-400'
+                } ${preview ? 'bg-green-50 border-green-300' : ''}`}
+                onDragEnter={handleDrag}
+                onDragLeave={handleDrag}
+                onDragOver={handleDrag}
+                onDrop={handleDrop}
+            >
+                <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleChange}
+                    className="hidden"
+                    id="license-upload"
+                />
+                
+                {preview ? (
+                    <div className="space-y-2">
+                        <img 
+                            src={preview} 
+                            alt="License preview" 
+                            className="mx-auto h-32 object-contain rounded border"
+                        />
+                        <p className="text-sm text-green-600 font-medium">
+                            ✓ License photo uploaded successfully
+                        </p>
+                        <label
+                            htmlFor="license-upload"
+                            className="inline-flex items-center space-x-1 bg-blue-600 text-white px-3 py-1 rounded text-sm hover:bg-blue-700 cursor-pointer"
+                        >
+                            <Upload size={14} />
+                            <span>Change Photo</span>
+                        </label>
+                    </div>
+                ) : (
+                    <div className="space-y-2">
+                        <Upload size={24} className="mx-auto text-gray-400" />
+                        <div>
+                            <label
+                                htmlFor="license-upload"
+                                className="text-blue-600 hover:text-blue-700 font-medium cursor-pointer text-sm"
+                            >
+                                Click to upload
+                            </label>
+                            <p className="text-gray-500 text-xs">or drag and drop</p>
+                        </div>
+                        <p className="text-gray-400 text-xs">
+                            PNG, JPG, JPEG up to 5MB
+                        </p>
+                    </div>
+                )}
+            </div>
+            
+            {!preview && (
+                <p className="text-red-600 text-xs">
+                    * License photo is required for rider verification
+                </p>
+            )}
+        </div>
+    );
+};
+
+// Application Review Component
+const ApplicationReviewMessage = ({ userType, onClose }) => {
+    const getContactEmail = () => {
+        switch (userType) {
+            case 'rider': return 'riders@foodexpress.com';
+            case 'restaurant': return 'partners@foodexpress.com';
+            default: return 'support@foodexpress.com';
+        }
+    };
+
+    const getTitle = () => {
+        switch (userType) {
+            case 'rider': return 'Rider Application Under Review';
+            case 'restaurant': return 'Restaurant Application Under Review';
+            default: return 'Application Under Review';
+        }
+    };
+
+    const getMessage = () => {
+        switch (userType) {
+            case 'rider':
+                return 'Your rider application has been submitted successfully and is now under review. Our team will verify your documents and information.';
+            case 'restaurant':
+                return 'Your restaurant application has been submitted successfully and is now under review. Our team will verify your business details.';
+            default:
+                return 'Your application has been submitted successfully and is now under review.';
+        }
+    };
+
+    return (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-lg shadow-xl p-6 max-w-md w-full">
+                <div className="text-center">
+                    <div className="w-16 h-16 bg-yellow-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <Clock size={32} className="text-yellow-600" />
+                    </div>
+                    
+                    <h3 className="text-xl font-bold text-gray-900 mb-2">
+                        {getTitle()}
+                    </h3>
+                    
+                    <p className="text-gray-600 mb-4 text-sm">
+                        {getMessage()} This process usually takes 24-48 hours.
+                    </p>
+                    
+                    <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mb-4">
+                        <p className="text-yellow-800 text-xs">
+                            <strong>Note:</strong> You will receive an email notification once your application is approved. 
+                            Please check your spam folder if you don't see it in your inbox.
+                        </p>
+                    </div>
+                    
+                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
+                        <p className="text-blue-800 text-xs">
+                            <strong>Need help?</strong> Contact us at:{' '}
+                            <a 
+                                href={`mailto:${getContactEmail()}`}
+                                className="underline font-medium"
+                            >
+                                {getContactEmail()}
+                            </a>
+                        </p>
+                    </div>
+                    
+                    <button
+                        onClick={onClose}
+                        className="w-full bg-red-800 text-white py-2 rounded-lg font-semibold hover:bg-red-900 transition-colors text-sm"
+                    >
+                        UNDERSTOOD
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
 };
 
 // Image Slideshow Component for Hero Section
@@ -634,10 +900,27 @@ const CustomerRegisterForm = ({ onRegister, onSwitchToLogin, onSwitchToRestauran
     });
     const [error, setError] = useState('');
     const [showPassword, setShowPassword] = useState(false);
+    const [passwordValid, setPasswordValid] = useState(false);
+
+    const validatePassword = (password) => {
+        const requirements = [
+            password.length >= 8,
+            /[a-z]/.test(password),
+            /[A-Z]/.test(password),
+            /[0-9]/.test(password),
+            /[^A-Za-z0-9]/.test(password)
+        ];
+        return requirements.every(req => req);
+    };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
         setError('');
+        
+        if (!validatePassword(formData.password)) {
+            setError('Please ensure your password meets all security requirements');
+            return;
+        }
         
         const result = await onRegister(formData);
         if (!result.success) {
@@ -648,7 +931,12 @@ const CustomerRegisterForm = ({ onRegister, onSwitchToLogin, onSwitchToRestauran
     };
 
     const handleChange = (e) => {
-        setFormData({ ...formData, [e.target.name]: e.target.value });
+        const { name, value } = e.target;
+        setFormData({ ...formData, [name]: value });
+        
+        if (name === 'password') {
+            setPasswordValid(validatePassword(value));
+        }
     };
 
     const handleLocationSelect = (address, lat, lng) => {
@@ -725,6 +1013,9 @@ const CustomerRegisterForm = ({ onRegister, onSwitchToLogin, onSwitchToRestauran
                             {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                         </button>
                     </div>
+                    
+                    <PasswordStrengthIndicator password={formData.password} />
+                    <PasswordRequirements password={formData.password} />
                 </div>
 
                 <div>
@@ -753,7 +1044,7 @@ const CustomerRegisterForm = ({ onRegister, onSwitchToLogin, onSwitchToRestauran
 
                 <button
                     type="submit"
-                    disabled={loading}
+                    disabled={loading || !passwordValid}
                     className="w-full bg-red-800 text-white py-2 sm:py-3 rounded-lg font-semibold hover:bg-red-900 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm sm:text-base"
                 >
                     {loading ? 'Creating account...' : 'CREATE CUSTOMER ACCOUNT'}
@@ -807,21 +1098,44 @@ const RestaurantRegisterForm = ({ onRegister, onSwitchToLogin, onSwitchToCustome
     });
     const [error, setError] = useState('');
     const [showPassword, setShowPassword] = useState(false);
+    const [passwordValid, setPasswordValid] = useState(false);
+    const [showReviewMessage, setShowReviewMessage] = useState(false);
+
+    const validatePassword = (password) => {
+        const requirements = [
+            password.length >= 8,
+            /[a-z]/.test(password),
+            /[A-Z]/.test(password),
+            /[0-9]/.test(password),
+            /[^A-Za-z0-9]/.test(password)
+        ];
+        return requirements.every(req => req);
+    };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
         setError('');
         
+        if (!validatePassword(formData.password)) {
+            setError('Please ensure your password meets all security requirements');
+            return;
+        }
+        
         const result = await onRegister(formData);
         if (!result.success) {
             setError(result.message);
         } else {
-            onClose();
+            setShowReviewMessage(true);
         }
     };
 
     const handleChange = (e) => {
-        setFormData({ ...formData, [e.target.name]: e.target.value });
+        const { name, value } = e.target;
+        setFormData({ ...formData, [name]: value });
+        
+        if (name === 'password') {
+            setPasswordValid(validatePassword(value));
+        }
     };
 
     const handleLocationSelect = (address, lat, lng) => {
@@ -836,180 +1150,195 @@ const RestaurantRegisterForm = ({ onRegister, onSwitchToLogin, onSwitchToCustome
     };
 
     return (
-        <div className="bg-white rounded-lg shadow-xl p-4 sm:p-6 max-w-md w-full mx-2 sm:mx-4 max-h-[90vh] overflow-y-auto">
-            <div className="text-center mb-4 sm:mb-6">
-                <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-2">Join as Restaurant</h2>
-                <p className="text-gray-600 text-sm sm:text-base">Register your restaurant and start serving customers</p>
-            </div>
-
-            {error && (
-                <div className="bg-red-100 border border-red-400 text-red-700 px-3 sm:px-4 py-2 sm:py-3 rounded mb-4 text-sm">
-                    {error}
-                </div>
-            )}
-
-            <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
-                <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Restaurant Name</label>
-                    <input
-                        type="text"
-                        name="restaurantName"
-                        value={formData.restaurantName}
-                        onChange={handleChange}
-                        className="w-full px-3 sm:px-4 py-2 sm:py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-600 focus:border-orange-600 text-sm sm:text-base"
-                        placeholder="Enter your restaurant name"
-                        required
-                        disabled={loading}
-                    />
+        <>
+            <div className="bg-white rounded-lg shadow-xl p-4 sm:p-6 max-w-md w-full mx-2 sm:mx-4 max-h-[90vh] overflow-y-auto">
+                <div className="text-center mb-4 sm:mb-6">
+                    <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-2">Join as Restaurant</h2>
+                    <p className="text-gray-600 text-sm sm:text-base">Register your restaurant and start serving customers</p>
                 </div>
 
-                <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Cuisine Type</label>
-                    <select
-                        name="cuisine"
-                        value={formData.cuisine}
-                        onChange={handleChange}
-                        className="w-full px-3 sm:px-4 py-2 sm:py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-600 focus:border-orange-600 text-sm sm:text-base"
-                        required
-                        disabled={loading}
-                    >
-                        <option value="">Select Cuisine</option>
-                        <option value="Filipino">Filipino</option>
-                        <option value="Chinese">Chinese</option>
-                        <option value="Japanese">Japanese</option>
-                        <option value="Korean">Korean</option>
-                        <option value="American">American</option>
-                        <option value="Italian">Italian</option>
-                        <option value="Mexican">Mexican</option>
-                        <option value="Fast Food">Fast Food</option>
-                        <option value="Vegetarian">Vegetarian</option>
-                        <option value="Seafood">Seafood</option>
-                        <option value="Barbecue">Barbecue</option>
-                        <option value="Desserts">Desserts</option>
-                    </select>
-                </div>
+                {error && (
+                    <div className="bg-red-100 border border-red-400 text-red-700 px-3 sm:px-4 py-2 sm:py-3 rounded mb-4 text-sm">
+                        {error}
+                    </div>
+                )}
 
-                <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Owner Name</label>
-                    <input
-                        type="text"
-                        name="name"
-                        value={formData.name}
-                        onChange={handleChange}
-                        className="w-full px-3 sm:px-4 py-2 sm:py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-600 focus:border-orange-600 text-sm sm:text-base"
-                        placeholder="Enter owner's full name"
-                        required
-                        disabled={loading}
-                    />
-                </div>
-
-                <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Email Address</label>
-                    <input
-                        type="email"
-                        name="email"
-                        value={formData.email}
-                        onChange={handleChange}
-                        className="w-full px-3 sm:px-4 py-2 sm:py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-600 focus:border-orange-600 text-sm sm:text-base"
-                        placeholder="Enter business email"
-                        required
-                        disabled={loading}
-                    />
-                </div>
-
-                <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Password</label>
-                    <div className="relative">
+                <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Restaurant Name</label>
                         <input
-                            type={showPassword ? "text" : "password"}
-                            name="password"
-                            value={formData.password}
+                            type="text"
+                            name="restaurantName"
+                            value={formData.restaurantName}
                             onChange={handleChange}
-                            className="w-full px-3 sm:px-4 py-2 sm:py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-600 focus:border-orange-600 pr-10 text-sm sm:text-base"
-                            placeholder="Create a password"
+                            className="w-full px-3 sm:px-4 py-2 sm:py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-600 focus:border-orange-600 text-sm sm:text-base"
+                            placeholder="Enter your restaurant name"
                             required
                             disabled={loading}
                         />
-                        <button
-                            type="button"
-                            onClick={() => setShowPassword(!showPassword)}
-                            className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600"
-                        >
-                            {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                        </button>
                     </div>
-                </div>
 
-                <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Phone Number</label>
-                    <input
-                        type="tel"
-                        name="phone"
-                        value={formData.phone}
-                        onChange={handleChange}
-                        className="w-full px-3 sm:px-4 py-2 sm:py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-600 focus:border-orange-600 text-sm sm:text-base"
-                        placeholder="09XXXXXXXXX"
-                        required
-                        disabled={loading}
-                    />
-                </div>
-
-                <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Restaurant Location
-                    </label>
-                    <LocationMap 
-                        onLocationSelect={handleLocationSelect}
-                        initialAddress={formData.address}
-                    />
-                </div>
-
-                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 text-sm">
-                    <p className="text-yellow-800">
-                        <strong>Note:</strong> Restaurant accounts require admin approval before you can start accepting orders.
-                        This usually takes 24-48 hours.
-                    </p>
-                </div>
-
-                <button
-                    type="submit"
-                    disabled={loading}
-                    className="w-full bg-orange-600 text-white py-2 sm:py-3 rounded-lg font-semibold hover:bg-orange-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm sm:text-base"
-                >
-                    {loading ? 'Creating account...' : 'REGISTER RESTAURANT'}
-                </button>
-
-                <div className="text-center space-y-3 sm:space-y-4">
-                    <p className="text-gray-600 text-sm sm:text-base">Want to join as?</p>
-                    <div className="flex justify-center space-x-4 sm:space-x-6">
-                        <button
-                            type="button"
-                            onClick={onSwitchToCustomer}
-                            className="text-orange-600 hover:text-orange-700 font-medium text-sm sm:text-base"
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Cuisine Type</label>
+                        <select
+                            name="cuisine"
+                            value={formData.cuisine}
+                            onChange={handleChange}
+                            className="w-full px-3 sm:px-4 py-2 sm:py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-600 focus:border-orange-600 text-sm sm:text-base"
+                            required
                             disabled={loading}
                         >
-                            Customer
-                        </button>
-                        <button
-                            type="button"
-                            onClick={onSwitchToRider}
-                            className="text-orange-600 hover:text-orange-700 font-medium text-sm sm:text-base"
-                            disabled={loading}
-                        >
-                            Delivery Rider
-                        </button>
+                            <option value="">Select Cuisine</option>
+                            <option value="Filipino">Filipino</option>
+                            <option value="Chinese">Chinese</option>
+                            <option value="Japanese">Japanese</option>
+                            <option value="Korean">Korean</option>
+                            <option value="American">American</option>
+                            <option value="Italian">Italian</option>
+                            <option value="Mexican">Mexican</option>
+                            <option value="Fast Food">Fast Food</option>
+                            <option value="Vegetarian">Vegetarian</option>
+                            <option value="Seafood">Seafood</option>
+                            <option value="Barbecue">Barbecue</option>
+                            <option value="Desserts">Desserts</option>
+                        </select>
                     </div>
+
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Owner Name</label>
+                        <input
+                            type="text"
+                            name="name"
+                            value={formData.name}
+                            onChange={handleChange}
+                            className="w-full px-3 sm:px-4 py-2 sm:py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-600 focus:border-orange-600 text-sm sm:text-base"
+                            placeholder="Enter owner's full name"
+                            required
+                            disabled={loading}
+                        />
+                    </div>
+
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Email Address</label>
+                        <input
+                            type="email"
+                            name="email"
+                            value={formData.email}
+                            onChange={handleChange}
+                            className="w-full px-3 sm:px-4 py-2 sm:py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-600 focus:border-orange-600 text-sm sm:text-base"
+                            placeholder="Enter business email"
+                            required
+                            disabled={loading}
+                        />
+                    </div>
+
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Password</label>
+                        <div className="relative">
+                            <input
+                                type={showPassword ? "text" : "password"}
+                                name="password"
+                                value={formData.password}
+                                onChange={handleChange}
+                                className="w-full px-3 sm:px-4 py-2 sm:py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-600 focus:border-orange-600 pr-10 text-sm sm:text-base"
+                                placeholder="Create a password"
+                                required
+                                disabled={loading}
+                            />
+                            <button
+                                type="button"
+                                onClick={() => setShowPassword(!showPassword)}
+                                className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600"
+                            >
+                                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                            </button>
+                        </div>
+                        
+                        <PasswordStrengthIndicator password={formData.password} />
+                        <PasswordRequirements password={formData.password} />
+                    </div>
+
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Phone Number</label>
+                        <input
+                            type="tel"
+                            name="phone"
+                            value={formData.phone}
+                            onChange={handleChange}
+                            className="w-full px-3 sm:px-4 py-2 sm:py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-600 focus:border-orange-600 text-sm sm:text-base"
+                            placeholder="09XXXXXXXXX"
+                            required
+                            disabled={loading}
+                        />
+                    </div>
+
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Restaurant Location
+                        </label>
+                        <LocationMap 
+                            onLocationSelect={handleLocationSelect}
+                            initialAddress={formData.address}
+                        />
+                    </div>
+
+                    <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 text-sm">
+                        <p className="text-yellow-800">
+                            <strong>Note:</strong> Restaurant accounts require admin approval before you can start accepting orders.
+                            This usually takes 24-48 hours.
+                        </p>
+                    </div>
+
                     <button
-                        type="button"
-                        onClick={onSwitchToLogin}
-                        className="text-orange-600 hover:text-orange-700 font-medium text-sm sm:text-base"
-                        disabled={loading}
+                        type="submit"
+                        disabled={loading || !passwordValid}
+                        className="w-full bg-orange-600 text-white py-2 sm:py-3 rounded-lg font-semibold hover:bg-orange-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm sm:text-base"
                     >
-                        Already have an account? Sign in
+                        {loading ? 'Creating account...' : 'REGISTER RESTAURANT'}
                     </button>
-                </div>
-            </form>
-        </div>
+
+                    <div className="text-center space-y-3 sm:space-y-4">
+                        <p className="text-gray-600 text-sm sm:text-base">Want to join as?</p>
+                        <div className="flex justify-center space-x-4 sm:space-x-6">
+                            <button
+                                type="button"
+                                onClick={onSwitchToCustomer}
+                                className="text-orange-600 hover:text-orange-700 font-medium text-sm sm:text-base"
+                                disabled={loading}
+                            >
+                                Customer
+                            </button>
+                            <button
+                                type="button"
+                                onClick={onSwitchToRider}
+                                className="text-orange-600 hover:text-orange-700 font-medium text-sm sm:text-base"
+                                disabled={loading}
+                            >
+                                Delivery Rider
+                            </button>
+                        </div>
+                        <button
+                            type="button"
+                            onClick={onSwitchToLogin}
+                            className="text-orange-600 hover:text-orange-700 font-medium text-sm sm:text-base"
+                            disabled={loading}
+                        >
+                            Already have an account? Sign in
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            {showReviewMessage && (
+                <ApplicationReviewMessage 
+                    userType="restaurant" 
+                    onClose={() => {
+                        setShowReviewMessage(false);
+                        onClose();
+                    }} 
+                />
+            )}
+        </>
     );
 };
 
@@ -1025,29 +1354,54 @@ const RiderRegisterForm = ({ onRegister, onSwitchToLogin, onSwitchToCustomer, on
         vehicleType: 'motorcycle',
         licenseNumber: ''
     });
+    const [licenseFile, setLicenseFile] = useState(null);
     const [error, setError] = useState('');
     const [showPassword, setShowPassword] = useState(false);
+    const [passwordValid, setPasswordValid] = useState(false);
+    const [showReviewMessage, setShowReviewMessage] = useState(false);
+
+    const validatePassword = (password) => {
+        const requirements = [
+            password.length >= 8,
+            /[a-z]/.test(password),
+            /[A-Z]/.test(password),
+            /[0-9]/.test(password),
+            /[^A-Za-z0-9]/.test(password)
+        ];
+        return requirements.every(req => req);
+    };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
         setError('');
         
+        if (!validatePassword(formData.password)) {
+            setError('Please ensure your password meets all security requirements');
+            return;
+        }
+
+        if (!licenseFile) {
+            setError('Please upload your license photo for verification');
+            return;
+        }
+        
         console.log('🚴 RIDER REGISTRATION DATA:', formData);
         
         try {
-            const result = await onRegister(formData);
+            // Create FormData for file upload
+            const submitData = new FormData();
+            Object.keys(formData).forEach(key => {
+                submitData.append(key, formData[key]);
+            });
+            submitData.append('licensePhoto', licenseFile);
+
+            const result = await onRegister(submitData);
             console.log('🚴 REGISTRATION RESULT:', result);
             
             if (!result.success) {
                 setError(result.message || 'Registration failed. Please try again.');
             } else {
-                if (result.needsApproval) {
-                    alert('✅ Registration successful! Your rider account is pending admin approval. You will be notified once approved.');
-                    onClose();
-                } else {
-                    console.log('✅ Rider registration successful and auto-logged in!');
-                    onClose();
-                }
+                setShowReviewMessage(true);
             }
         } catch (error) {
             console.error('🚴 Registration error:', error);
@@ -1056,7 +1410,12 @@ const RiderRegisterForm = ({ onRegister, onSwitchToLogin, onSwitchToCustomer, on
     };
 
     const handleChange = (e) => {
-        setFormData({ ...formData, [e.target.name]: e.target.value });
+        const { name, value } = e.target;
+        setFormData({ ...formData, [name]: value });
+        
+        if (name === 'password') {
+            setPasswordValid(validatePassword(value));
+        }
     };
 
     const handleLocationSelect = (address, lat, lng) => {
@@ -1071,169 +1430,191 @@ const RiderRegisterForm = ({ onRegister, onSwitchToLogin, onSwitchToCustomer, on
     };
 
     return (
-        <div className="bg-white rounded-lg shadow-xl p-4 sm:p-6 max-w-md w-full mx-2 sm:mx-4 max-h-[90vh] overflow-y-auto">
-            <div className="text-center mb-4 sm:mb-6">
-                <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-2">Join as Rider</h2>
-                <p className="text-gray-600 text-sm sm:text-base">Become a delivery rider and start earning</p>
-            </div>
-
-            {error && (
-                <div className="bg-red-100 border border-red-400 text-red-700 px-3 sm:px-4 py-2 sm:py-3 rounded mb-4 text-sm">
-                    {error}
-                </div>
-            )}
-
-            <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
-                <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Full Name *</label>
-                    <input
-                        type="text"
-                        name="name"
-                        value={formData.name}
-                        onChange={handleChange}
-                        className="w-full px-3 sm:px-4 py-2 sm:py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600 text-sm sm:text-base"
-                        placeholder="Enter your full name"
-                        required
-                        disabled={loading}
-                    />
+        <>
+            <div className="bg-white rounded-lg shadow-xl p-4 sm:p-6 max-w-md w-full mx-2 sm:mx-4 max-h-[90vh] overflow-y-auto">
+                <div className="text-center mb-4 sm:mb-6">
+                    <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-2">Join as Rider</h2>
+                    <p className="text-gray-600 text-sm sm:text-base">Become a delivery rider and start earning</p>
                 </div>
 
-                <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Email Address *</label>
-                    <input
-                        type="email"
-                        name="email"
-                        value={formData.email}
-                        onChange={handleChange}
-                        className="w-full px-3 sm:px-4 py-2 sm:py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600 text-sm sm:text-base"
-                        placeholder="Enter your email"
-                        required
-                        disabled={loading}
-                    />
-                </div>
+                {error && (
+                    <div className="bg-red-100 border border-red-400 text-red-700 px-3 sm:px-4 py-2 sm:py-3 rounded mb-4 text-sm">
+                        {error}
+                    </div>
+                )}
 
-                <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Password *</label>
-                    <div className="relative">
+                <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Full Name *</label>
                         <input
-                            type={showPassword ? "text" : "password"}
-                            name="password"
-                            value={formData.password}
+                            type="text"
+                            name="name"
+                            value={formData.name}
                             onChange={handleChange}
-                            className="w-full px-3 sm:px-4 py-2 sm:py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600 pr-10 text-sm sm:text-base"
-                            placeholder="Create a password"
+                            className="w-full px-3 sm:px-4 py-2 sm:py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600 text-sm sm:text-base"
+                            placeholder="Enter your full name"
                             required
                             disabled={loading}
                         />
-                        <button
-                            type="button"
-                            onClick={() => setShowPassword(!showPassword)}
-                            className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600"
-                        >
-                            {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                        </button>
                     </div>
-                </div>
 
-                <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Phone Number *</label>
-                    <input
-                        type="tel"
-                        name="phone"
-                        value={formData.phone}
-                        onChange={handleChange}
-                        className="w-full px-3 sm:px-4 py-2 sm:py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600 text-sm sm:text-base"
-                        placeholder="09XXXXXXXXX"
-                        required
-                        disabled={loading}
-                    />
-                </div>
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Email Address *</label>
+                        <input
+                            type="email"
+                            name="email"
+                            value={formData.email}
+                            onChange={handleChange}
+                            className="w-full px-3 sm:px-4 py-2 sm:py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600 text-sm sm:text-base"
+                            placeholder="Enter your email"
+                            required
+                            disabled={loading}
+                        />
+                    </div>
 
-                <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Vehicle Type *</label>
-                    <select
-                        name="vehicleType"
-                        value={formData.vehicleType}
-                        onChange={handleChange}
-                        className="w-full px-3 sm:px-4 py-2 sm:py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600 text-sm sm:text-base"
-                        required
-                        disabled={loading}
-                    >
-                        <option value="motorcycle">Motorcycle</option>
-                        <option value="bicycle">Bicycle</option>
-                        <option value="car">Car</option>
-                    </select>
-                </div>
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Password *</label>
+                        <div className="relative">
+                            <input
+                                type={showPassword ? "text" : "password"}
+                                name="password"
+                                value={formData.password}
+                                onChange={handleChange}
+                                className="w-full px-3 sm:px-4 py-2 sm:py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600 pr-10 text-sm sm:text-base"
+                                placeholder="Create a password"
+                                required
+                                disabled={loading}
+                            />
+                            <button
+                                type="button"
+                                onClick={() => setShowPassword(!showPassword)}
+                                className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600"
+                            >
+                                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                            </button>
+                        </div>
+                        
+                        <PasswordStrengthIndicator password={formData.password} />
+                        <PasswordRequirements password={formData.password} />
+                    </div>
 
-                <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">License Number (Optional)</label>
-                    <input
-                        type="text"
-                        name="licenseNumber"
-                        value={formData.licenseNumber}
-                        onChange={handleChange}
-                        className="w-full px-3 sm:px-4 py-2 sm:py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600 text-sm sm:text-base"
-                        placeholder="Enter license number if applicable"
-                        disabled={loading}
-                    />
-                </div>
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Phone Number *</label>
+                        <input
+                            type="tel"
+                            name="phone"
+                            value={formData.phone}
+                            onChange={handleChange}
+                            className="w-full px-3 sm:px-4 py-2 sm:py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600 text-sm sm:text-base"
+                            placeholder="09XXXXXXXXX"
+                            required
+                            disabled={loading}
+                        />
+                    </div>
 
-                <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Home Location *
-                    </label>
-                    <LocationMap 
-                        onLocationSelect={handleLocationSelect}
-                        initialAddress={formData.address}
-                    />
-                </div>
-
-                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 text-sm">
-                    <p className="text-yellow-800">
-                        <strong>Note:</strong> Rider accounts require admin approval before you can start accepting delivery requests.
-                        This usually takes 24-48 hours.
-                    </p>
-                </div>
-
-                <button
-                    type="submit"
-                    disabled={loading}
-                    className="w-full bg-blue-600 text-white py-2 sm:py-3 rounded-lg font-semibold hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm sm:text-base"
-                >
-                    {loading ? 'Creating account...' : 'REGISTER AS RIDER'}
-                </button>
-
-                <div className="text-center space-y-3 sm:space-y-4">
-                    <p className="text-gray-600 text-sm sm:text-base">Want to join as?</p>
-                    <div className="flex justify-center space-x-4 sm:space-x-6">
-                        <button
-                            type="button"
-                            onClick={onSwitchToCustomer}
-                            className="text-blue-600 hover:text-blue-700 font-medium text-sm sm:text-base"
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Vehicle Type *</label>
+                        <select
+                            name="vehicleType"
+                            value={formData.vehicleType}
+                            onChange={handleChange}
+                            className="w-full px-3 sm:px-4 py-2 sm:py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600 text-sm sm:text-base"
+                            required
                             disabled={loading}
                         >
-                            Customer
-                        </button>
-                        <button
-                            type="button"
-                            onClick={onSwitchToRestaurant}
-                            className="text-blue-600 hover:text-blue-700 font-medium text-sm sm:text-base"
-                            disabled={loading}
-                        >
-                            Restaurant Owner
-                        </button>
+                            <option value="motorcycle">Motorcycle</option>
+                            <option value="bicycle">Bicycle</option>
+                            <option value="car">Car</option>
+                        </select>
                     </div>
+
+                    <div>
+                        <LicenseUpload 
+                            onFileSelect={setLicenseFile}
+                            currentFile={licenseFile}
+                        />
+                    </div>
+
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">License Number (Optional)</label>
+                        <input
+                            type="text"
+                            name="licenseNumber"
+                            value={formData.licenseNumber}
+                            onChange={handleChange}
+                            className="w-full px-3 sm:px-4 py-2 sm:py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600 text-sm sm:text-base"
+                            placeholder="Enter license number if applicable"
+                            disabled={loading}
+                        />
+                    </div>
+
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Home Location *
+                        </label>
+                        <LocationMap 
+                            onLocationSelect={handleLocationSelect}
+                            initialAddress={formData.address}
+                        />
+                    </div>
+
+                    <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 text-sm">
+                        <p className="text-yellow-800">
+                            <strong>Note:</strong> Rider accounts require admin approval before you can start accepting delivery requests.
+                            This usually takes 24-48 hours.
+                        </p>
+                    </div>
+
                     <button
-                        type="button"
-                        onClick={onSwitchToLogin}
-                        className="text-blue-600 hover:text-blue-700 font-medium text-sm sm:text-base"
-                        disabled={loading}
+                        type="submit"
+                        disabled={loading || !passwordValid || !licenseFile}
+                        className="w-full bg-blue-600 text-white py-2 sm:py-3 rounded-lg font-semibold hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm sm:text-base"
                     >
-                        Already have an account? Sign in
+                        {loading ? 'Creating account...' : 'REGISTER AS RIDER'}
                     </button>
-                </div>
-            </form>
-        </div>
+
+                    <div className="text-center space-y-3 sm:space-y-4">
+                        <p className="text-gray-600 text-sm sm:text-base">Want to join as?</p>
+                        <div className="flex justify-center space-x-4 sm:space-x-6">
+                            <button
+                                type="button"
+                                onClick={onSwitchToCustomer}
+                                className="text-blue-600 hover:text-blue-700 font-medium text-sm sm:text-base"
+                                disabled={loading}
+                            >
+                                Customer
+                            </button>
+                            <button
+                                type="button"
+                                onClick={onSwitchToRestaurant}
+                                className="text-blue-600 hover:text-blue-700 font-medium text-sm sm:text-base"
+                                disabled={loading}
+                            >
+                                Restaurant Owner
+                            </button>
+                        </div>
+                        <button
+                            type="button"
+                            onClick={onSwitchToLogin}
+                            className="text-blue-600 hover:text-blue-700 font-medium text-sm sm:text-base"
+                            disabled={loading}
+                        >
+                            Already have an account? Sign in
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            {showReviewMessage && (
+                <ApplicationReviewMessage 
+                    userType="rider" 
+                    onClose={() => {
+                        setShowReviewMessage(false);
+                        onClose();
+                    }} 
+                />
+            )}
+        </>
     );
 };
 
