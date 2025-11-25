@@ -1,4 +1,4 @@
-// AdminDashboard.jsx - WITH ACTUAL LOGO FROM PUBLIC FOLDER
+// AdminDashboard.jsx - FIXED SYNTAX ERROR VERSION
 import React, { useState, useEffect } from 'react';
 import { Menu, X } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
@@ -76,6 +76,20 @@ const AdminDashboard = () => {
     return titles[activeTab] || 'Dashboard';
   };
 
+  const getUserInitial = () => {
+    if (user && user.name) {
+      return user.name.charAt(0).toUpperCase();
+    }
+    return 'A';
+  };
+
+  const getUserName = () => {
+    if (user && user.name) {
+      return user.name;
+    }
+    return 'Admin';
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 flex">
       {/* Sidebar Overlay for Mobile */}
@@ -133,7 +147,10 @@ const AdminDashboard = () => {
                     onError={(e) => {
                       // Fallback if logo doesn't exist
                       e.target.style.display = 'none';
-                      e.target.nextSibling?.style.display = 'flex';
+                      const fallback = e.target.nextSibling;
+                      if (fallback) {
+                        fallback.style.display = 'flex';
+                      }
                     }}
                   />
                   {/* Fallback logo */}
@@ -159,14 +176,14 @@ const AdminDashboard = () => {
             <div className="flex items-center space-x-3 sm:space-x-4">
               <div className="text-right hidden sm:block min-w-0">
                 <p className="text-sm font-medium text-gray-900 truncate max-w-[150px]">
-                  {user?.name || 'Admin'}
+                  {getUserName()}
                 </p>
                 <p className="text-xs text-orange-600 font-medium">Administrator</p>
               </div>
               
               <div className="relative">
                 <div className="w-10 h-10 bg-gradient-to-r from-orange-500 to-orange-600 rounded-full flex items-center justify-center text-white font-bold shadow-sm text-sm">
-                  {user?.name?.charAt(0)?.toUpperCase() || 'A'}
+                  {getUserInitial()}
                 </div>
                 {/* Online indicator */}
                 <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-white rounded-full"></div>
@@ -183,7 +200,7 @@ const AdminDashboard = () => {
               <div className="flex items-center space-x-2">
                 <div className="text-right">
                   <p className="text-sm font-medium text-gray-900">
-                    {user?.name || 'Admin'}
+                    {getUserName()}
                   </p>
                   <p className="text-xs text-orange-600">Administrator</p>
                 </div>
