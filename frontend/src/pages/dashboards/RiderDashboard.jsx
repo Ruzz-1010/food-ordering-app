@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import {
   Navigation, Package, DollarSign, Clock, CheckCircle, Phone, 
   X, LogOut, RefreshCw, MapPin, Store, User, Eye, Map, Wifi, WifiOff,
-  Truck, Home, MessageCircle, AlertCircle, ChevronRight, Menu, MoreVertical
+  Truck, Home, MessageCircle, AlertCircle, ChevronRight, Menu, MoreVertical,
+  CreditCard, TrendingUp, Wallet
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 
@@ -21,6 +22,13 @@ const RiderDashboard = () => {
   const [currentLocation, setCurrentLocation] = useState(null);
   const [customerLocation, setCustomerLocation] = useState(null);
   const [showMobileMenu, setShowMobileMenu] = useState(false);
+  const [earnings, setEarnings] = useState({
+    today: 0,
+    weekly: 0,
+    monthly: 0,
+    total: 0,
+    completedDeliveries: 0
+  });
 
   const token = localStorage.getItem('token');
 
@@ -110,6 +118,73 @@ const RiderDashboard = () => {
     }
   };
 
+  // Fetch rider earnings
+  const fetchEarnings = async () => {
+    try {
+      const res = await fetch(`${API_URL}/riders/earnings`, {
+        headers: { 
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}` 
+        }
+      });
+      
+      const data = await res.json();
+      console.log('💰 Earnings data:', data);
+      
+      if (data.success) {
+        setEarnings(data.earnings || {
+          today: 0,
+          weekly: 0,
+          monthly: 0,
+          total: 0,
+          completedDeliveries: 0
+        });
+      }
+    } catch (error) {
+      console.error('Error fetching earnings:', error);
+      // Calculate earnings locally if API fails
+      calculateLocalEarnings();
+    }
+  };
+
+  // Calculate earnings locally from myDeliveries
+  const calculateLocalEarnings = () => {
+    const completedOrders = myDeliveries.filter(order => 
+      order.status === 'delivered'
+    );
+    
+    const deliveryFee = 35; // Fixed delivery fee
+    const totalEarnings = completedOrders.length * deliveryFee;
+    
+    // Calculate today's earnings (orders delivered today)
+    const today = new Date().toDateString();
+    const todayEarnings = completedOrders.filter(order => 
+      new Date(order.updatedAt || order.createdAt).toDateString() === today
+    ).length * deliveryFee;
+
+    // Calculate weekly earnings (last 7 days)
+    const oneWeekAgo = new Date();
+    oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+    const weeklyEarnings = completedOrders.filter(order => 
+      new Date(order.updatedAt || order.createdAt) >= oneWeekAgo
+    ).length * deliveryFee;
+
+    // Calculate monthly earnings (last 30 days)
+    const oneMonthAgo = new Date();
+    oneMonthAgo.setDate(oneMonthAgo.getDate() - 30);
+    const monthlyEarnings = completedOrders.filter(order => 
+      new Date(order.updatedAt || order.createdAt) >= oneMonthAgo
+    ).length * deliveryFee;
+
+    setEarnings({
+      today: todayEarnings,
+      weekly: weeklyEarnings,
+      monthly: monthlyEarnings,
+      total: totalEarnings,
+      completedDeliveries: completedOrders.length
+    });
+  };
+
   const acceptOrder = async (orderId) => {
     if (riderStatus === 'offline') {
       alert('❌ Please go online to accept orders');
@@ -134,6 +209,7 @@ const RiderDashboard = () => {
         alert('✅ Order assigned to you!');
         await fetchAvailable();
         await fetchMyDeliveries();
+        await fetchEarnings();
       } else {
         alert(`❌ Failed: ${data.message}`);
       }
@@ -160,6 +236,7 @@ const RiderDashboard = () => {
       if (res.ok && data.success) {
         alert(`✅ Status updated to ${status}`);
         await fetchMyDeliveries();
+        await fetchEarnings(); // Refresh earnings after delivery completion
       } else {
         alert(`❌ Failed: ${data.message || 'Unknown error'}`);
       }
@@ -173,7 +250,7 @@ const RiderDashboard = () => {
   const loadData = async () => {
     setLoading(true);
     try {
-      await Promise.all([fetchAvailable(), fetchMyDeliveries()]);
+      await Promise.all([fetchAvailable(), fetchMyDeliveries(), fetchEarnings()]);
     } catch (error) {
       console.error('❌ Error loading data:', error);
     } finally {
@@ -606,7 +683,8 @@ const RiderDashboard = () => {
 
       <div className="max-w-7xl mx-auto px-3 sm:px-4 py-4 sm:py-6">
         {/* Stats - Responsive Grid */}
-        <div className="grid grid-cols-2 gap-2 sm:gap-4 mb-4 sm:mb-6">
+        <div className="grid grid-cols-2 lg:grid-cols-6 gap-2 sm:gap-4 mb-4 sm:mb-6">
+          {/* Delivery Stats */}
           <div className="bg-white p-3 sm:p-4 rounded-lg shadow-sm border text-center">
             <p className="text-xs sm:text-sm text-gray-600 mb-1">Available</p>
             <p className="text-xl sm:text-2xl font-bold text-gray-900">{stats.availableOrders}</p>
@@ -626,6 +704,53 @@ const RiderDashboard = () => {
             <p className="text-xs sm:text-sm text-gray-600 mb-1">Completed</p>
             <p className="text-xl sm:text-2xl font-bold text-green-600">{stats.completedDeliveries}</p>
             <p className="text-xs text-green-600">delivered</p>
+          </div>
+          
+          {/* Earnings Stats */}
+          <div className="bg-white p-3 sm:p-4 rounded-lg shadow-sm border text-center col-span-2 lg:col-span-1">
+            <div className="flex items-center justify-center mb-1">
+              <Wallet className="text-green-600 w-4 h-4 mr-1" />
+              <p className="text-xs sm:text-sm text-gray-600">Today's Earnings</p>
+            </div>
+            <p className="text-xl sm:text-2xl font-bold text-green-600">{formatCurrency(earnings.today)}</p>
+            <p className="text-xs text-green-600">{earnings.completedDeliveries} deliveries</p>
+          </div>
+          <div className="bg-white p-3 sm:p-4 rounded-lg shadow-sm border text-center col-span-2 lg:col-span-1">
+            <div className="flex items-center justify-center mb-1">
+              <TrendingUp className="text-blue-600 w-4 h-4 mr-1" />
+              <p className="text-xs sm:text-sm text-gray-600">Total Earnings</p>
+            </div>
+            <p className="text-xl sm:text-2xl font-bold text-blue-600">{formatCurrency(earnings.total)}</p>
+            <p className="text-xs text-blue-600">₱35 per delivery</p>
+          </div>
+        </div>
+
+        {/* Earnings Summary Card */}
+        <div className="bg-gradient-to-r from-green-500 to-green-600 rounded-lg p-4 sm:p-6 mb-4 sm:mb-6 text-white">
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="text-lg sm:text-xl font-bold mb-1">Your Earnings</h3>
+              <p className="text-green-100 text-sm sm:text-base">₱35 per successful delivery</p>
+            </div>
+            <div className="text-right">
+              <p className="text-2xl sm:text-3xl font-bold">{formatCurrency(earnings.total)}</p>
+              <p className="text-green-100 text-sm">Total earned</p>
+            </div>
+          </div>
+          
+          <div className="grid grid-cols-3 gap-4 mt-4">
+            <div className="text-center">
+              <p className="text-lg sm:text-xl font-bold">{formatCurrency(earnings.today)}</p>
+              <p className="text-green-100 text-xs sm:text-sm">Today</p>
+            </div>
+            <div className="text-center">
+              <p className="text-lg sm:text-xl font-bold">{formatCurrency(earnings.weekly)}</p>
+              <p className="text-green-100 text-xs sm:text-sm">This Week</p>
+            </div>
+            <div className="text-center">
+              <p className="text-lg sm:text-xl font-bold">{formatCurrency(earnings.monthly)}</p>
+              <p className="text-green-100 text-xs sm:text-sm">This Month</p>
+            </div>
           </div>
         </div>
 
@@ -683,6 +808,16 @@ const RiderDashboard = () => {
             }`}
           >
             My Deliveries ({myDeliveries.length})
+          </button>
+          <button 
+            onClick={() => setActiveTab('earnings')} 
+            className={`px-4 py-2 sm:px-6 sm:py-3 rounded-lg font-medium text-sm sm:text-base whitespace-nowrap flex-shrink-0 ${
+              activeTab === 'earnings' 
+                ? 'bg-orange-600 text-white' 
+                : 'bg-white text-gray-700 border hover:bg-gray-50'
+            }`}
+          >
+            Earnings
           </button>
         </div>
 
@@ -757,6 +892,9 @@ const RiderDashboard = () => {
                     <div className="text-right sm:text-left sm:ml-4">
                       <p className="text-lg font-bold text-green-600">
                         {formatCurrency(order.total || order.totalAmount)}
+                      </p>
+                      <p className="text-sm text-green-500 font-medium">
+                        +{formatCurrency(order.deliveryFee || 35)} for you
                       </p>
                     </div>
                   </div>
@@ -875,6 +1013,9 @@ const RiderDashboard = () => {
                       <p className="text-lg font-bold text-green-600">
                         {formatCurrency(order.total || order.totalAmount)}
                       </p>
+                      <p className="text-sm text-green-500 font-medium">
+                        +{formatCurrency(order.deliveryFee || 35)} for you
+                      </p>
                       <p className="text-xs sm:text-sm text-gray-500">Delivery Fee</p>
                     </div>
                   </div>
@@ -923,6 +1064,118 @@ const RiderDashboard = () => {
                 </div>
               ))
             )}
+          </div>
+        )}
+
+        {/* Earnings Tab */}
+        {activeTab === 'earnings' && (
+          <div className="space-y-4 sm:space-y-6">
+            {/* Earnings Summary */}
+            <div className="bg-white rounded-lg shadow-sm border p-4 sm:p-6">
+              <h3 className="text-lg sm:text-xl font-bold text-gray-900 mb-4">Earnings Summary</h3>
+              
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                <div className="bg-green-50 p-4 rounded-lg border border-green-200">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-green-800 font-semibold">Today</p>
+                      <p className="text-2xl font-bold text-green-600">{formatCurrency(earnings.today)}</p>
+                    </div>
+                    <TrendingUp className="text-green-600 w-8 h-8" />
+                  </div>
+                  <p className="text-green-700 text-sm mt-2">{earnings.completedDeliveries} deliveries today</p>
+                </div>
+
+                <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-blue-800 font-semibold">This Week</p>
+                      <p className="text-2xl font-bold text-blue-600">{formatCurrency(earnings.weekly)}</p>
+                    </div>
+                    <CreditCard className="text-blue-600 w-8 h-8" />
+                  </div>
+                  <p className="text-blue-700 text-sm mt-2">Weekly earnings</p>
+                </div>
+
+                <div className="bg-purple-50 p-4 rounded-lg border border-purple-200">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-purple-800 font-semibold">This Month</p>
+                      <p className="text-2xl font-bold text-purple-600">{formatCurrency(earnings.monthly)}</p>
+                    </div>
+                    <Wallet className="text-purple-600 w-8 h-8" />
+                  </div>
+                  <p className="text-purple-700 text-sm mt-2">Monthly earnings</p>
+                </div>
+
+                <div className="bg-orange-50 p-4 rounded-lg border border-orange-200">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-orange-800 font-semibold">All Time</p>
+                      <p className="text-2xl font-bold text-orange-600">{formatCurrency(earnings.total)}</p>
+                    </div>
+                    <DollarSign className="text-orange-600 w-8 h-8" />
+                  </div>
+                  <p className="text-orange-700 text-sm mt-2">Total earnings</p>
+                </div>
+              </div>
+
+              {/* Earnings Breakdown */}
+              <div className="border-t pt-6">
+                <h4 className="font-semibold text-gray-900 mb-4">Earnings Breakdown</h4>
+                <div className="space-y-3">
+                  <div className="flex justify-between items-center">
+                    <span className="text-gray-600">Completed Deliveries</span>
+                    <span className="font-semibold">{earnings.completedDeliveries}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-gray-600">Rate per Delivery</span>
+                    <span className="font-semibold text-green-600">₱35.00</span>
+                  </div>
+                  <div className="flex justify-between items-center border-t pt-3">
+                    <span className="text-gray-900 font-semibold">Total Earnings</span>
+                    <span className="text-lg font-bold text-green-600">{formatCurrency(earnings.total)}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Recent Completed Deliveries */}
+            <div className="bg-white rounded-lg shadow-sm border p-4 sm:p-6">
+              <h3 className="text-lg sm:text-xl font-bold text-gray-900 mb-4">Recent Completed Deliveries</h3>
+              
+              {myDeliveries.filter(order => order.status === 'delivered').length === 0 ? (
+                <div className="text-center py-8">
+                  <Package className="mx-auto text-gray-300 mb-3 w-12 h-12" />
+                  <p className="text-gray-500">No completed deliveries yet</p>
+                  <p className="text-gray-400 text-sm mt-1">Completed deliveries will appear here</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {myDeliveries
+                    .filter(order => order.status === 'delivered')
+                    .slice(0, 5)
+                    .map((order, index) => (
+                      <div key={order._id} className="flex items-center justify-between p-3 border rounded-lg">
+                        <div className="flex items-center space-x-3">
+                          <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
+                            <CheckCircle className="text-green-600 w-4 h-4" />
+                          </div>
+                          <div>
+                            <p className="font-medium text-gray-900">Order #{order.orderId || order._id}</p>
+                            <p className="text-sm text-gray-500">{formatDate(order.updatedAt || order.createdAt)}</p>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <p className="font-semibold text-green-600">+₱35.00</p>
+                          <p className="text-sm text-gray-500">Delivery Fee</p>
+                        </div>
+                      </div>
+                    ))
+                  }
+                </div>
+              )}
+            </div>
           </div>
         )}
       </div>
