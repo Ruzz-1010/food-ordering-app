@@ -1805,7 +1805,7 @@ const RestaurantCard = ({ restaurant, onAddToCart, user }) => {
                             </>
                         ) : (
                             <>
-                                <span>📖 VIEW FULL MENU</span>
+                                <span> VIEW FULL MENU</span>
                             </>
                         )}
                     </button>
