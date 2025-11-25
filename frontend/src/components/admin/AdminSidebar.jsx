@@ -1,4 +1,4 @@
-// AdminSidebar.jsx - WITH ACTUAL LOGO FROM PUBLIC FOLDER
+// AdminSidebar.jsx - WITH LOGO
 import React from 'react';
 import { 
   LayoutDashboard, 
@@ -35,22 +35,8 @@ const AdminSidebar = ({ activeTab, setActiveTab, isOpen, setIsOpen, onLogout }) 
       {/* Sidebar Header with Logo */}
       <div className="flex items-center justify-between p-6 border-b border-gray-200 bg-gradient-to-r from-orange-50 to-white">
         <div className="flex items-center space-x-3">
-          {/* Your actual logo from public folder */}
-          <div className="w-12 h-12 rounded-xl flex items-center justify-center overflow-hidden bg-white border border-gray-200">
-            <img 
-              src="/logo.png" 
-              alt="FoodApp Logo" 
-              className="w-full h-full object-cover p-1"
-              onError={(e) => {
-                // Fallback if logo doesn't exist
-                e.target.style.display = 'none';
-                e.target.nextSibling?.style.display = 'flex';
-              }}
-            />
-            {/* Fallback logo */}
-            <div className="w-full h-full bg-gradient-to-r from-orange-500 to-orange-600 rounded-xl flex items-center justify-center text-white font-bold text-lg hidden">
-              <Utensils size={24} className="text-white" />
-            </div>
+          <div className="w-12 h-12 bg-gradient-to-r from-orange-500 to-orange-600 rounded-xl flex items-center justify-center shadow-lg">
+            <Utensils size={24} className="text-white" />
           </div>
           <div>
             <h2 className="text-xl font-bold text-gray-900">FoodAdmin</h2>
@@ -116,19 +102,9 @@ const AdminSidebar = ({ activeTab, setActiveTab, isOpen, setIsOpen, onLogout }) 
               <span className="text-xs text-green-600 font-medium">Live</span>
             </div>
           </div>
-          <div className="flex items-center justify-center space-x-2">
-            <img 
-              src="/logo.png" 
-              alt="FoodApp Logo" 
-              className="w-4 h-4"
-              onError={(e) => {
-                e.target.style.display = 'none';
-              }}
-            />
-            <p className="text-xs text-gray-500">
-              v1.0.0 • FoodAdmin System
-            </p>
-          </div>
+          <p className="text-xs text-gray-500 text-center">
+            v1.0.0 • FoodAdmin System
+          </p>
         </div>
       </div>
     </div>
