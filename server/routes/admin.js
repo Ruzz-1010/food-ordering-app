@@ -1,13 +1,4 @@
-// routes/admin.js
-GET /api/admin/dashboard/stats       // Overall statistics
-GET /api/admin/users                 // All users data  
-GET /api/admin/restaurants          // All restaurants
-GET /api/admin/orders               // All orders
-GET /api/dmin/products               //all menu
-
-
-
-// routes/admin.js - COMPLETE VERSION
+// routes/admin.js - CORRECTED VERSION
 const express = require('express');
 const router = express.Router();
 const User = require('../models/User');
@@ -17,6 +8,21 @@ const Product = require('../models/Product');
 
 // Admin authentication middleware (if you have one)
 const adminAuth = require('../middleware/adminAuth');
+
+// Remove these problematic lines:
+// GET /api/admin/dashboard/stats       // Overall statistics
+// GET /api/admin/users                 // All users data  
+// GET /api/admin/restaurants          // All restaurants
+// GET /api/admin/orders               // All orders
+// GET /api/dmin/products               //all menu
+
+// Or comment them properly:
+// Available endpoints:
+// - GET /api/admin/dashboard/stats       // Overall statistics
+// - GET /api/admin/users                 // All users data  
+// - GET /api/admin/restaurants          // All restaurants
+// - GET /api/admin/orders               // All orders
+// - GET /api/admin/products              // All menu items
 
 // GET /api/admin/dashboard/stats
 router.get('/dashboard/stats', adminAuth, async (req, res) => {
