@@ -491,16 +491,16 @@ const RestaurantDashboard = () => {
   // Error handling UI
   if (error) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+        <div className="text-center max-w-sm w-full">
           <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
             <X className="text-red-600 w-8 h-8" />
           </div>
           <h2 className="text-xl font-bold text-gray-900 mb-2">Something went wrong</h2>
-          <p className="text-gray-600 mb-4">{error.message}</p>
+          <p className="text-gray-600 mb-4 text-sm">{error.message}</p>
           <div className="space-y-2">
-            <button onClick={() => { setError(null); fetchData(); }} className="bg-orange-600 text-white px-6 py-2 rounded-lg hover:bg-orange-700 block mx-auto">Try Again</button>
-            <button onClick={logout} className="bg-gray-600 text-white px-6 py-2 rounded-lg hover:bg-gray-700 block mx-auto">Logout</button>
+            <button onClick={() => { setError(null); fetchData(); }} className="w-full bg-orange-600 text-white px-6 py-3 rounded-lg hover:bg-orange-700 text-sm">Try Again</button>
+            <button onClick={logout} className="w-full bg-gray-600 text-white px-6 py-3 rounded-lg hover:bg-gray-700 text-sm">Logout</button>
           </div>
         </div>
       </div>
@@ -509,10 +509,10 @@ const RestaurantDashboard = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
         <div className="text-center">
           <div className="w-12 h-12 border-4 border-orange-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading Restaurant Data...</p>
+          <p className="text-gray-600 text-sm">Loading Restaurant Data...</p>
         </div>
       </div>
     );
@@ -520,10 +520,10 @@ const RestaurantDashboard = () => {
 
   if (!user) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
         <div className="text-center">
           <h2 className="text-xl font-bold text-gray-900 mb-2">Not Logged In</h2>
-          <p className="text-gray-600">Please login to access the restaurant dashboard.</p>
+          <p className="text-gray-600 text-sm">Please login to access the restaurant dashboard.</p>
         </div>
       </div>
     );
@@ -531,16 +531,16 @@ const RestaurantDashboard = () => {
 
   if (!restaurantId) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+        <div className="text-center max-w-sm w-full">
           <div className="w-16 h-16 bg-yellow-100 rounded-full flex items-center justify-center mx-auto mb-4">
             <Store className="text-yellow-600 w-8 h-8" />
           </div>
           <h2 className="text-xl font-bold text-gray-900 mb-2">Restaurant Setup Required</h2>
-          <p className="text-gray-600 mb-4">Your restaurant account needs to be set up.</p>
+          <p className="text-gray-600 mb-4 text-sm">Your restaurant account needs to be set up.</p>
           <div className="space-y-2">
-            <button onClick={fetchData} className="bg-orange-600 text-white px-6 py-2 rounded-lg hover:bg-orange-700 block mx-auto">Retry</button>
-            <button onClick={logout} className="bg-gray-600 text-white px-6 py-2 rounded-lg hover:bg-gray-700 block mx-auto">Logout</button>
+            <button onClick={fetchData} className="w-full bg-orange-600 text-white px-6 py-3 rounded-lg hover:bg-orange-700 text-sm">Retry</button>
+            <button onClick={logout} className="w-full bg-gray-600 text-white px-6 py-3 rounded-lg hover:bg-gray-700 text-sm">Logout</button>
           </div>
         </div>
       </div>
@@ -551,89 +551,103 @@ const RestaurantDashboard = () => {
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
       <header className="bg-white shadow-sm border-b">
-        <div className="max-w-7xl mx-auto px-3 sm:px-4 py-3 sm:py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-2 sm:space-x-3">
-              <div className="w-8 h-8 sm:w-10 sm:h-10 bg-orange-600 rounded-lg flex items-center justify-center flex-shrink-0">
-                <Store className="text-white w-4 h-4 sm:w-5 sm:h-5" />
+        <div className="max-w-7xl mx-auto px-4 py-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="flex items-center space-x-3">
+              <div className="w-10 h-10 bg-orange-600 rounded-lg flex items-center justify-center flex-shrink-0">
+                <Store className="text-white w-5 h-5" />
               </div>
               <div className="min-w-0 flex-1">
-                <h1 className="text-lg sm:text-xl font-bold text-gray-900 truncate">Restaurant Dashboard</h1>
-                <p className="text-xs sm:text-sm text-gray-500 truncate">{restaurant.name || 'Your Restaurant'} - {user?.name}</p>
-                <p className="text-xs text-gray-400 truncate">Orders: {stats.totalOrders} | Products: {menuItems.length}</p>
+                <h1 className="text-lg font-bold text-gray-900 truncate">Restaurant Dashboard</h1>
+                <p className="text-sm text-gray-500 truncate">{restaurant.name || 'Your Restaurant'}</p>
+                <p className="text-xs text-gray-400">Orders: {stats.totalOrders} | Products: {menuItems.length}</p>
               </div>
             </div>
 
-            <div className="flex items-center space-x-2 sm:space-x-3">
-              <button onClick={handleQuickFix} className="flex items-center space-x-2 bg-purple-600 text-white px-3 py-2 rounded-lg hover:bg-purple-700 text-sm">
-                <Plus className="w-4 h-4" />
-                <span className="hidden sm:inline">Quick Add Products</span>
-              </button>
-              <button onClick={() => setShowProfile(true)} className="flex items-center space-x-2 bg-blue-600 text-white px-3 py-2 rounded-lg hover:bg-blue-700 text-sm">
-                <User className="w-4 h-4" />
-                <span className="hidden sm:inline">Profile</span>
-              </button>
-              <button onClick={fetchData} className="flex items-center space-x-2 bg-gray-600 text-white px-3 py-2 rounded-lg hover:bg-gray-700 text-sm">
-                <RefreshCw className="w-4 h-4" />
-                <span className="hidden sm:inline">Refresh</span>
-              </button>
-              <button onClick={logout} className="flex items-center space-x-2 bg-red-600 text-white px-3 py-2 rounded-lg hover:bg-red-700 text-sm">
-                <LogOut className="w-4 h-4" />
-                <span className="hidden sm:inline">Logout</span>
-              </button>
+            <div className="flex items-center justify-between sm:justify-end gap-2 w-full sm:w-auto">
+              <div className="flex items-center gap-2">
+                <button onClick={() => setShowProfile(true)} className="flex items-center justify-center w-10 h-10 bg-blue-600 text-white rounded-lg hover:bg-blue-700 sm:hidden" title="Profile">
+                  <User className="w-5 h-5" />
+                </button>
+                <button onClick={fetchData} className="flex items-center justify-center w-10 h-10 bg-gray-600 text-white rounded-lg hover:bg-gray-700 sm:hidden" title="Refresh">
+                  <RefreshCw className="w-5 h-5" />
+                </button>
+                <button onClick={logout} className="flex items-center justify-center w-10 h-10 bg-red-600 text-white rounded-lg hover:bg-red-700 sm:hidden" title="Logout">
+                  <LogOut className="w-5 h-5" />
+                </button>
+              </div>
+              
+              <div className="hidden sm:flex items-center space-x-2">
+                <button onClick={() => setShowProfile(true)} className="flex items-center space-x-2 bg-blue-600 text-white px-3 py-2 rounded-lg hover:bg-blue-700 text-sm">
+                  <User className="w-4 h-4" />
+                  <span>Profile</span>
+                </button>
+                <button onClick={fetchData} className="flex items-center space-x-2 bg-gray-600 text-white px-3 py-2 rounded-lg hover:bg-gray-700 text-sm">
+                  <RefreshCw className="w-4 h-4" />
+                  <span>Refresh</span>
+                </button>
+                <button onClick={logout} className="flex items-center space-x-2 bg-red-600 text-white px-3 py-2 rounded-lg hover:bg-red-700 text-sm">
+                  <LogOut className="w-4 h-4" />
+                  <span>Logout</span>
+                </button>
+              </div>
             </div>
           </div>
         </div>
       </header>
 
-      <div className="max-w-7xl mx-auto px-3 sm:px-4 py-4 sm:py-6">
+      <div className="max-w-7xl mx-auto px-4 py-4">
         {/* Stats - Responsive */}
-        <div className="grid grid-cols-2 gap-2 sm:gap-4 mb-4 sm:mb-6">
-          <div className="bg-white p-3 sm:p-4 rounded-lg shadow-sm border text-center">
-            <p className="text-xs sm:text-sm text-gray-600 mb-1">Today's Revenue</p>
-            <p className="text-xl sm:text-2xl font-bold text-gray-900">{formatCurrency(stats.todayRevenue)}</p>
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
+          <div className="bg-white p-4 rounded-lg shadow-sm border text-center">
+            <p className="text-xs text-gray-600 mb-1">Today's Revenue</p>
+            <p className="text-xl font-bold text-gray-900">{formatCurrency(stats.todayRevenue)}</p>
             <p className="text-xs text-gray-500">{stats.completedOrders} completed</p>
           </div>
-          <div className="bg-white p-3 sm:p-4 rounded-lg shadow-sm border text-center">
-            <p className="text-xs sm:text-sm text-gray-600 mb-1">Total Orders</p>
-            <p className="text-xl sm:text-2xl font-bold text-gray-900">{stats.totalOrders}</p>
+          <div className="bg-white p-4 rounded-lg shadow-sm border text-center">
+            <p className="text-xs text-gray-600 mb-1">Total Orders</p>
+            <p className="text-xl font-bold text-gray-900">{stats.totalOrders}</p>
             <p className="text-xs text-blue-600">all time</p>
           </div>
-          <div className="bg-white p-3 sm:p-4 rounded-lg shadow-sm border text-center">
-            <p className="text-xs sm:text-sm text-gray-600 mb-1">Pending Orders</p>
-            <p className="text-xl sm:text-2xl font-bold text-orange-600">{stats.pendingOrders}</p>
+          <div className="bg-white p-4 rounded-lg shadow-sm border text-center">
+            <p className="text-xs text-gray-600 mb-1">Pending Orders</p>
+            <p className="text-xl font-bold text-orange-600">{stats.pendingOrders}</p>
             <p className="text-xs text-orange-600">need attention</p>
           </div>
-          <div className="bg-white p-3 sm:p-4 rounded-lg shadow-sm border text-center">
-            <p className="text-xs sm:text-sm text-gray-600 mb-1">Menu Items</p>
-            <p className="text-xl sm:text-2xl font-bold text-green-600">{menuItems.length}</p>
+          <div className="bg-white p-4 rounded-lg shadow-sm border text-center">
+            <p className="text-xs text-gray-600 mb-1">Menu Items</p>
+            <p className="text-xl font-bold text-green-600">{menuItems.length}</p>
             <p className="text-xs text-green-600">available</p>
           </div>
         </div>
 
         {/* Main Content */}
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 sm:gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
           {/* Sidebar */}
-          <div className="lg:col-span-1 space-y-4 sm:space-y-6">
+          <div className="lg:col-span-1 space-y-4">
             {/* Quick Actions */}
-            <div className="bg-white rounded-lg shadow-sm border p-3 sm:p-4">
-              <h3 className="font-semibold text-gray-900 mb-2 sm:mb-3 text-sm sm:text-base">Quick Actions</h3>
+            <div className="bg-white rounded-lg shadow-sm border p-4">
+              <h3 className="font-semibold text-gray-900 mb-3">Quick Actions</h3>
               <div className="space-y-2">
-                <button onClick={() => setShowAddProduct(true)} className="w-full flex items-center space-x-2 bg-orange-600 text-white px-3 py-2 rounded hover:bg-orange-700 text-sm">
+                <button onClick={() => setShowAddProduct(true)} className="w-full flex items-center space-x-2 bg-orange-600 text-white px-3 py-3 rounded-lg hover:bg-orange-700 text-sm">
                   <Plus className="w-4 h-4" />
                   <span>Add Product</span>
                 </button>
-                <button onClick={() => setActiveTab('orders')} className="w-full flex items-center space-x-2 bg-green-600 text-white px-3 py-2 rounded hover:bg-green-700 text-sm">
+                <button onClick={() => setActiveTab('orders')} className="w-full flex items-center space-x-2 bg-green-600 text-white px-3 py-3 rounded-lg hover:bg-green-700 text-sm">
                   <Package className="w-4 h-4" />
                   <span>View Orders ({orders.length})</span>
+                </button>
+                <button onClick={handleQuickFix} className="w-full flex items-center space-x-2 bg-purple-600 text-white px-3 py-3 rounded-lg hover:bg-purple-700 text-sm">
+                  <Plus className="w-4 h-4" />
+                  <span>Add Sample Products</span>
                 </button>
               </div>
             </div>
 
             {/* Restaurant Info */}
-            <div className="bg-white rounded-lg shadow-sm border p-3 sm:p-4">
-              <h3 className="font-semibold text-gray-900 mb-2 sm:mb-3 text-sm sm:text-base">Restaurant Info</h3>
-              <div className="space-y-2 text-xs sm:text-sm">
+            <div className="bg-white rounded-lg shadow-sm border p-4">
+              <h3 className="font-semibold text-gray-900 mb-3">Restaurant Info</h3>
+              <div className="space-y-2 text-sm">
                 <p><strong>Name:</strong> {restaurant.name || 'Your Restaurant'}</p>
                 <p><strong>Cuisine:</strong> {restaurant.cuisine || 'Not set'}</p>
                 <p><strong>Status:</strong> <span className={`ml-1 ${restaurant.isApproved ? 'text-green-600' : 'text-yellow-600'}`}>{restaurant.isApproved ? 'Approved' : 'Pending Approval'}</span></p>
@@ -645,9 +659,9 @@ const RestaurantDashboard = () => {
                 )}
                 <button 
                   onClick={() => setShowProfile(true)}
-                  className="w-full mt-3 flex items-center justify-center space-x-2 bg-blue-600 text-white px-3 py-2 rounded hover:bg-blue-700 text-xs sm:text-sm"
+                  className="w-full mt-3 flex items-center justify-center space-x-2 bg-blue-600 text-white px-3 py-2 rounded-lg hover:bg-blue-700 text-sm"
                 >
-                  <Edit className="w-3 h-3 sm:w-4 sm:h-4" />
+                  <Edit className="w-4 h-4" />
                   <span>Edit Profile</span>
                 </button>
               </div>
@@ -659,45 +673,48 @@ const RestaurantDashboard = () => {
             <div className="bg-white rounded-lg shadow-sm border">
               {/* Tabs - Responsive */}
               <div className="flex border-b overflow-x-auto">
-                <button onClick={() => setActiveTab('dashboard')} className={`flex-1 py-3 sm:py-4 font-medium text-xs sm:text-base whitespace-nowrap px-2 sm:px-4 ${activeTab === 'dashboard' ? 'text-orange-600 border-b-2 border-orange-600' : 'text-gray-600'}`}>📊 Dashboard</button>
-                <button onClick={() => setActiveTab('orders')} className={`flex-1 py-3 sm:py-4 font-medium text-xs sm:text-base whitespace-nowrap px-2 sm:px-4 ${activeTab === 'orders' ? 'text-orange-600 border-b-2 border-orange-600' : 'text-gray-600'}`}>📦 Orders ({orders.length})</button>
-                <button onClick={() => setActiveTab('menu')} className={`flex-1 py-3 sm:py-4 font-medium text-xs sm:text-base whitespace-nowrap px-2 sm:px-4 ${activeTab === 'menu' ? 'text-orange-600 border-b-2 border-orange-600' : 'text-gray-600'}`}>🍽️ Menu ({menuItems.length})</button>
-                <button onClick={() => setActiveTab('earnings')} className={`flex-1 py-3 sm:py-4 font-medium text-xs sm:text-base whitespace-nowrap px-2 sm:px-4 ${activeTab === 'earnings' ? 'text-orange-600 border-b-2 border-orange-600' : 'text-gray-600'}`}>💰 Earnings</button>
+                <button onClick={() => setActiveTab('dashboard')} className={`flex-1 py-4 font-medium text-sm whitespace-nowrap px-4 min-w-[120px] ${activeTab === 'dashboard' ? 'text-orange-600 border-b-2 border-orange-600' : 'text-gray-600'}`}>📊 Dashboard</button>
+                <button onClick={() => setActiveTab('orders')} className={`flex-1 py-4 font-medium text-sm whitespace-nowrap px-4 min-w-[120px] ${activeTab === 'orders' ? 'text-orange-600 border-b-2 border-orange-600' : 'text-gray-600'}`}>📦 Orders ({orders.length})</button>
+                <button onClick={() => setActiveTab('menu')} className={`flex-1 py-4 font-medium text-sm whitespace-nowrap px-4 min-w-[120px] ${activeTab === 'menu' ? 'text-orange-600 border-b-2 border-orange-600' : 'text-gray-600'}`}>🍽️ Menu ({menuItems.length})</button>
+                <button onClick={() => setActiveTab('earnings')} className={`flex-1 py-4 font-medium text-sm whitespace-nowrap px-4 min-w-[120px] ${activeTab === 'earnings' ? 'text-orange-600 border-b-2 border-orange-600' : 'text-gray-600'}`}>💰 Earnings</button>
               </div>
 
               <div className="p-4 sm:p-6">
                 {/* Dashboard Tab */}
                 {activeTab === 'dashboard' && (
-                  <div className="space-y-4 sm:space-y-6">
-                    <h2 className="text-lg sm:text-xl font-bold text-gray-900">Overview</h2>
+                  <div className="space-y-6">
+                    <h2 className="text-xl font-bold text-gray-900">Overview</h2>
                     <div>
-                      <h3 className="font-semibold text-gray-900 mb-3 sm:mb-4 text-sm sm:text-base">Recent Orders</h3>
+                      <h3 className="font-semibold text-gray-900 mb-4">Recent Orders</h3>
                       {orders.slice(0, 5).length > 0 ? (
-                        orders.slice(0, 5).map((order) => (
-                          <div key={order._id} className="border rounded-lg p-3 sm:p-4 mb-2 sm:mb-3">
-                            <div className="flex justify-between items-start">
-                              <div className="min-w-0 flex-1">
-                                <p className="font-medium text-sm sm:text-base truncate">Order #{order.orderId || order._id}</p>
-                                <p className="text-xs sm:text-sm text-gray-600 truncate">{order.user?.name || order.customerId?.name || 'Customer'}</p>
-                                <p className="text-xs text-gray-500">{formatDate(order.createdAt)}</p>
+                        <div className="space-y-3">
+                          {orders.slice(0, 5).map((order) => (
+                            <div key={order._id} className="border rounded-lg p-4 hover:shadow-md transition-shadow">
+                              <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-2">
+                                <div className="min-w-0 flex-1">
+                                  <p className="font-medium text-gray-900 truncate">Order #{order.orderId || order._id}</p>
+                                  <p className="text-sm text-gray-600 truncate">{order.user?.name || order.customerId?.name || 'Customer'}</p>
+                                  <p className="text-xs text-gray-500">{formatDate(order.createdAt)}</p>
+                                </div>
+                                <span className={`px-3 py-1 text-xs rounded-full flex-shrink-0 self-start ${order.status === 'delivered' || order.status === 'completed' ? 'bg-green-100 text-green-800' : order.status === 'pending' ? 'bg-yellow-100 text-yellow-800' : order.status === 'cancelled' ? 'bg-red-100 text-red-800' : 'bg-blue-100 text-blue-800'}`}>
+                                  {order.status}
+                                </span>
                               </div>
-                              <span className={`px-2 py-1 text-xs rounded flex-shrink-0 ml-2 ${order.status === 'delivered' || order.status === 'completed' ? 'bg-green-100 text-green-800' : order.status === 'pending' ? 'bg-yellow-100 text-yellow-800' : order.status === 'cancelled' ? 'bg-red-100 text-red-800' : 'bg-blue-100 text-blue-800'}`}>
-                                {order.status}
-                              </span>
+                              <div className="flex justify-between items-center mt-3">
+                                <span className="text-green-600 font-semibold">{formatCurrency(order.total || order.totalAmount)}</span>
+                                <button onClick={() => { setSelectedOrder(order); setShowOrderDetails(true); }} className="text-orange-600 hover:text-orange-700 flex items-center space-x-1 text-sm">
+                                  <Eye className="w-4 h-4" />
+                                  <span>View Details</span>
+                                </button>
+                              </div>
                             </div>
-                            <div className="flex justify-between items-center mt-2">
-                              <span className="text-green-600 font-semibold text-sm sm:text-base">{formatCurrency(order.total || order.totalAmount)}</span>
-                              <button onClick={() => { setSelectedOrder(order); setShowOrderDetails(true); }} className="text-orange-600 hover:text-orange-700">
-                                <Eye className="w-4 h-4" />
-                              </button>
-                            </div>
-                          </div>
-                        ))
+                          ))}
+                        </div>
                       ) : (
-                        <div className="text-center py-6 sm:py-8">
-                          <Package className="mx-auto text-gray-300 mb-3 sm:mb-4 w-8 h-8 sm:w-12 sm:h-12" />
-                          <p className="text-gray-500 text-sm sm:text-base">No orders yet</p>
-                          <p className="text-xs sm:text-sm text-gray-400 mt-2">When customers place orders, they will appear here</p>
+                        <div className="text-center py-8">
+                          <Package className="mx-auto text-gray-300 mb-4 w-12 h-12" />
+                          <p className="text-gray-500">No orders yet</p>
+                          <p className="text-sm text-gray-400 mt-2">When customers place orders, they will appear here</p>
                         </div>
                       )}
                     </div>
@@ -707,38 +724,42 @@ const RestaurantDashboard = () => {
                 {/* Orders Tab */}
                 {activeTab === 'orders' && (
                   <div>
-                    <h2 className="text-lg sm:text-xl font-bold text-gray-900 mb-4 sm:mb-6">All Orders ({orders.length})</h2>
+                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-6">
+                      <h2 className="text-xl font-bold text-gray-900">All Orders ({orders.length})</h2>
+                      <button onClick={fetchData} className="w-full sm:w-auto flex items-center justify-center space-x-2 bg-orange-600 text-white px-4 py-2 rounded-lg hover:bg-orange-700 text-sm">
+                        <RefreshCw className="w-4 h-4" />
+                        <span>Refresh</span>
+                      </button>
+                    </div>
                     {orders.length === 0 ? (
-                      <div className="text-center py-6 sm:py-8">
-                        <Package className="mx-auto text-gray-300 mb-3 sm:mb-4 w-8 h-8 sm:w-12 sm:h-12" />
-                        <p className="text-gray-500 text-sm sm:text-base">No orders yet</p>
-                        <div className="mt-4 space-y-2">
-                          <button onClick={fetchData} className="bg-orange-600 text-white px-4 sm:px-6 py-2 rounded-lg hover:bg-orange-700 text-sm block mx-auto">Refresh Data</button>
-                        </div>
+                      <div className="text-center py-8">
+                        <Package className="mx-auto text-gray-300 mb-4 w-12 h-12" />
+                        <p className="text-gray-500">No orders yet</p>
+                        <p className="text-sm text-gray-400 mt-2">Your orders will appear here when customers place them</p>
                       </div>
                     ) : (
-                      <div className="space-y-3 sm:space-y-4">
+                      <div className="space-y-4">
                         {orders.map((order) => (
-                          <div key={order._id} className="border rounded-lg p-3 sm:p-4">
-                            <div className="flex justify-between items-start mb-2 sm:mb-3">
+                          <div key={order._id} className="border rounded-lg p-4 hover:shadow-md transition-shadow">
+                            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-2 mb-3">
                               <div className="min-w-0 flex-1">
-                                <h3 className="font-semibold text-gray-900 text-sm sm:text-base truncate">Order #{order.orderId || order._id}</h3>
-                                <p className="text-xs sm:text-sm text-gray-600 truncate">{order.user?.name || order.customerId?.name || 'Customer'} • {formatDate(order.createdAt)}</p>
+                                <h3 className="font-semibold text-gray-900 truncate">Order #{order.orderId || order._id}</h3>
+                                <p className="text-sm text-gray-600 truncate">{order.user?.name || order.customerId?.name || 'Customer'} • {formatDate(order.createdAt)}</p>
+                                <p className="text-sm text-gray-600 truncate">{order.deliveryAddress || 'No address provided'}</p>
                               </div>
-                              <span className={`px-2 py-1 text-xs rounded flex-shrink-0 ml-2 ${order.status === 'delivered' || order.status === 'completed' ? 'bg-green-100 text-green-800' : order.status === 'pending' ? 'bg-yellow-100 text-yellow-800' : order.status === 'cancelled' ? 'bg-red-100 text-red-800' : 'bg-blue-100 text-blue-800'}`}>
+                              <span className={`px-3 py-1 text-xs rounded-full flex-shrink-0 self-start ${order.status === 'delivered' || order.status === 'completed' ? 'bg-green-100 text-green-800' : order.status === 'pending' ? 'bg-yellow-100 text-yellow-800' : order.status === 'cancelled' ? 'bg-red-100 text-red-800' : 'bg-blue-100 text-blue-800'}`}>
                                 {order.status}
                               </span>
                             </div>
-                            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2 sm:gap-0">
+                            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
                               <div className="min-w-0 flex-1">
-                                <p className="text-xs sm:text-sm text-gray-600 truncate">{order.deliveryAddress || 'No address provided'}</p>
-                                <p className="text-base sm:text-lg font-bold text-green-600">{formatCurrency(order.total || order.totalAmount)}</p>
+                                <p className="text-lg font-bold text-green-600">{formatCurrency(order.total || order.totalAmount)}</p>
                               </div>
-                              <div className="flex flex-wrap gap-1 sm:gap-2">
-                                <button onClick={() => { setSelectedOrder(order); setShowOrderDetails(true); }} className="bg-orange-600 text-white px-2 sm:px-3 py-1 rounded text-xs hover:bg-orange-700">Details</button>
-                                {order.status === 'pending' && <button onClick={() => handleUpdateOrderStatus(order._id, 'confirmed')} className="bg-blue-600 text-white px-2 sm:px-3 py-1 rounded text-xs hover:bg-blue-700">Accept</button>}
-                                {order.status === 'confirmed' && <button onClick={() => handleUpdateOrderStatus(order._id, 'preparing')} className="bg-purple-600 text-white px-2 sm:px-3 py-1 rounded text-xs hover:bg-purple-700">Start Preparing</button>}
-                                {order.status === 'preparing' && <button onClick={() => handleUpdateOrderStatus(order._id, 'ready')} className="bg-green-600 text-white px-2 sm:px-3 py-1 rounded text-xs hover:bg-green-700">Mark Ready</button>}
+                              <div className="flex flex-wrap gap-2">
+                                <button onClick={() => { setSelectedOrder(order); setShowOrderDetails(true); }} className="flex-1 sm:flex-none bg-orange-600 text-white px-3 py-2 rounded-lg hover:bg-orange-700 text-sm min-w-[100px]">Details</button>
+                                {order.status === 'pending' && <button onClick={() => handleUpdateOrderStatus(order._id, 'confirmed')} className="flex-1 sm:flex-none bg-blue-600 text-white px-3 py-2 rounded-lg hover:bg-blue-700 text-sm min-w-[100px]">Accept</button>}
+                                {order.status === 'confirmed' && <button onClick={() => handleUpdateOrderStatus(order._id, 'preparing')} className="flex-1 sm:flex-none bg-purple-600 text-white px-3 py-2 rounded-lg hover:bg-purple-700 text-sm min-w-[100px]">Preparing</button>}
+                                {order.status === 'preparing' && <button onClick={() => handleUpdateOrderStatus(order._id, 'ready')} className="flex-1 sm:flex-none bg-green-600 text-white px-3 py-2 rounded-lg hover:bg-green-700 text-sm min-w-[100px]">Mark Ready</button>}
                               </div>
                             </div>
                           </div>
@@ -751,49 +772,55 @@ const RestaurantDashboard = () => {
                 {/* Menu Tab */}
                 {activeTab === 'menu' && (
                   <div>
-                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-0 mb-4 sm:mb-6">
-                      <h2 className="text-lg sm:text-xl font-bold text-gray-900">Menu Items ({menuItems.length})</h2>
-                      <button onClick={() => setShowAddProduct(true)} className="flex items-center space-x-2 bg-orange-600 text-white px-3 sm:px-4 py-2 rounded-lg hover:bg-orange-700 text-sm w-full sm:w-auto justify-center">
-                        <Plus className="w-4 h-4" />
-                        <span>Add Item</span>
-                      </button>
+                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-6">
+                      <h2 className="text-xl font-bold text-gray-900">Menu Items ({menuItems.length})</h2>
+                      <div className="flex gap-2 w-full sm:w-auto">
+                        <button onClick={() => setShowAddProduct(true)} className="flex-1 sm:flex-none flex items-center justify-center space-x-2 bg-orange-600 text-white px-4 py-2 rounded-lg hover:bg-orange-700 text-sm">
+                          <Plus className="w-4 h-4" />
+                          <span>Add Item</span>
+                        </button>
+                        <button onClick={handleQuickFix} className="flex-1 sm:flex-none flex items-center justify-center space-x-2 bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 text-sm">
+                          <Plus className="w-4 h-4" />
+                          <span>Samples</span>
+                        </button>
+                      </div>
                     </div>
                     {menuItems.length === 0 ? (
-                      <div className="text-center py-6 sm:py-8">
-                        <Package className="mx-auto text-gray-300 mb-3 sm:mb-4 w-8 h-8 sm:w-12 sm:h-12" />
-                        <p className="text-gray-500 text-sm sm:text-base">No menu items yet</p>
-                        <div className="mt-4 space-y-2">
-                          <button onClick={() => setShowAddProduct(true)} className="bg-orange-600 text-white px-4 sm:px-6 py-2 rounded-lg hover:bg-orange-700 text-sm block mx-auto">Add Your First Item</button>
-                          <button onClick={handleQuickFix} className="bg-purple-600 text-white px-4 sm:px-6 py-2 rounded-lg hover:bg-purple-700 text-sm block mx-auto">Add Sample Products</button>
+                      <div className="text-center py-8">
+                        <Package className="mx-auto text-gray-300 mb-4 w-12 h-12" />
+                        <p className="text-gray-500">No menu items yet</p>
+                        <div className="mt-4 space-y-2 max-w-xs mx-auto">
+                          <button onClick={() => setShowAddProduct(true)} className="w-full bg-orange-600 text-white px-6 py-3 rounded-lg hover:bg-orange-700 text-sm">Add Your First Item</button>
+                          <button onClick={handleQuickFix} className="w-full bg-purple-600 text-white px-6 py-3 rounded-lg hover:bg-purple-700 text-sm">Add Sample Products</button>
                         </div>
                       </div>
                     ) : (
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         {menuItems.map((item) => (
-                          <div key={item._id} className="border rounded-lg p-3 sm:p-4 hover:shadow-md transition-shadow">
-                            <div className="flex items-center space-x-2 sm:space-x-3 mb-2 sm:mb-3">
+                          <div key={item._id} className="border rounded-lg p-4 hover:shadow-md transition-shadow">
+                            <div className="flex items-start space-x-3 mb-3">
                               {item.image ? (
-                                <img src={item.image} alt={item.name} className="w-12 h-12 sm:w-16 sm:h-16 object-cover rounded-lg flex-shrink-0" />
+                                <img src={item.image} alt={item.name} className="w-16 h-16 object-cover rounded-lg flex-shrink-0" />
                               ) : (
-                                <div className="w-12 h-12 sm:w-16 sm:h-16 bg-gray-200 rounded-lg flex items-center justify-center flex-shrink-0">
-                                  <Image className="text-gray-400 w-4 h-4 sm:w-5 sm:h-5" />
+                                <div className="w-16 h-16 bg-gray-200 rounded-lg flex items-center justify-center flex-shrink-0">
+                                  <Image className="text-gray-400 w-6 h-6" />
                                 </div>
                               )}
                               <div className="min-w-0 flex-1">
                                 <div className="flex justify-between items-start">
-                                  <h3 className="font-semibold text-gray-900 text-sm sm:text-base truncate">{item.name}</h3>
+                                  <h3 className="font-semibold text-gray-900 truncate">{item.name}</h3>
                                   <span className={`px-2 py-1 text-xs rounded flex-shrink-0 ml-2 ${item.isAvailable !== false ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
                                     {item.isAvailable !== false ? 'Available' : 'Unavailable'}
                                   </span>
                                 </div>
-                                <p className="text-xs sm:text-sm text-gray-600 capitalize truncate">{item.category}</p>
+                                <p className="text-sm text-gray-600 capitalize">{item.category}</p>
                               </div>
                             </div>
-                            {item.description && <p className="text-xs sm:text-sm text-gray-600 mb-2 line-clamp-2">{item.description}</p>}
-                            {item.ingredients && <p className="text-xs text-gray-500 mb-2 sm:mb-3 line-clamp-1">Ingredients: {item.ingredients}</p>}
+                            {item.description && <p className="text-sm text-gray-600 mb-2 line-clamp-2">{item.description}</p>}
+                            {item.ingredients && <p className="text-xs text-gray-500 mb-3 line-clamp-1">Ingredients: {item.ingredients}</p>}
                             <div className="flex justify-between items-center">
                               <div>
-                                <p className="text-base sm:text-lg font-bold text-green-600">{formatCurrency(item.price)}</p>
+                                <p className="text-lg font-bold text-green-600">{formatCurrency(item.price)}</p>
                                 {item.preparationTime && <p className="text-xs text-gray-500">{item.preparationTime} min prep</p>}
                               </div>
                             </div>
@@ -807,28 +834,28 @@ const RestaurantDashboard = () => {
                 {/* Earnings Tab */}
                 {activeTab === 'earnings' && (
                   <div>
-                    <h2 className="text-lg sm:text-xl font-bold text-gray-900 mb-4 sm:mb-6">Earnings Overview</h2>
+                    <h2 className="text-xl font-bold text-gray-900 mb-6">Earnings Overview</h2>
                     {earningsArray.length === 0 ? (
-                      <div className="text-center py-6 sm:py-8">
-                        <DollarSign className="mx-auto text-gray-300 mb-3 sm:mb-4 w-8 h-8 sm:w-12 sm:h-12" />
-                        <p className="text-gray-500 text-sm sm:text-base">No earnings data available</p>
-                        <p className="text-xs sm:text-sm text-gray-400 mt-2">Complete some orders to see earnings data</p>
+                      <div className="text-center py-8">
+                        <DollarSign className="mx-auto text-gray-300 mb-4 w-12 h-12" />
+                        <p className="text-gray-500">No earnings data available</p>
+                        <p className="text-sm text-gray-400 mt-2">Complete some orders to see earnings data</p>
                       </div>
                     ) : (
-                      <div className="space-y-4 sm:space-y-6">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
+                      <div className="space-y-6">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                           {earningsArray.map((earning, index) => (
-                            <div key={index} className="bg-gray-50 rounded-lg p-3 sm:p-4">
-                              <p className="text-xs sm:text-sm font-medium text-gray-600">{earning.date}</p>
-                              <p className="text-lg sm:text-xl font-bold text-gray-900">{formatCurrency(earning.revenue)}</p>
+                            <div key={index} className="bg-gray-50 rounded-lg p-4">
+                              <p className="text-sm font-medium text-gray-600">{earning.date}</p>
+                              <p className="text-xl font-bold text-gray-900">{formatCurrency(earning.revenue)}</p>
                               <p className="text-xs text-gray-500">{earning.orders} orders</p>
                             </div>
                           ))}
                         </div>
-                        <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 sm:p-4">
-                          <h4 className="font-semibold text-blue-900 mb-2 text-sm sm:text-base">💰 Total Revenue</h4>
-                          <p className="text-xl sm:text-2xl font-bold text-blue-900">{formatCurrency(stats.totalRevenue)}</p>
-                          <p className="text-xs sm:text-sm text-blue-700">From {stats.completedOrders} completed orders</p>
+                        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                          <h4 className="font-semibold text-blue-900 mb-2">💰 Total Revenue</h4>
+                          <p className="text-2xl font-bold text-blue-900">{formatCurrency(stats.totalRevenue)}</p>
+                          <p className="text-sm text-blue-700">From {stats.completedOrders} completed orders</p>
                         </div>
                       </div>
                     )}
@@ -842,16 +869,16 @@ const RestaurantDashboard = () => {
 
       {/* Add Product Modal */}
       {showAddProduct && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-3 sm:p-4">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-lg shadow-lg max-w-md w-full max-h-[90vh] overflow-y-auto">
-            <div className="p-4 sm:p-6">
-              <div className="flex justify-between items-center mb-3 sm:mb-4">
+            <div className="p-6">
+              <div className="flex justify-between items-center mb-4">
                 <h3 className="text-lg font-bold text-gray-900">Add Menu Item</h3>
                 <button onClick={() => setShowAddProduct(false)} className="text-gray-500 hover:text-gray-700">
                   <X className="w-5 h-5" />
                 </button>
               </div>
-              <form onSubmit={handleAddProduct} className="space-y-3 sm:space-y-4">
+              <form onSubmit={handleAddProduct} className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Product Image URL</label>
                   <input type="url" value={newProduct.image} onChange={(e) => setNewProduct({...newProduct, image: e.target.value})} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 text-sm" placeholder="https://example.com/image.jpg" />
@@ -886,9 +913,9 @@ const RestaurantDashboard = () => {
                   <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
                   <textarea value={newProduct.description} onChange={(e) => setNewProduct({...newProduct, description: e.target.value})} rows="2" className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 text-sm" placeholder="Describe your menu item..." />
                 </div>
-                <div className="flex space-x-2 sm:space-x-3 pt-3 sm:pt-4">
-                  <button type="button" onClick={() => setShowAddProduct(false)} className="flex-1 px-3 sm:px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 text-sm">Cancel</button>
-                  <button type="submit" disabled={loading} className="flex-1 px-3 sm:px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 flex items-center justify-center space-x-2 disabled:opacity-50 text-sm">
+                <div className="flex space-x-3 pt-4">
+                  <button type="button" onClick={() => setShowAddProduct(false)} className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 text-sm">Cancel</button>
+                  <button type="submit" disabled={loading} className="flex-1 px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 flex items-center justify-center space-x-2 disabled:opacity-50 text-sm">
                     <Save className="w-4 h-4" />
                     <span>{loading ? 'Adding...' : 'Add Item'}</span>
                   </button>
@@ -901,20 +928,20 @@ const RestaurantDashboard = () => {
 
       {/* Profile Update Modal with GPS Location */}
       {showProfile && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-3 sm:p-4">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-lg shadow-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="p-4 sm:p-6">
-              <div className="flex justify-between items-center mb-4 sm:mb-6">
-                <h3 className="text-lg sm:text-xl font-bold text-gray-900">Update Restaurant Profile</h3>
+            <div className="p-6">
+              <div className="flex justify-between items-center mb-6">
+                <h3 className="text-xl font-bold text-gray-900">Update Restaurant Profile</h3>
                 <button onClick={() => setShowProfile(false)} className="text-gray-500 hover:text-gray-700">
-                  <X className="w-5 h-5 sm:w-6 sm:h-6" />
+                  <X className="w-6 h-6" />
                 </button>
               </div>
-              <form onSubmit={handleUpdateProfile} className="space-y-4 sm:space-y-6">
+              <form onSubmit={handleUpdateProfile} className="space-y-6">
                 {/* Basic Information */}
                 <div>
-                  <h4 className="font-semibold text-gray-900 mb-3 sm:mb-4 text-sm sm:text-base">Basic Information</h4>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
+                  <h4 className="font-semibold text-gray-900 mb-4">Basic Information</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">Restaurant Name *</label>
                       <input 
@@ -942,8 +969,8 @@ const RestaurantDashboard = () => {
 
                 {/* Contact Information */}
                 <div>
-                  <h4 className="font-semibold text-gray-900 mb-3 sm:mb-4 text-sm sm:text-base">Contact Information</h4>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
+                  <h4 className="font-semibold text-gray-900 mb-4">Contact Information</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">Email *</label>
                       <input 
@@ -967,7 +994,7 @@ const RestaurantDashboard = () => {
                       />
                     </div>
                   </div>
-                  <div className="mt-3 sm:mt-4">
+                  <div className="mt-4">
                     <label className="block text-sm font-medium text-gray-700 mb-1">Address *</label>
                     <textarea 
                       required 
@@ -982,12 +1009,12 @@ const RestaurantDashboard = () => {
 
                 {/* GPS Location Section */}
                 <div>
-                  <h4 className="font-semibold text-gray-900 mb-3 sm:mb-4 text-sm sm:text-base">📍 Restaurant Location</h4>
-                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 sm:p-4 mb-3 sm:mb-4">
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-0 mb-3">
+                  <h4 className="font-semibold text-gray-900 mb-4">📍 Restaurant Location</h4>
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-3">
                       <div>
-                        <p className="text-blue-800 font-medium text-sm sm:text-base">GPS Location</p>
-                        <p className="text-blue-700 text-xs sm:text-sm">
+                        <p className="text-blue-800 font-medium">GPS Location</p>
+                        <p className="text-blue-700 text-sm">
                           Set your exact location for better delivery accuracy
                         </p>
                       </div>
@@ -995,7 +1022,7 @@ const RestaurantDashboard = () => {
                         type="button"
                         onClick={getCurrentLocation}
                         disabled={locationLoading}
-                        className="flex items-center space-x-2 bg-blue-600 text-white px-3 sm:px-4 py-2 rounded-lg hover:bg-blue-700 disabled:opacity-50 text-sm w-full sm:w-auto justify-center"
+                        className="flex items-center space-x-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 disabled:opacity-50 text-sm w-full sm:w-auto justify-center"
                       >
                         {locationLoading ? (
                           <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
@@ -1009,7 +1036,7 @@ const RestaurantDashboard = () => {
                     {/* Location Coordinates Display */}
                     {profileData.location && profileData.location.coordinates && 
                      profileData.location.coordinates[0] !== 0 && (
-                      <div className="bg-white rounded p-2 sm:p-3 border">
+                      <div className="bg-white rounded p-3 border">
                         <p className="text-sm font-medium text-gray-700 mb-2">Current Coordinates:</p>
                         <div className="grid grid-cols-2 gap-2 text-xs">
                           <div>
@@ -1034,8 +1061,8 @@ const RestaurantDashboard = () => {
 
                 {/* Business Details */}
                 <div>
-                  <h4 className="font-semibold text-gray-900 mb-3 sm:mb-4 text-sm sm:text-base">Business Details</h4>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
+                  <h4 className="font-semibold text-gray-900 mb-4">Business Details</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">Delivery Time</label>
                       <input 
@@ -1063,8 +1090,8 @@ const RestaurantDashboard = () => {
 
                 {/* Opening Hours */}
                 <div>
-                  <h4 className="font-semibold text-gray-900 mb-3 sm:mb-4 text-sm sm:text-base">Opening Hours</h4>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
+                  <h4 className="font-semibold text-gray-900 mb-4">Opening Hours</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">Open Time</label>
                       <input 
@@ -1094,8 +1121,8 @@ const RestaurantDashboard = () => {
 
                 {/* Images */}
                 <div>
-                  <h4 className="font-semibold text-gray-900 mb-3 sm:mb-4 text-sm sm:text-base">Restaurant Images</h4>
-                  <div className="space-y-3 sm:space-y-4">
+                  <h4 className="font-semibold text-gray-900 mb-4">Restaurant Images</h4>
+                  <div className="space-y-4">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">Profile Image URL</label>
                       <input 
@@ -1131,18 +1158,18 @@ const RestaurantDashboard = () => {
                   />
                 </div>
 
-                <div className="flex space-x-2 sm:space-x-3 pt-3 sm:pt-4">
+                <div className="flex space-x-3 pt-4">
                   <button 
                     type="button" 
                     onClick={() => setShowProfile(false)} 
-                    className="flex-1 px-3 sm:px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 text-sm"
+                    className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 text-sm"
                   >
                     Cancel
                   </button>
                   <button 
                     type="submit" 
                     disabled={loading} 
-                    className="flex-1 px-3 sm:px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 flex items-center justify-center space-x-2 disabled:opacity-50 text-sm"
+                    className="flex-1 px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 flex items-center justify-center space-x-2 disabled:opacity-50 text-sm"
                   >
                     <Save className="w-4 h-4" />
                     <span>{loading ? 'Updating...' : 'Update Profile'}</span>
@@ -1154,54 +1181,82 @@ const RestaurantDashboard = () => {
         </div>
       )}
 
-      {/* Order Details Modal */}
+      {/* Order Details Modal - Fixed for Mobile */}
       {showOrderDetails && selectedOrder && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-3 sm:p-4">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-lg shadow-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="p-4 sm:p-6">
-              <div className="flex justify-between items-center mb-4 sm:mb-6">
-                <h3 className="text-lg sm:text-xl font-bold text-gray-900">Order Details</h3>
+            <div className="p-6">
+              <div className="flex justify-between items-center mb-6">
+                <h3 className="text-xl font-bold text-gray-900">Order Details</h3>
                 <button onClick={() => setShowOrderDetails(false)} className="text-gray-500 hover:text-gray-700">
-                  <X className="w-5 h-5 sm:w-6 sm:h-6" />
+                  <X className="w-6 h-6" />
                 </button>
               </div>
-              <div className="space-y-3 sm:space-y-4">
+              <div className="space-y-4">
                 <div>
-                  <h4 className="font-semibold text-gray-900 mb-2 text-sm sm:text-base">Order Information</h4>
-                  <p className="text-sm"><strong>Order ID:</strong> {selectedOrder.orderId || selectedOrder._id}</p>
-                  <p className="text-sm"><strong>Status:</strong> <span className={`ml-2 px-2 py-1 text-xs rounded ${selectedOrder.status === 'delivered' || selectedOrder.status === 'completed' ? 'bg-green-100 text-green-800' : selectedOrder.status === 'pending' ? 'bg-yellow-100 text-yellow-800' : selectedOrder.status === 'cancelled' ? 'bg-red-100 text-red-800' : 'bg-blue-100 text-blue-800'}`}>{selectedOrder.status}</span></p>
-                  <p className="text-sm"><strong>Total Amount:</strong> {formatCurrency(selectedOrder.total || selectedOrder.totalAmount)}</p>
-                  <p className="text-sm"><strong>Order Date:</strong> {formatDate(selectedOrder.createdAt)}</p>
+                  <h4 className="font-semibold text-gray-900 mb-3">Order Information</h4>
+                  <div className="space-y-2 text-sm">
+                    <p><strong>Order ID:</strong> {selectedOrder.orderId || selectedOrder._id}</p>
+                    <div className="flex items-center">
+                      <strong className="mr-2">Status:</strong>
+                      <span className={`px-3 py-1 text-xs rounded-full ${selectedOrder.status === 'delivered' || selectedOrder.status === 'completed' ? 'bg-green-100 text-green-800' : selectedOrder.status === 'pending' ? 'bg-yellow-100 text-yellow-800' : selectedOrder.status === 'cancelled' ? 'bg-red-100 text-red-800' : 'bg-blue-100 text-blue-800'}`}>
+                        {selectedOrder.status}
+                      </span>
+                    </div>
+                    <p><strong>Total Amount:</strong> {formatCurrency(selectedOrder.total || selectedOrder.totalAmount)}</p>
+                    <p><strong>Order Date:</strong> {formatDate(selectedOrder.createdAt)}</p>
+                  </div>
                 </div>
                 <div>
-                  <h4 className="font-semibold text-gray-900 mb-2 text-sm sm:text-base">Customer Information</h4>
-                  <p className="text-sm"><strong>Name:</strong> {selectedOrder.user?.name || selectedOrder.customerId?.name || 'Customer'}</p>
-                  <p className="text-sm"><strong>Phone:</strong> {selectedOrder.user?.phone || selectedOrder.customerId?.phone || 'No phone'}</p>
-                  <p className="text-sm"><strong>Address:</strong> {selectedOrder.deliveryAddress || 'No address'}</p>
+                  <h4 className="font-semibold text-gray-900 mb-3">Customer Information</h4>
+                  <div className="space-y-2 text-sm">
+                    <p><strong>Name:</strong> {selectedOrder.user?.name || selectedOrder.customerId?.name || 'Customer'}</p>
+                    <p><strong>Phone:</strong> {selectedOrder.user?.phone || selectedOrder.customerId?.phone || 'No phone'}</p>
+                    <p><strong>Address:</strong> {selectedOrder.deliveryAddress || 'No address'}</p>
+                  </div>
                 </div>
                 {selectedOrder.items && selectedOrder.items.length > 0 && (
                   <div>
-                    <h4 className="font-semibold text-gray-900 mb-2 text-sm sm:text-base">Order Items</h4>
-                    {selectedOrder.items.map((item, index) => (
-                      <div key={index} className="flex justify-between border-b py-2 text-sm">
-                        <div>
-                          <span>{item.quantity}x {item.product?.name || item.productName}</span>
-                          {item.product?.category && <span className="text-xs text-gray-500 ml-2">({item.product.category})</span>}
+                    <h4 className="font-semibold text-gray-900 mb-3">Order Items</h4>
+                    <div className="space-y-2">
+                      {selectedOrder.items.map((item, index) => (
+                        <div key={index} className="flex justify-between items-center border-b pb-2 text-sm">
+                          <div className="flex-1">
+                            <span className="font-medium">{item.quantity}x {item.product?.name || item.productName}</span>
+                            {item.product?.category && <span className="text-xs text-gray-500 ml-2">({item.product.category})</span>}
+                          </div>
+                          <span className="font-semibold">{formatCurrency(item.price)}</span>
                         </div>
-                        <span>{formatCurrency(item.price)}</span>
+                      ))}
+                      <div className="flex justify-between border-t pt-2 mt-2 font-semibold text-sm">
+                        <span>Total:</span>
+                        <span>{formatCurrency(selectedOrder.total || selectedOrder.totalAmount)}</span>
                       </div>
-                    ))}
-                    <div className="flex justify-between border-t pt-2 mt-2 font-semibold text-sm">
-                      <span>Total:</span>
-                      <span>{formatCurrency(selectedOrder.total || selectedOrder.totalAmount)}</span>
                     </div>
                   </div>
                 )}
-                <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-3 pt-3 sm:pt-4">
-                  {selectedOrder.status === 'pending' && <button onClick={() => { handleUpdateOrderStatus(selectedOrder._id, 'confirmed'); setShowOrderDetails(false); }} className="flex-1 bg-blue-600 text-white py-2 rounded hover:bg-blue-700 text-sm">Accept Order</button>}
-                  {selectedOrder.status === 'confirmed' && <button onClick={() => { handleUpdateOrderStatus(selectedOrder._id, 'preparing'); setShowOrderDetails(false); }} className="flex-1 bg-purple-600 text-white py-2 rounded hover:bg-purple-700 text-sm">Start Preparing</button>}
-                  {selectedOrder.status === 'preparing' && <button onClick={() => { handleUpdateOrderStatus(selectedOrder._id, 'ready'); setShowOrderDetails(false); }} className="flex-1 bg-green-600 text-white py-2 rounded hover:bg-green-700 text-sm">Mark Ready</button>}
-                  {(selectedOrder.user?.phone || selectedOrder.customerId?.phone) && <a href={`tel:${selectedOrder.user?.phone || selectedOrder.customerId?.phone}`} className="px-4 bg-gray-600 text-white py-2 rounded hover:bg-gray-700 flex items-center justify-center text-sm"><Phone className="w-4 h-4" /></a>}
+                <div className="flex flex-col sm:flex-row gap-3 pt-4">
+                  {selectedOrder.status === 'pending' && (
+                    <button onClick={() => { handleUpdateOrderStatus(selectedOrder._id, 'confirmed'); setShowOrderDetails(false); }} className="flex-1 bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 text-sm">
+                      Accept Order
+                    </button>
+                  )}
+                  {selectedOrder.status === 'confirmed' && (
+                    <button onClick={() => { handleUpdateOrderStatus(selectedOrder._id, 'preparing'); setShowOrderDetails(false); }} className="flex-1 bg-purple-600 text-white py-3 rounded-lg hover:bg-purple-700 text-sm">
+                      Start Preparing
+                    </button>
+                  )}
+                  {selectedOrder.status === 'preparing' && (
+                    <button onClick={() => { handleUpdateOrderStatus(selectedOrder._id, 'ready'); setShowOrderDetails(false); }} className="flex-1 bg-green-600 text-white py-3 rounded-lg hover:bg-green-700 text-sm">
+                      Mark Ready
+                    </button>
+                  )}
+                  {(selectedOrder.user?.phone || selectedOrder.customerId?.phone) && (
+                    <a href={`tel:${selectedOrder.user?.phone || selectedOrder.customerId?.phone}`} className="flex items-center justify-center bg-gray-600 text-white py-3 rounded-lg hover:bg-gray-700 text-sm px-6">
+                      <Phone className="w-4 h-4 mr-2" />
+                      Call Customer
+                    </a>
+                  )}
                 </div>
               </div>
             </div>
@@ -1210,6 +1265,6 @@ const RestaurantDashboard = () => {
       )}
     </div>
   );
-};
+};  
 
 export default RestaurantDashboard;
