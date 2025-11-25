@@ -3,7 +3,9 @@ import {
   Store, Plus, Package, DollarSign, Clock, Star, Eye, X, Save,
   LogOut, RefreshCw, Image, MapPin, Navigation, ChefHat,
   CheckCircle, Users, TrendingUp, Phone, MessageCircle, Settings,
-  User, Edit, Camera, Upload, Map, Crosshair
+  User, Edit, Camera, Upload, Map, Crosshair, Trash2, 
+  ToggleLeft, ToggleRight, BarChart3, Calendar, FileText, 
+  Truck, UserCheck, Ban, Filter, Download
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 
@@ -29,6 +31,15 @@ const RestaurantDashboard = () => {
   const [newProduct, setNewProduct] = useState({
     name: '', price: '', description: '', category: 'main course', preparationTime: '', ingredients: '', image: ''
   });
+
+  // NEW STATE VARIABLES
+  const [showEditProduct, setShowEditProduct] = useState(false);
+  const [editingProduct, setEditingProduct] = useState(null);
+  const [availableRiders, setAvailableRiders] = useState([]);
+  const [showRiderAssignment, setShowRiderAssignment] = useState(false);
+  const [selectedOrderForRider, setSelectedOrderForRider] = useState(null);
+  const [reportPeriod, setReportPeriod] = useState('today');
+  const [showReports, setShowReports] = useState(false);
 
   // Profile state with location fields
   const [profileData, setProfileData] = useState({
@@ -227,6 +238,38 @@ const RestaurantDashboard = () => {
     }
   };
 
+  // NEW: Fetch available riders
+  const fetchAvailableRiders = async () => {
+    const token = localStorage.getItem('token');
+    try {
+      const res = await fetch(`${API_URL}/riders/available`, {
+        headers: { 
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      if (res.ok) {
+        const data = await res.json();
+        if (data.success) {
+          setAvailableRiders(data.riders || []);
+        } else {
+          setAvailableRiders([]);
+        }
+      } else {
+        setAvailableRiders([]);
+      }
+    } catch (error) {
+      console.error('❌ Error fetching riders:', error);
+      // For demo purposes, create sample riders
+      setAvailableRiders([
+        { _id: '1', name: 'Juan Dela Cruz', phone: '+63 912 345 6789', status: 'available' },
+        { _id: '2', name: 'Maria Santos', phone: '+63 917 654 3210', status: 'available' },
+        { _id: '3', name: 'Pedro Reyes', phone: '+63 918 777 8888', status: 'busy' }
+      ]);
+    }
+  };
+
   // Load all data
   const fetchData = async () => {
     setLoading(true);
@@ -237,6 +280,7 @@ const RestaurantDashboard = () => {
       if (id) {
         await fetchMenu(id);
         await fetchOrders();
+        await fetchAvailableRiders(); // NEW: Fetch riders
       } else {
         setError(new Error('No restaurant data found. Please contact support.'));
       }
@@ -336,6 +380,113 @@ const RestaurantDashboard = () => {
     }
   };
 
+  // NEW: Edit product
+  const handleEditProduct = async (e) => {
+    e.preventDefault();
+    if (!editingProduct) return;
+    
+    const token = localStorage.getItem('token');
+    setLoading(true);
+    
+    try {
+      const productData = {
+        name: editingProduct.name.trim(),
+        price: parseFloat(editingProduct.price),
+        description: editingProduct.description?.trim() || '',
+        category: editingProduct.category,
+        preparationTime: parseInt(editingProduct.preparationTime) || 15,
+        ingredients: editingProduct.ingredients?.trim() || '',
+        image: editingProduct.image?.trim() || '',
+        isAvailable: editingProduct.isAvailable
+      };
+
+      const res = await fetch(`${API_URL}/products/${editingProduct._id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(productData)
+      });
+      
+      const data = await res.json();
+      
+      if (res.ok) {
+        alert('✅ Product updated successfully!');
+        setShowEditProduct(false);
+        setEditingProduct(null);
+        await fetchMenu(restaurantId);
+      } else {
+        alert(`❌ Failed: ${data.message || 'Error updating product'}`);
+      }
+    } catch (error) {
+      console.error('❌ Error updating product:', error);
+      alert('❌ Network error. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // NEW: Delete product
+  const handleDeleteProduct = async (productId) => {
+    if (!confirm('Are you sure you want to delete this product?')) return;
+    
+    const token = localStorage.getItem('token');
+    setLoading(true);
+    
+    try {
+      const res = await fetch(`${API_URL}/products/${productId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      
+      const data = await res.json();
+      
+      if (res.ok) {
+        alert('✅ Product deleted successfully!');
+        await fetchMenu(restaurantId);
+      } else {
+        alert(`❌ Failed: ${data.message || 'Error deleting product'}`);
+      }
+    } catch (error) {
+      console.error('❌ Error deleting product:', error);
+      alert('❌ Network error. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // NEW: Toggle product availability
+  const handleToggleAvailability = async (product) => {
+    const token = localStorage.getItem('token');
+    
+    try {
+      const res = await fetch(`${API_URL}/products/${product._id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ 
+          isAvailable: !product.isAvailable 
+        })
+      });
+      
+      const data = await res.json();
+      
+      if (res.ok) {
+        await fetchMenu(restaurantId);
+      } else {
+        alert(`❌ Failed to update availability: ${data.message}`);
+      }
+    } catch (error) {
+      console.error('❌ Error updating availability:', error);
+      alert('❌ Network error. Please try again.');
+    }
+  };
+
   // Update order status
   const handleUpdateOrderStatus = async (orderId, newStatus) => {
     const token = localStorage.getItem('token');
@@ -360,6 +511,67 @@ const RestaurantDashboard = () => {
       }
     } catch (error) {
       console.error('❌ Error updating order status:', error);
+      alert('❌ Network error. Please try again.');
+    }
+  };
+
+  // NEW: Reject order
+  const handleRejectOrder = async (orderId) => {
+    if (!confirm('Are you sure you want to reject this order?')) return;
+    
+    const token = localStorage.getItem('token');
+    
+    try {
+      const res = await fetch(`${API_URL}/orders/${orderId}/status`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ status: 'rejected' })
+      });
+      
+      const data = await res.json();
+      
+      if (res.ok) {
+        await fetchData();
+        alert('✅ Order rejected');
+        setShowOrderDetails(false);
+      } else {
+        alert(`❌ Failed to reject order: ${data.message || 'Unknown error'}`);
+      }
+    } catch (error) {
+      console.error('❌ Error rejecting order:', error);
+      alert('❌ Network error. Please try again.');
+    }
+  };
+
+  // NEW: Assign rider to order
+  const handleAssignRider = async (orderId, riderId) => {
+    const token = localStorage.getItem('token');
+    
+    try {
+      const res = await fetch(`${API_URL}/orders/${orderId}/assign-rider`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ riderId })
+      });
+      
+      const data = await res.json();
+      
+      if (res.ok) {
+        await fetchData();
+        setShowRiderAssignment(false);
+        setSelectedOrderForRider(null);
+        alert('✅ Rider assigned successfully!');
+      } else {
+        alert(`❌ Failed to assign rider: ${data.message || 'Unknown error'}`);
+      }
+    } catch (error) {
+      console.error('❌ Error assigning rider:', error);
       alert('❌ Network error. Please try again.');
     }
   };
@@ -432,6 +644,89 @@ const RestaurantDashboard = () => {
     } catch (error) {
       console.error('❌ Quick fix error:', error);
     }
+  };
+
+  // NEW: Generate sales report data
+  const generateSalesReport = () => {
+    const now = new Date();
+    let startDate, endDate;
+
+    switch (reportPeriod) {
+      case 'today':
+        startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        endDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
+        break;
+      case 'week':
+        startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 7);
+        endDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
+        break;
+      case 'month':
+        startDate = new Date(now.getFullYear(), now.getMonth() - 1, now.getDate());
+        endDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
+        break;
+      default:
+        startDate = new Date(0);
+        endDate = new Date();
+    }
+
+    const filteredOrders = orders.filter(order => {
+      const orderDate = new Date(order.createdAt);
+      return orderDate >= startDate && orderDate <= endDate && 
+             ['delivered', 'completed'].includes(order.status);
+    });
+
+    const totalRevenue = filteredOrders.reduce((sum, order) => sum + (order.total || order.totalAmount || 0), 0);
+    const totalOrders = filteredOrders.length;
+    const averageOrderValue = totalOrders > 0 ? totalRevenue / totalOrders : 0;
+
+    // Category breakdown
+    const categoryBreakdown = {};
+    filteredOrders.forEach(order => {
+      order.items?.forEach(item => {
+        const category = item.product?.category || 'uncategorized';
+        if (!categoryBreakdown[category]) {
+          categoryBreakdown[category] = { revenue: 0, orders: 0 };
+        }
+        categoryBreakdown[category].revenue += item.price * item.quantity;
+        categoryBreakdown[category].orders += 1;
+      });
+    });
+
+    return {
+      period: reportPeriod,
+      totalRevenue,
+      totalOrders,
+      averageOrderValue,
+      categoryBreakdown,
+      orders: filteredOrders,
+      startDate: startDate.toLocaleDateString(),
+      endDate: endDate.toLocaleDateString()
+    };
+  };
+
+  // NEW: Export report to CSV
+  const exportReportToCSV = (report) => {
+    const headers = ['Date', 'Order ID', 'Customer', 'Items', 'Total Amount', 'Status'];
+    const csvData = [
+      headers,
+      ...report.orders.map(order => [
+        new Date(order.createdAt).toLocaleDateString(),
+        order.orderId || order._id,
+        order.user?.name || order.customerId?.name || 'Customer',
+        order.items?.map(item => `${item.quantity}x ${item.product?.name}`).join('; ') || '',
+        order.total || order.totalAmount,
+        order.status
+      ])
+    ];
+
+    const csvContent = csvData.map(row => row.map(cell => `"${cell}"`).join(',')).join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `sales-report-${report.period}-${new Date().toISOString().split('T')[0]}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
   };
 
   // Map Component for Location Preview
@@ -547,6 +842,8 @@ const RestaurantDashboard = () => {
     );
   }
 
+  const salesReport = generateSalesReport();
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
@@ -578,6 +875,10 @@ const RestaurantDashboard = () => {
               </div>
               
               <div className="hidden sm:flex items-center space-x-2">
+                <button onClick={() => setShowReports(true)} className="flex items-center space-x-2 bg-green-600 text-white px-3 py-2 rounded-lg hover:bg-green-700 text-sm">
+                  <BarChart3 className="w-4 h-4" />
+                  <span>Reports</span>
+                </button>
                 <button onClick={() => setShowProfile(true)} className="flex items-center space-x-2 bg-blue-600 text-white px-3 py-2 rounded-lg hover:bg-blue-700 text-sm">
                   <User className="w-4 h-4" />
                   <span>Profile</span>
@@ -637,7 +938,11 @@ const RestaurantDashboard = () => {
                   <Package className="w-4 h-4" />
                   <span>View Orders ({orders.length})</span>
                 </button>
-                <button onClick={handleQuickFix} className="w-full flex items-center space-x-2 bg-purple-600 text-white px-3 py-3 rounded-lg hover:bg-purple-700 text-sm">
+                <button onClick={() => setShowReports(true)} className="w-full flex items-center space-x-2 bg-purple-600 text-white px-3 py-3 rounded-lg hover:bg-purple-700 text-sm">
+                  <BarChart3 className="w-4 h-4" />
+                  <span>Sales Reports</span>
+                </button>
+                <button onClick={handleQuickFix} className="w-full flex items-center space-x-2 bg-indigo-600 text-white px-3 py-3 rounded-lg hover:bg-indigo-700 text-sm">
                   <Plus className="w-4 h-4" />
                   <span>Add Sample Products</span>
                 </button>
@@ -696,7 +1001,7 @@ const RestaurantDashboard = () => {
                                   <p className="text-sm text-gray-600 truncate">{order.user?.name || order.customerId?.name || 'Customer'}</p>
                                   <p className="text-xs text-gray-500">{formatDate(order.createdAt)}</p>
                                 </div>
-                                <span className={`px-3 py-1 text-xs rounded-full flex-shrink-0 self-start ${order.status === 'delivered' || order.status === 'completed' ? 'bg-green-100 text-green-800' : order.status === 'pending' ? 'bg-yellow-100 text-yellow-800' : order.status === 'cancelled' ? 'bg-red-100 text-red-800' : 'bg-blue-100 text-blue-800'}`}>
+                                <span className={`px-3 py-1 text-xs rounded-full flex-shrink-0 self-start ${order.status === 'delivered' || order.status === 'completed' ? 'bg-green-100 text-green-800' : order.status === 'pending' ? 'bg-yellow-100 text-yellow-800' : order.status === 'cancelled' || order.status === 'rejected' ? 'bg-red-100 text-red-800' : 'bg-blue-100 text-blue-800'}`}>
                                   {order.status}
                                 </span>
                               </div>
@@ -746,8 +1051,11 @@ const RestaurantDashboard = () => {
                                 <h3 className="font-semibold text-gray-900 truncate">Order #{order.orderId || order._id}</h3>
                                 <p className="text-sm text-gray-600 truncate">{order.user?.name || order.customerId?.name || 'Customer'} • {formatDate(order.createdAt)}</p>
                                 <p className="text-sm text-gray-600 truncate">{order.deliveryAddress || 'No address provided'}</p>
+                                {order.rider && (
+                                  <p className="text-sm text-blue-600">Rider: {order.rider.name} ({order.rider.status})</p>
+                                )}
                               </div>
-                              <span className={`px-3 py-1 text-xs rounded-full flex-shrink-0 self-start ${order.status === 'delivered' || order.status === 'completed' ? 'bg-green-100 text-green-800' : order.status === 'pending' ? 'bg-yellow-100 text-yellow-800' : order.status === 'cancelled' ? 'bg-red-100 text-red-800' : 'bg-blue-100 text-blue-800'}`}>
+                              <span className={`px-3 py-1 text-xs rounded-full flex-shrink-0 self-start ${order.status === 'delivered' || order.status === 'completed' ? 'bg-green-100 text-green-800' : order.status === 'pending' ? 'bg-yellow-100 text-yellow-800' : order.status === 'cancelled' || order.status === 'rejected' ? 'bg-red-100 text-red-800' : 'bg-blue-100 text-blue-800'}`}>
                                 {order.status}
                               </span>
                             </div>
@@ -757,9 +1065,24 @@ const RestaurantDashboard = () => {
                               </div>
                               <div className="flex flex-wrap gap-2">
                                 <button onClick={() => { setSelectedOrder(order); setShowOrderDetails(true); }} className="flex-1 sm:flex-none bg-orange-600 text-white px-3 py-2 rounded-lg hover:bg-orange-700 text-sm min-w-[100px]">Details</button>
-                                {order.status === 'pending' && <button onClick={() => handleUpdateOrderStatus(order._id, 'confirmed')} className="flex-1 sm:flex-none bg-blue-600 text-white px-3 py-2 rounded-lg hover:bg-blue-700 text-sm min-w-[100px]">Accept</button>}
-                                {order.status === 'confirmed' && <button onClick={() => handleUpdateOrderStatus(order._id, 'preparing')} className="flex-1 sm:flex-none bg-purple-600 text-white px-3 py-2 rounded-lg hover:bg-purple-700 text-sm min-w-[100px]">Preparing</button>}
-                                {order.status === 'preparing' && <button onClick={() => handleUpdateOrderStatus(order._id, 'ready')} className="flex-1 sm:flex-none bg-green-600 text-white px-3 py-2 rounded-lg hover:bg-green-700 text-sm min-w-[100px]">Mark Ready</button>}
+                                {order.status === 'pending' && (
+                                  <>
+                                    <button onClick={() => handleUpdateOrderStatus(order._id, 'confirmed')} className="flex-1 sm:flex-none bg-blue-600 text-white px-3 py-2 rounded-lg hover:bg-blue-700 text-sm min-w-[100px]">Accept</button>
+                                    <button onClick={() => handleRejectOrder(order._id)} className="flex-1 sm:flex-none bg-red-600 text-white px-3 py-2 rounded-lg hover:bg-red-700 text-sm min-w-[100px]">Reject</button>
+                                  </>
+                                )}
+                                {order.status === 'confirmed' && (
+                                  <>
+                                    <button onClick={() => handleUpdateOrderStatus(order._id, 'preparing')} className="flex-1 sm:flex-none bg-purple-600 text-white px-3 py-2 rounded-lg hover:bg-purple-700 text-sm min-w-[100px]">Preparing</button>
+                                    <button onClick={() => { setSelectedOrderForRider(order); setShowRiderAssignment(true); }} className="flex-1 sm:flex-none bg-indigo-600 text-white px-3 py-2 rounded-lg hover:bg-indigo-700 text-sm min-w-[100px]">Assign Rider</button>
+                                  </>
+                                )}
+                                {order.status === 'preparing' && (
+                                  <button onClick={() => handleUpdateOrderStatus(order._id, 'ready')} className="flex-1 sm:flex-none bg-green-600 text-white px-3 py-2 rounded-lg hover:bg-green-700 text-sm min-w-[100px]">Mark Ready</button>
+                                )}
+                                {order.status === 'ready' && !order.rider && (
+                                  <button onClick={() => { setSelectedOrderForRider(order); setShowRiderAssignment(true); }} className="flex-1 sm:flex-none bg-indigo-600 text-white px-3 py-2 rounded-lg hover:bg-indigo-700 text-sm min-w-[100px]">Assign Rider</button>
+                                )}
                               </div>
                             </div>
                           </div>
@@ -809,9 +1132,20 @@ const RestaurantDashboard = () => {
                               <div className="min-w-0 flex-1">
                                 <div className="flex justify-between items-start">
                                   <h3 className="font-semibold text-gray-900 truncate">{item.name}</h3>
-                                  <span className={`px-2 py-1 text-xs rounded flex-shrink-0 ml-2 ${item.isAvailable !== false ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
-                                    {item.isAvailable !== false ? 'Available' : 'Unavailable'}
-                                  </span>
+                                  <button
+                                    onClick={() => handleToggleAvailability(item)}
+                                    className={`flex items-center space-x-1 px-2 py-1 text-xs rounded flex-shrink-0 ml-2 ${
+                                      item.isAvailable !== false 
+                                        ? 'bg-green-100 text-green-800 hover:bg-green-200' 
+                                        : 'bg-red-100 text-red-800 hover:bg-red-200'
+                                    }`}
+                                  >
+                                    {item.isAvailable !== false ? (
+                                      <><ToggleRight className="w-3 h-3" /><span>Available</span></>
+                                    ) : (
+                                      <><ToggleLeft className="w-3 h-3" /><span>Unavailable</span></>
+                                    )}
+                                  </button>
                                 </div>
                                 <p className="text-sm text-gray-600 capitalize">{item.category}</p>
                               </div>
@@ -822,6 +1156,20 @@ const RestaurantDashboard = () => {
                               <div>
                                 <p className="text-lg font-bold text-green-600">{formatCurrency(item.price)}</p>
                                 {item.preparationTime && <p className="text-xs text-gray-500">{item.preparationTime} min prep</p>}
+                              </div>
+                              <div className="flex space-x-2">
+                                <button 
+                                  onClick={() => { setEditingProduct(item); setShowEditProduct(true); }}
+                                  className="bg-blue-600 text-white px-3 py-1 rounded text-sm hover:bg-blue-700"
+                                >
+                                  Edit
+                                </button>
+                                <button 
+                                  onClick={() => handleDeleteProduct(item._id)}
+                                  className="bg-red-600 text-white px-3 py-1 rounded text-sm hover:bg-red-700"
+                                >
+                                  Delete
+                                </button>
                               </div>
                             </div>
                           </div>
@@ -921,6 +1269,245 @@ const RestaurantDashboard = () => {
                   </button>
                 </div>
               </form>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Product Modal */}
+      {showEditProduct && editingProduct && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-lg max-w-md w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-lg font-bold text-gray-900">Edit Menu Item</h3>
+                <button onClick={() => { setShowEditProduct(false); setEditingProduct(null); }} className="text-gray-500 hover:text-gray-700">
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+              <form onSubmit={handleEditProduct} className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Product Image URL</label>
+                  <input type="url" value={editingProduct.image} onChange={(e) => setEditingProduct({...editingProduct, image: e.target.value})} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 text-sm" placeholder="https://example.com/image.jpg" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Product Name *</label>
+                  <input type="text" required value={editingProduct.name} onChange={(e) => setEditingProduct({...editingProduct, name: e.target.value})} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 text-sm" placeholder="e.g., Chicken Burger" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Price *</label>
+                  <input type="number" required value={editingProduct.price} onChange={(e) => setEditingProduct({...editingProduct, price: e.target.value})} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 text-sm" placeholder="₱ 0.00" step="0.01" min="0" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
+                  <select value={editingProduct.category} onChange={(e) => setEditingProduct({...editingProduct, category: e.target.value})} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 text-sm">
+                    <option value="main course">Main Course</option>
+                    <option value="appetizer">Appetizer</option>
+                    <option value="dessert">Dessert</option>
+                    <option value="beverage">Beverage</option>
+                    <option value="side dish">Side Dish</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Preparation Time (minutes)</label>
+                  <input type="number" value={editingProduct.preparationTime} onChange={(e) => setEditingProduct({...editingProduct, preparationTime: e.target.value})} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 text-sm" placeholder="15" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Ingredients</label>
+                  <textarea value={editingProduct.ingredients} onChange={(e) => setEditingProduct({...editingProduct, ingredients: e.target.value})} rows="2" className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 text-sm" placeholder="List main ingredients..." />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                  <textarea value={editingProduct.description} onChange={(e) => setEditingProduct({...editingProduct, description: e.target.value})} rows="2" className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 text-sm" placeholder="Describe your menu item..." />
+                </div>
+                <div className="flex items-center space-x-2">
+                  <input 
+                    type="checkbox" 
+                    id="isAvailable"
+                    checked={editingProduct.isAvailable !== false}
+                    onChange={(e) => setEditingProduct({...editingProduct, isAvailable: e.target.checked})}
+                    className="w-4 h-4 text-orange-600 border-gray-300 rounded focus:ring-orange-500"
+                  />
+                  <label htmlFor="isAvailable" className="text-sm font-medium text-gray-700">
+                    Product is available for ordering
+                  </label>
+                </div>
+                <div className="flex space-x-3 pt-4">
+                  <button type="button" onClick={() => { setShowEditProduct(false); setEditingProduct(null); }} className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 text-sm">Cancel</button>
+                  <button type="submit" disabled={loading} className="flex-1 px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 flex items-center justify-center space-x-2 disabled:opacity-50 text-sm">
+                    <Save className="w-4 h-4" />
+                    <span>{loading ? 'Updating...' : 'Update Item'}</span>
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Sales Reports Modal */}
+      {showReports && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6">
+              <div className="flex justify-between items-center mb-6">
+                <h3 className="text-xl font-bold text-gray-900">Sales Reports</h3>
+                <button onClick={() => setShowReports(false)} className="text-gray-500 hover:text-gray-700">
+                  <X className="w-6 h-6" />
+                </button>
+              </div>
+              
+              <div className="mb-6">
+                <label className="block text-sm font-medium text-gray-700 mb-2">Report Period</label>
+                <div className="flex flex-wrap gap-2">
+                  {['today', 'week', 'month', 'all'].map((period) => (
+                    <button
+                      key={period}
+                      onClick={() => setReportPeriod(period)}
+                      className={`px-4 py-2 rounded-lg text-sm font-medium ${
+                        reportPeriod === period
+                          ? 'bg-orange-600 text-white'
+                          : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                      }`}
+                    >
+                      {period.charAt(0).toUpperCase() + period.slice(1)}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {salesReport.totalOrders === 0 ? (
+                <div className="text-center py-8">
+                  <BarChart3 className="mx-auto text-gray-300 mb-4 w-12 h-12" />
+                  <p className="text-gray-500">No sales data available for the selected period</p>
+                  <p className="text-sm text-gray-400 mt-2">Complete some orders to generate reports</p>
+                </div>
+              ) : (
+                <div className="space-y-6">
+                  {/* Summary Cards */}
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                      <h4 className="font-semibold text-blue-900 mb-2">Total Revenue</h4>
+                      <p className="text-2xl font-bold text-blue-900">{formatCurrency(salesReport.totalRevenue)}</p>
+                      <p className="text-sm text-blue-700">{salesReport.startDate} - {salesReport.endDate}</p>
+                    </div>
+                    <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                      <h4 className="font-semibold text-green-900 mb-2">Total Orders</h4>
+                      <p className="text-2xl font-bold text-green-900">{salesReport.totalOrders}</p>
+                      <p className="text-sm text-green-700">Completed orders</p>
+                    </div>
+                    <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
+                      <h4 className="font-semibold text-purple-900 mb-2">Average Order Value</h4>
+                      <p className="text-2xl font-bold text-purple-900">{formatCurrency(salesReport.averageOrderValue)}</p>
+                      <p className="text-sm text-purple-700">Per order</p>
+                    </div>
+                  </div>
+
+                  {/* Category Breakdown */}
+                  <div>
+                    <h4 className="font-semibold text-gray-900 mb-4">Category Performance</h4>
+                    <div className="space-y-3">
+                      {Object.entries(salesReport.categoryBreakdown).map(([category, data]) => (
+                        <div key={category} className="flex justify-between items-center border-b pb-2">
+                          <span className="font-medium text-gray-700 capitalize">{category}</span>
+                          <div className="text-right">
+                            <p className="text-green-600 font-semibold">{formatCurrency(data.revenue)}</p>
+                            <p className="text-xs text-gray-500">{data.orders} orders</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Recent Orders in Report */}
+                  <div>
+                    <h4 className="font-semibold text-gray-900 mb-4">Recent Orders ({salesReport.orders.length})</h4>
+                    <div className="space-y-2 max-h-60 overflow-y-auto">
+                      {salesReport.orders.slice(0, 10).map((order) => (
+                        <div key={order._id} className="flex justify-between items-center border-b pb-2 text-sm">
+                          <div>
+                            <p className="font-medium">#{order.orderId || order._id}</p>
+                            <p className="text-gray-600 text-xs">{formatDate(order.createdAt)}</p>
+                          </div>
+                          <span className="text-green-600 font-semibold">{formatCurrency(order.total || order.totalAmount)}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Export Button */}
+                  <div className="flex justify-end pt-4">
+                    <button
+                      onClick={() => exportReportToCSV(salesReport)}
+                      className="flex items-center space-x-2 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 text-sm"
+                    >
+                      <Download className="w-4 h-4" />
+                      <span>Export as CSV</span>
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Rider Assignment Modal */}
+      {showRiderAssignment && selectedOrderForRider && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-lg max-w-md w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-lg font-bold text-gray-900">Assign Rider</h3>
+                <button onClick={() => { setShowRiderAssignment(false); setSelectedOrderForRider(null); }} className="text-gray-500 hover:text-gray-700">
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+              
+              <div className="mb-4">
+                <p className="text-sm text-gray-600">Order: #{selectedOrderForRider.orderId || selectedOrderForRider._id}</p>
+                <p className="text-sm text-gray-600">Customer: {selectedOrderForRider.user?.name || selectedOrderForRider.customerId?.name || 'Customer'}</p>
+                <p className="text-sm text-gray-600">Address: {selectedOrderForRider.deliveryAddress || 'No address'}</p>
+              </div>
+
+              <div className="space-y-3">
+                <h4 className="font-semibold text-gray-900">Available Riders</h4>
+                {availableRiders.length === 0 ? (
+                  <p className="text-gray-500 text-sm">No riders available at the moment</p>
+                ) : (
+                  availableRiders.map((rider) => (
+                    <div key={rider._id} className="border rounded-lg p-3 hover:shadow-md transition-shadow">
+                      <div className="flex justify-between items-center">
+                        <div>
+                          <p className="font-medium text-gray-900">{rider.name}</p>
+                          <p className="text-sm text-gray-600">{rider.phone}</p>
+                          <span className={`text-xs px-2 py-1 rounded-full ${
+                            rider.status === 'available' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
+                          }`}>
+                            {rider.status}
+                          </span>
+                        </div>
+                        <button
+                          onClick={() => handleAssignRider(selectedOrderForRider._id, rider._id)}
+                          disabled={rider.status !== 'available'}
+                          className="bg-orange-600 text-white px-3 py-2 rounded-lg hover:bg-orange-700 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+                        >
+                          Assign
+                        </button>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+
+              <div className="flex space-x-3 pt-4">
+                <button 
+                  onClick={() => { setShowRiderAssignment(false); setSelectedOrderForRider(null); }} 
+                  className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 text-sm"
+                >
+                  Cancel
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -1199,12 +1786,15 @@ const RestaurantDashboard = () => {
                     <p><strong>Order ID:</strong> {selectedOrder.orderId || selectedOrder._id}</p>
                     <div className="flex items-center">
                       <strong className="mr-2">Status:</strong>
-                      <span className={`px-3 py-1 text-xs rounded-full ${selectedOrder.status === 'delivered' || selectedOrder.status === 'completed' ? 'bg-green-100 text-green-800' : selectedOrder.status === 'pending' ? 'bg-yellow-100 text-yellow-800' : selectedOrder.status === 'cancelled' ? 'bg-red-100 text-red-800' : 'bg-blue-100 text-blue-800'}`}>
+                      <span className={`px-3 py-1 text-xs rounded-full ${selectedOrder.status === 'delivered' || selectedOrder.status === 'completed' ? 'bg-green-100 text-green-800' : selectedOrder.status === 'pending' ? 'bg-yellow-100 text-yellow-800' : selectedOrder.status === 'cancelled' || selectedOrder.status === 'rejected' ? 'bg-red-100 text-red-800' : 'bg-blue-100 text-blue-800'}`}>
                         {selectedOrder.status}
                       </span>
                     </div>
                     <p><strong>Total Amount:</strong> {formatCurrency(selectedOrder.total || selectedOrder.totalAmount)}</p>
                     <p><strong>Order Date:</strong> {formatDate(selectedOrder.createdAt)}</p>
+                    {selectedOrder.rider && (
+                      <p><strong>Assigned Rider:</strong> {selectedOrder.rider.name} ({selectedOrder.rider.phone})</p>
+                    )}
                   </div>
                 </div>
                 <div>
@@ -1237,18 +1827,33 @@ const RestaurantDashboard = () => {
                 )}
                 <div className="flex flex-col sm:flex-row gap-3 pt-4">
                   {selectedOrder.status === 'pending' && (
-                    <button onClick={() => { handleUpdateOrderStatus(selectedOrder._id, 'confirmed'); setShowOrderDetails(false); }} className="flex-1 bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 text-sm">
-                      Accept Order
-                    </button>
+                    <>
+                      <button onClick={() => { handleUpdateOrderStatus(selectedOrder._id, 'confirmed'); setShowOrderDetails(false); }} className="flex-1 bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 text-sm">
+                        Accept Order
+                      </button>
+                      <button onClick={() => { handleRejectOrder(selectedOrder._id); setShowOrderDetails(false); }} className="flex-1 bg-red-600 text-white py-3 rounded-lg hover:bg-red-700 text-sm">
+                        Reject Order
+                      </button>
+                    </>
                   )}
                   {selectedOrder.status === 'confirmed' && (
-                    <button onClick={() => { handleUpdateOrderStatus(selectedOrder._id, 'preparing'); setShowOrderDetails(false); }} className="flex-1 bg-purple-600 text-white py-3 rounded-lg hover:bg-purple-700 text-sm">
-                      Start Preparing
-                    </button>
+                    <>
+                      <button onClick={() => { handleUpdateOrderStatus(selectedOrder._id, 'preparing'); setShowOrderDetails(false); }} className="flex-1 bg-purple-600 text-white py-3 rounded-lg hover:bg-purple-700 text-sm">
+                        Start Preparing
+                      </button>
+                      <button onClick={() => { setSelectedOrderForRider(selectedOrder); setShowRiderAssignment(true); setShowOrderDetails(false); }} className="flex-1 bg-indigo-600 text-white py-3 rounded-lg hover:bg-indigo-700 text-sm">
+                        Assign Rider
+                      </button>
+                    </>
                   )}
                   {selectedOrder.status === 'preparing' && (
                     <button onClick={() => { handleUpdateOrderStatus(selectedOrder._id, 'ready'); setShowOrderDetails(false); }} className="flex-1 bg-green-600 text-white py-3 rounded-lg hover:bg-green-700 text-sm">
                       Mark Ready
+                    </button>
+                  )}
+                  {selectedOrder.status === 'ready' && !selectedOrder.rider && (
+                    <button onClick={() => { setSelectedOrderForRider(selectedOrder); setShowRiderAssignment(true); setShowOrderDetails(false); }} className="flex-1 bg-indigo-600 text-white py-3 rounded-lg hover:bg-indigo-700 text-sm">
+                      Assign Rider
                     </button>
                   )}
                   {(selectedOrder.user?.phone || selectedOrder.customerId?.phone) && (
