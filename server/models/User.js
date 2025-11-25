@@ -2,74 +2,59 @@ const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
 
 const userSchema = new mongoose.Schema({
-  name: { 
-    type: String, 
-    required: [true, 'Name is required'] 
-  },
-  email: { 
-    type: String, 
+  name: { type: String, required: [true, 'Name is required'] },
+  email: {
+    type: String,
     required: [true, 'Email is required'],
-    unique: true 
+    unique: true,
+    lowercase: true,
+    trim: true
   },
-  password: { 
-    type: String, 
-    required: [true, 'Password is required'] 
+  password: { type: String, required: [true, 'Password is required'], minlength: 6 },
+  phone: { type: String, required: [true, 'Phone is required'], trim: true },
+  address: { type: String, required: [true, 'Address is required'], trim: true },
+  role: {
+    type: String,
+    enum: ['customer', 'restaurant', 'rider', 'admin'],
+    default: 'customer'
   },
-  phone: { 
-    type: String, 
-    required: [true, 'Phone is required'] 
-  },
-  address: { 
-    type: String, 
-    required: [true, 'Address is required'] 
-  },
-  role: { 
-    type: String, 
-    enum: ['customer', 'restaurant', 'rider', 'admin'], 
-    default: 'customer' 
-  },
-  isApproved: { 
-    type: Boolean, 
-    default: function() {
-      // ✅ CUSTOMERS AUTO-APPROVED, RESTAURANT/RIDER NEED APPROVAL
+  isApproved: {
+    type: Boolean,
+    default: function () {
+      /* auto-approve customer & admin only */
       return this.role === 'customer' || this.role === 'admin';
     }
   },
-  isActive: { 
-    type: Boolean, 
-    default: true 
+  isActive: { type: Boolean, default: true },
+  vehicleType: {
+    type: String,
+    enum: ['motorcycle', 'bicycle', 'car', ''],
+    default: ''
   },
-  vehicleType: { 
-    type: String, 
-    enum: ['motorcycle', 'bicycle', 'car'],
-    default: 'motorcycle' 
-  },
-  licenseNumber: { 
-    type: String, 
-    default: '' 
-  },
-  createdAt: { 
-    type: Date, 
-    default: Date.now 
-  }
+  licenseNumber: { type: String, default: '', trim: true },
+  createdAt: { type: Date, default: Date.now }
 });
 
-// Hash password before saving
-userSchema.pre('save', async function(next) {
+/* ---------- hooks ---------- */
+userSchema.pre('save', async function (next) {
   if (!this.isModified('password')) return next();
-  
   try {
-    const salt = await bcrypt.genSalt(10);
+    const salt = await bcrypt.genSalt(12);
     this.password = await bcrypt.hash(this.password, salt);
-    next();
-  } catch (error) {
-    next(error);
+    return next();
+  } catch (err) {
+    return next(err);
   }
 });
 
-// Compare password method
-userSchema.methods.comparePassword = async function(candidatePassword) {
-  return await bcrypt.compare(candidatePassword, this.password);
+/* ---------- instance methods ---------- */
+userSchema.methods.comparePassword = async function (candidatePassword) {
+  return bcrypt.compare(candidatePassword, this.password);
+};
+
+/* ---------- static helpers ---------- */
+userSchema.statics.findByEmail = function (email) {
+  return this.findOne({ email: email.toLowerCase().trim() });
 };
 
 module.exports = mongoose.model('User', userSchema);
