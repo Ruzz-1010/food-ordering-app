@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { 
     Search, MapPin, Clock, Star, 
-    ShoppingCart, Filter, Store, Bike, Navigation,
+    ShoppingCart, Store, Bike, Navigation,
     Facebook, Twitter, Instagram, Youtube,
     Plus, Minus, X, Package, User, History,
     Phone, Mail, Map, Home, Settings, LogOut,
@@ -459,7 +459,7 @@ const LocationMap = ({ onLocationSelect, initialAddress = '', showCurrentLocatio
                         value={address}
                         onChange={(e) => setAddress(e.target.value)}
                         onKeyPress={handleKeyPress}
-                        className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-800 text-sm"
+                        className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-800 focus:border-red-800 text-sm"
                         placeholder="Enter your full address"
                         disabled={loading}
                     />
@@ -2857,16 +2857,10 @@ const CustomerDashboard = () => {
                                         className="w-full pl-10 pr-4 py-2 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-800 focus:border-red-800 text-sm"
                                     />
                                 </div>
-                                <div className="flex gap-2">
-                                    <button className="flex-1 flex items-center justify-center space-x-1 bg-red-800 text-white px-4 py-2 rounded-lg hover:bg-red-900 transition-colors text-sm font-semibold">
-                                        <Search size={14} />
-                                        <span>SEARCH</span>
-                                    </button>
-                                    <button className="flex-1 flex items-center justify-center space-x-1 bg-white border border-gray-300 px-4 py-2 rounded-lg hover:border-red-800 transition-colors text-sm font-semibold">
-                                        <Filter size={14} />
-                                        <span>FILTER</span>
-                                    </button>
-                                </div>
+                                <button className="flex items-center justify-center space-x-1 bg-red-800 text-white px-4 py-2 rounded-lg hover:bg-red-900 transition-colors text-sm font-semibold">
+                                    <Search size={14} />
+                                    <span>SEARCH</span>
+                                </button>
                             </div>
                         </div>
                     </div>
