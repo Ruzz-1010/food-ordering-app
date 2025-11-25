@@ -21,7 +21,44 @@ const getAuthHeaders = () => {
         ...(token && { 'Authorization': `Bearer ${token}` })
     };
 };
-
+// Image compression function for Base64
+const compressImage = (file, maxWidth = 800, quality = 0.7) => {
+    return new Promise((resolve) => {
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      const img = new Image();
+      
+      img.onload = () => {
+        // Calculate new dimensions
+        let width = img.width;
+        let height = img.height;
+        
+        if (width > maxWidth) {
+          height = (height * maxWidth) / width;
+          width = maxWidth;
+        }
+        
+        canvas.width = width;
+        canvas.height = height;
+        
+        // Draw and compress
+        ctx.drawImage(img, 0, 0, width, height);
+        canvas.toBlob(resolve, 'image/jpeg', quality);
+      };
+      
+      img.src = URL.createObjectURL(file);
+    });
+  };
+  
+  // Convert to Base64
+  const convertToBase64 = (file) => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = () => resolve(reader.result);
+      reader.onerror = error => reject(error);
+    });
+  };
 // Cart Hook for State Management
 const useCart = () => {
     const [cart, setCart] = useState([]);
@@ -1371,6 +1408,7 @@ const RiderRegisterForm = ({ onRegister, onSwitchToLogin, onSwitchToCustomer, on
         return requirements.every(req => req);
     };
 
+    // ✅ UPDATED HANDLE SUBMIT WITH BASE64
     const handleSubmit = async (e) => {
         e.preventDefault();
         setError('');
@@ -1385,17 +1423,29 @@ const RiderRegisterForm = ({ onRegister, onSwitchToLogin, onSwitchToCustomer, on
             return;
         }
         
-        console.log('🚴 RIDER REGISTRATION DATA:', formData);
-        
         try {
-            // Create FormData for file upload
-            const submitData = new FormData();
-            Object.keys(formData).forEach(key => {
-                submitData.append(key, formData[key]);
+            console.log('🔄 Compressing license photo...');
+            
+            // Step 1: Compress image
+            const compressedBlob = await compressImage(licenseFile, 800, 0.7);
+            const compressedFile = new File([compressedBlob], 'license.jpg', { 
+                type: 'image/jpeg' 
             });
-            submitData.append('licensePhoto', licenseFile);
-
-            const result = await onRegister(submitData);
+            
+            // Step 2: Convert to Base64
+            const licenseBase64 = await convertToBase64(compressedFile);
+            
+            console.log('📏 Compressed image size:', licenseBase64.length, 'characters');
+            
+            // Step 3: Prepare registration data (JSON, not FormData)
+            const registrationData = {
+                ...formData,
+                licensePhoto: licenseBase64  // Send as Base64 string
+            };
+            
+            console.log('🚴 RIDER REGISTRATION DATA:', registrationData);
+            
+            const result = await onRegister(registrationData);
             console.log('🚴 REGISTRATION RESULT:', result);
             
             if (!result.success) {
@@ -1405,10 +1455,11 @@ const RiderRegisterForm = ({ onRegister, onSwitchToLogin, onSwitchToCustomer, on
             }
         } catch (error) {
             console.error('🚴 Registration error:', error);
-            setError('Registration failed. Please try again.');
+            setError('Image processing failed. Please try again.');
         }
     };
 
+    // ... KEEP THE REST OF THE COMPONENT THE SAME ...
     const handleChange = (e) => {
         const { name, value } = e.target;
         setFormData({ ...formData, [name]: value });
@@ -1444,6 +1495,7 @@ const RiderRegisterForm = ({ onRegister, onSwitchToLogin, onSwitchToCustomer, on
                 )}
 
                 <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
+                    {/* KEEP ALL THE FORM FIELDS EXACTLY THE SAME */}
                     <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">Full Name *</label>
                         <input

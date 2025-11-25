@@ -118,7 +118,58 @@ const RiderDashboard = () => {
     }
   };
 
-  // Fetch rider earnings
+  // Calculate earnings from completed orders
+  const calculateEarnings = () => {
+    const completedOrders = myDeliveries.filter(order => 
+      order.status === 'delivered' || order.status === 'completed'
+    );
+    
+    console.log('💰 Calculating earnings from completed orders:', completedOrders);
+    
+    const deliveryFee = 35; // Fixed delivery fee per order
+    
+    // Get current date for calculations
+    const now = new Date();
+    
+    // Today's earnings (orders completed today)
+    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const todayEarnings = completedOrders.filter(order => {
+      const orderDate = new Date(order.updatedAt || order.deliveredAt || order.createdAt);
+      return orderDate >= todayStart;
+    }).length * deliveryFee;
+
+    // Weekly earnings (last 7 days)
+    const oneWeekAgo = new Date(now);
+    oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+    const weeklyEarnings = completedOrders.filter(order => {
+      const orderDate = new Date(order.updatedAt || order.deliveredAt || order.createdAt);
+      return orderDate >= oneWeekAgo;
+    }).length * deliveryFee;
+
+    // Monthly earnings (last 30 days)
+    const oneMonthAgo = new Date(now);
+    oneMonthAgo.setDate(oneMonthAgo.getDate() - 30);
+    const monthlyEarnings = completedOrders.filter(order => {
+      const orderDate = new Date(order.updatedAt || order.deliveredAt || order.createdAt);
+      return orderDate >= oneMonthAgo;
+    }).length * deliveryFee;
+
+    // Total earnings (all completed orders)
+    const totalEarnings = completedOrders.length * deliveryFee;
+
+    const earningsData = {
+      today: todayEarnings,
+      weekly: weeklyEarnings,
+      monthly: monthlyEarnings,
+      total: totalEarnings,
+      completedDeliveries: completedOrders.length
+    };
+
+    console.log('📈 Final earnings calculation:', earningsData);
+    setEarnings(earningsData);
+  };
+
+  // Fetch earnings data
   const fetchEarnings = async () => {
     try {
       const res = await fetch(`${API_URL}/riders/earnings`, {
@@ -128,61 +179,28 @@ const RiderDashboard = () => {
         }
       });
       
-      const data = await res.json();
-      console.log('💰 Earnings data:', data);
-      
-      if (data.success) {
-        setEarnings(data.earnings || {
-          today: 0,
-          weekly: 0,
-          monthly: 0,
-          total: 0,
-          completedDeliveries: 0
-        });
+      if (res.ok) {
+        const data = await res.json();
+        console.log('💰 Earnings data from API:', data);
+        
+        if (data.success) {
+          setEarnings(data.earnings || {
+            today: 0,
+            weekly: 0,
+            monthly: 0,
+            total: 0,
+            completedDeliveries: 0
+          });
+          return;
+        }
       }
     } catch (error) {
-      console.error('Error fetching earnings:', error);
-      // Calculate earnings locally if API fails
-      calculateLocalEarnings();
+      console.error('Error fetching earnings from API:', error);
     }
-  };
-
-  // Calculate earnings locally from myDeliveries
-  const calculateLocalEarnings = () => {
-    const completedOrders = myDeliveries.filter(order => 
-      order.status === 'delivered'
-    );
     
-    const deliveryFee = 35; // Fixed delivery fee
-    const totalEarnings = completedOrders.length * deliveryFee;
-    
-    // Calculate today's earnings (orders delivered today)
-    const today = new Date().toDateString();
-    const todayEarnings = completedOrders.filter(order => 
-      new Date(order.updatedAt || order.createdAt).toDateString() === today
-    ).length * deliveryFee;
-
-    // Calculate weekly earnings (last 7 days)
-    const oneWeekAgo = new Date();
-    oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
-    const weeklyEarnings = completedOrders.filter(order => 
-      new Date(order.updatedAt || order.createdAt) >= oneWeekAgo
-    ).length * deliveryFee;
-
-    // Calculate monthly earnings (last 30 days)
-    const oneMonthAgo = new Date();
-    oneMonthAgo.setDate(oneMonthAgo.getDate() - 30);
-    const monthlyEarnings = completedOrders.filter(order => 
-      new Date(order.updatedAt || order.createdAt) >= oneMonthAgo
-    ).length * deliveryFee;
-
-    setEarnings({
-      today: todayEarnings,
-      weekly: weeklyEarnings,
-      monthly: monthlyEarnings,
-      total: totalEarnings,
-      completedDeliveries: completedOrders.length
-    });
+    // Fallback to local calculation
+    console.log('🔄 Using local earnings calculation');
+    calculateEarnings();
   };
 
   const acceptOrder = async (orderId) => {
@@ -209,7 +227,7 @@ const RiderDashboard = () => {
         alert('✅ Order assigned to you!');
         await fetchAvailable();
         await fetchMyDeliveries();
-        await fetchEarnings();
+        calculateEarnings(); // Update earnings immediately
       } else {
         alert(`❌ Failed: ${data.message}`);
       }
@@ -236,7 +254,7 @@ const RiderDashboard = () => {
       if (res.ok && data.success) {
         alert(`✅ Status updated to ${status}`);
         await fetchMyDeliveries();
-        await fetchEarnings(); // Refresh earnings after delivery completion
+        calculateEarnings(); // Update earnings immediately after status change
       } else {
         alert(`❌ Failed: ${data.message || 'Unknown error'}`);
       }
@@ -250,7 +268,8 @@ const RiderDashboard = () => {
   const loadData = async () => {
     setLoading(true);
     try {
-      await Promise.all([fetchAvailable(), fetchMyDeliveries(), fetchEarnings()]);
+      await Promise.all([fetchAvailable(), fetchMyDeliveries()]);
+      calculateEarnings(); // Calculate earnings after loading deliveries
     } catch (error) {
       console.error('❌ Error loading data:', error);
     } finally {
@@ -258,7 +277,7 @@ const RiderDashboard = () => {
     }
   };
 
-  // Load on mount
+  // Load on mount and when myDeliveries changes
   useEffect(() => {
     if (user && user.role === 'rider') {
       getCurrentLocation();
@@ -266,10 +285,17 @@ const RiderDashboard = () => {
     }
   }, [user]);
 
+  // Recalculate earnings when myDeliveries changes
+  useEffect(() => {
+    if (myDeliveries.length > 0) {
+      calculateEarnings();
+    }
+  }, [myDeliveries]);
+
   // Format currency
   const formatCurrency = (amount) => {
     if (!amount && amount !== 0) return '₱0';
-    return `₱${parseFloat(amount).toLocaleString('en-PH', { minimumFractionDigits: 2 })}`;
+    return `₱${parseFloat(amount).toFixed(2)}`;
   };
 
   // Format date
@@ -581,7 +607,7 @@ const RiderDashboard = () => {
                 <h1 className="text-lg sm:text-xl font-bold text-gray-900 truncate">Rider Dashboard</h1>
                 <p className="text-xs sm:text-sm text-gray-500 truncate">{user.name} • {user.email}</p>
                 <p className="text-xs text-gray-400 truncate">
-                  Available: {stats.availableOrders} | My Deliveries: {stats.myDeliveries}
+                  Available: {stats.availableOrders} | My Deliveries: {stats.myDeliveries} | Earnings: {formatCurrency(earnings.total)}
                 </p>
               </div>
             </div>
@@ -1083,7 +1109,7 @@ const RiderDashboard = () => {
                     </div>
                     <TrendingUp className="text-green-600 w-8 h-8" />
                   </div>
-                  <p className="text-green-700 text-sm mt-2">{earnings.completedDeliveries} deliveries today</p>
+                  <p className="text-green-700 text-sm mt-2">{Math.round(earnings.today / 35)} deliveries today</p>
                 </div>
 
                 <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
@@ -1094,7 +1120,7 @@ const RiderDashboard = () => {
                     </div>
                     <CreditCard className="text-blue-600 w-8 h-8" />
                   </div>
-                  <p className="text-blue-700 text-sm mt-2">Weekly earnings</p>
+                  <p className="text-blue-700 text-sm mt-2">{Math.round(earnings.weekly / 35)} deliveries this week</p>
                 </div>
 
                 <div className="bg-purple-50 p-4 rounded-lg border border-purple-200">
@@ -1105,7 +1131,7 @@ const RiderDashboard = () => {
                     </div>
                     <Wallet className="text-purple-600 w-8 h-8" />
                   </div>
-                  <p className="text-purple-700 text-sm mt-2">Monthly earnings</p>
+                  <p className="text-purple-700 text-sm mt-2">{Math.round(earnings.monthly / 35)} deliveries this month</p>
                 </div>
 
                 <div className="bg-orange-50 p-4 rounded-lg border border-orange-200">
@@ -1116,7 +1142,7 @@ const RiderDashboard = () => {
                     </div>
                     <DollarSign className="text-orange-600 w-8 h-8" />
                   </div>
-                  <p className="text-orange-700 text-sm mt-2">Total earnings</p>
+                  <p className="text-orange-700 text-sm mt-2">{earnings.completedDeliveries} total deliveries</p>
                 </div>
               </div>
 

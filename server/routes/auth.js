@@ -2,52 +2,14 @@ const express = require('express');
 const router = express.Router();
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const multer = require('multer');
-const path = require('path');
-const fs = require('fs');
 const User = require('../models/User');
 const Restaurant = require('../models/Restaurant');
 
-// Configure multer for file uploads
-const storage = multer.diskStorage({
-  destination: function (req, file, cb) {
-    const uploadDir = 'uploads/';
-    // Create uploads directory if it doesn't exist
-    if (!fs.existsSync(uploadDir)) {
-      fs.mkdirSync(uploadDir, { recursive: true });
-    }
-    cb(null, uploadDir);
-  },
-  filename: function (req, file, cb) {
-    // Create unique filename
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    cb(null, 'license-' + uniqueSuffix + path.extname(file.originalname));
-  }
-});
-
-const fileFilter = (req, file, cb) => {
-  // Check if file is an image
-  if (file.mimetype.startsWith('image/')) {
-    cb(null, true);
-  } else {
-    cb(new Error('Only image files are allowed!'), false);
-  }
-};
-
-const upload = multer({
-  storage: storage,
-  fileFilter: fileFilter,
-  limits: {
-    fileSize: 5 * 1024 * 1024 // 5MB limit
-  }
-});
-
-// REGISTER ROUTE - WITH RESTAURANT & RIDER SUPPORT
-router.post('/register', upload.single('licensePhoto'), async (req, res) => {
+// REGISTER ROUTE - WITH RESTAURANT & RIDER SUPPORT (BASE64 VERSION)
+router.post('/register', async (req, res) => {
   try {
     console.log('📝 REGISTER REQUEST RECEIVED');
     console.log('📝 Body:', req.body);
-    console.log('📝 File:', req.file);
     
     const { 
       name, 
@@ -59,15 +21,12 @@ router.post('/register', upload.single('licensePhoto'), async (req, res) => {
       restaurantName, 
       cuisine, 
       vehicleType, 
-      licenseNumber 
+      licenseNumber,
+      licensePhoto  // ✅ Base64 string from frontend
     } = req.body;
 
     // 🚨 VALIDATE REQUIRED FIELDS
     if (!name || !email || !password) {
-      // Clean up uploaded file if validation fails
-      if (req.file) {
-        fs.unlinkSync(req.file.path);
-      }
       return res.status(400).json({ 
         success: false,
         message: 'Name, email, and password are required' 
@@ -77,9 +36,6 @@ router.post('/register', upload.single('licensePhoto'), async (req, res) => {
     // 🚨 VALIDATE EMAIL FORMAT
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
-      if (req.file) {
-        fs.unlinkSync(req.file.path);
-      }
       return res.status(400).json({
         success: false,
         message: 'Please provide a valid email address'
@@ -88,9 +44,6 @@ router.post('/register', upload.single('licensePhoto'), async (req, res) => {
 
     // 🚨 VALIDATE PASSWORD LENGTH
     if (password.length < 6) {
-      if (req.file) {
-        fs.unlinkSync(req.file.path);
-      }
       return res.status(400).json({
         success: false,
         message: 'Password must be at least 6 characters long'
@@ -100,9 +53,6 @@ router.post('/register', upload.single('licensePhoto'), async (req, res) => {
     // 🚨 VALIDATE ROLE
     const validRoles = ['customer', 'restaurant', 'rider'];
     if (!validRoles.includes(role)) {
-      if (req.file) {
-        fs.unlinkSync(req.file.path);
-      }
       return res.status(400).json({
         success: false,
         message: 'Invalid role. Must be customer, restaurant, or rider'
@@ -111,10 +61,18 @@ router.post('/register', upload.single('licensePhoto'), async (req, res) => {
 
     // 🚨 VALIDATE RIDER SPECIFIC FIELDS
     if (role === 'rider') {
-      if (!req.file) {
+      if (!licensePhoto) {
         return res.status(400).json({
           success: false,
           message: 'License photo is required for rider registration'
+        });
+      }
+      
+      // 🚨 VALIDATE BASE64 SIZE (optional)
+      if (licensePhoto.length > 500000) { // ~500KB limit
+        return res.status(400).json({
+          success: false,
+          message: 'License photo too large. Please upload a smaller image.'
         });
       }
     }
@@ -125,10 +83,6 @@ router.post('/register', upload.single('licensePhoto'), async (req, res) => {
     });
     
     if (existingUser) {
-      // Clean up uploaded file if user already exists
-      if (req.file) {
-        fs.unlinkSync(req.file.path);
-      }
       return res.status(400).json({ 
         success: false,
         message: 'User already exists with this email' 
@@ -150,10 +104,10 @@ router.post('/register', upload.single('licensePhoto'), async (req, res) => {
       userData.vehicleType = (vehicleType || 'motorcycle').trim();
       userData.licenseNumber = (licenseNumber || '').trim();
       
-      // Store license photo path
-      if (req.file) {
-        userData.licensePhoto = req.file.path;
-        console.log('📸 License photo saved at:', req.file.path);
+      // ✅ Store Base64 string directly (no file path)
+      if (licensePhoto) {
+        userData.licensePhoto = licensePhoto;
+        console.log('📸 License photo stored as Base64 (length):', licensePhoto.length);
       }
       
       console.log('🚴 Rider registration data:', userData);
@@ -161,9 +115,6 @@ router.post('/register', upload.single('licensePhoto'), async (req, res) => {
 
     // Validate restaurant-specific fields
     if (role === 'restaurant' && !restaurantName) {
-      if (req.file) {
-        fs.unlinkSync(req.file.path);
-      }
       return res.status(400).json({
         success: false,
         message: 'Restaurant name is required for restaurant registration'
@@ -231,7 +182,7 @@ router.post('/register', upload.single('licensePhoto'), async (req, res) => {
     if (role === 'rider') {
       userResponse.vehicleType = newUser.vehicleType;
       userResponse.licenseNumber = newUser.licenseNumber;
-      userResponse.licensePhoto = newUser.licensePhoto;
+      userResponse.licensePhoto = newUser.licensePhoto; // ✅ Base64 string
     }
 
     let message = 'Registration successful! 🎉';
@@ -249,11 +200,6 @@ router.post('/register', upload.single('licensePhoto'), async (req, res) => {
 
   } catch (error) {
     console.error('❌ Registration error:', error);
-    
-    // Clean up uploaded file if registration fails
-    if (req.file) {
-      fs.unlinkSync(req.file.path);
-    }
     
     // Handle specific Mongoose errors
     if (error.name === 'ValidationError') {
@@ -343,7 +289,7 @@ router.post('/login', async (req, res) => {
     if (user.role === 'rider') {
       userResponse.vehicleType = user.vehicleType;
       userResponse.licenseNumber = user.licenseNumber;
-      userResponse.licensePhoto = user.licensePhoto;
+      userResponse.licensePhoto = user.licensePhoto; // ✅ Base64 string
     }
 
     res.json({
@@ -398,7 +344,7 @@ router.get('/me', async (req, res) => {
     if (user.role === 'rider') {
       userResponse.vehicleType = user.vehicleType;
       userResponse.licenseNumber = user.licenseNumber;
-      userResponse.licensePhoto = user.licensePhoto;
+      userResponse.licensePhoto = user.licensePhoto; // ✅ Base64 string
     }
 
     res.json({
@@ -553,11 +499,7 @@ router.delete('/users/:id', async (req, res) => {
       });
     }
 
-    // Delete license photo file if exists
-    if (user.licensePhoto && fs.existsSync(user.licensePhoto)) {
-      fs.unlinkSync(user.licensePhoto);
-    }
-
+    // ✅ No need to delete files since we're using Base64 strings
     // Delete user from database
     await User.findByIdAndDelete(req.params.id);
 
@@ -638,7 +580,7 @@ router.put('/profile', async (req, res) => {
     if (user.role === 'rider') {
       userResponse.vehicleType = user.vehicleType;
       userResponse.licenseNumber = user.licenseNumber;
-      userResponse.licensePhoto = user.licensePhoto;
+      userResponse.licensePhoto = user.licensePhoto; // ✅ Base64 string
     }
 
     res.json({
@@ -783,7 +725,7 @@ router.post('/sync-restaurant-approval', async (req, res) => {
   }
 });
 
-// GET LICENSE PHOTO (PROTECTED)
+// GET LICENSE PHOTO (PROTECTED) - NOW RETURNS BASE64 STRING
 router.get('/license-photo/:userId', async (req, res) => {
   try {
     const token = req.header('Authorization')?.replace('Bearer ', '');
@@ -828,16 +770,11 @@ router.get('/license-photo/:userId', async (req, res) => {
       });
     }
 
-    // Check if file exists
-    if (!fs.existsSync(targetUser.licensePhoto)) {
-      return res.status(404).json({
-        success: false,
-        message: 'License photo file not found'
-      });
-    }
-
-    // Send the file
-    res.sendFile(path.resolve(targetUser.licensePhoto));
+    // ✅ Return Base64 string directly
+    res.json({
+      success: true,
+      licensePhoto: targetUser.licensePhoto
+    });
 
   } catch (error) {
     console.error('❌ Get license photo error:', error);
@@ -868,7 +805,7 @@ router.get('/debug-all', async (req, res) => {
         address: u.address,
         vehicleType: u.vehicleType,
         licenseNumber: u.licenseNumber,
-        licensePhoto: u.licensePhoto,
+        licensePhoto: u.licensePhoto ? `Base64 string (${u.licensePhoto.length} chars)` : null,
         createdAt: u.createdAt,
         updatedAt: u.updatedAt
       })),
