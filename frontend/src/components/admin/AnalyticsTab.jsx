@@ -77,39 +77,71 @@ const AnalyticsTab = () => {
 
       console.log('🚀 Starting analytics data fetch...');
 
-      // Try different endpoint variations
+      // Fetch all data
       let ordersData = [];
       let usersData = [];
       let restaurantsData = [];
 
       try {
-        // Try multiple possible endpoints for orders
-        ordersData = await fetchData('/orders') || 
-                    await fetchData('/admin/orders') || 
-                    [];
+        // Try multiple endpoints for orders
+        const endpoints = ['/orders', '/admin/orders'];
+        for (const endpoint of endpoints) {
+          try {
+            const data = await fetchData(endpoint);
+            if (Array.isArray(data) && data.length > 0) {
+              ordersData = data;
+              console.log(`✅ Found ${data.length} orders from ${endpoint}`);
+              break;
+            }
+          } catch (e) {
+            console.log(`❌ ${endpoint} failed:`, e.message);
+          }
+        }
+        
+        if (ordersData.length === 0) {
+          console.log('⚠️ No orders found from any endpoint');
+        }
+
       } catch (orderError) {
         console.error('Failed to fetch orders:', orderError);
-        // Continue with empty orders data
       }
 
       try {
-        // Try multiple possible endpoints for users
-        usersData = await fetchData('/users') || 
-                   await fetchData('/admin/users') || 
-                   [];
+        // Try multiple endpoints for users
+        const endpoints = ['/users', '/admin/users'];
+        for (const endpoint of endpoints) {
+          try {
+            const data = await fetchData(endpoint);
+            if (Array.isArray(data) && data.length > 0) {
+              usersData = data;
+              console.log(`✅ Found ${data.length} users from ${endpoint}`);
+              break;
+            }
+          } catch (e) {
+            console.log(`❌ ${endpoint} failed:`, e.message);
+          }
+        }
       } catch (userError) {
         console.error('Failed to fetch users:', userError);
-        // Continue with empty users data
       }
 
       try {
-        // Try multiple possible endpoints for restaurants
-        restaurantsData = await fetchData('/restaurants') || 
-                        await fetchData('/admin/restaurants') || 
-                        [];
+        // Try multiple endpoints for restaurants
+        const endpoints = ['/restaurants', '/admin/restaurants'];
+        for (const endpoint of endpoints) {
+          try {
+            const data = await fetchData(endpoint);
+            if (Array.isArray(data) && data.length > 0) {
+              restaurantsData = data;
+              console.log(`✅ Found ${data.length} restaurants from ${endpoint}`);
+              break;
+            }
+          } catch (e) {
+            console.log(`❌ ${endpoint} failed:`, e.message);
+          }
+        }
       } catch (restaurantError) {
         console.error('Failed to fetch restaurants:', restaurantError);
-        // Continue with empty restaurants data
       }
 
       console.log('📊 Raw data received:', {
@@ -118,31 +150,37 @@ const AnalyticsTab = () => {
         restaurants: restaurantsData
       });
 
-      // Process orders data
-      const deliveredOrders = Array.isArray(ordersData) ? ordersData.filter(order => 
-        order.status === 'delivered' || order.status === 'completed'
-      ) : [];
+      // 🛠️ FIX: Process orders data properly
+      const deliveredOrders = Array.isArray(ordersData) ? ordersData.filter(order => {
+        const status = order.status?.toLowerCase();
+        return status === 'delivered' || status === 'completed';
+      }) : [];
 
-      console.log('✅ Delivered orders:', deliveredOrders);
+      console.log('✅ Delivered/Completed orders:', deliveredOrders.length);
+      console.log('📋 All orders statuses:', ordersData.map(o => ({ 
+        id: o._id, 
+        status: o.status, 
+        amount: o.totalAmount || o.total 
+      })));
 
-      // Calculate total revenue (including service fee)
+      // Calculate total revenue from delivered/completed orders
       const totalRevenue = deliveredOrders.reduce((total, order) => {
         const orderAmount = parseFloat(order.totalAmount || order.total || order.amount || 0);
-        const serviceFee = 10; // ₱10 service fee per order
-        return total + orderAmount + serviceFee;
+        console.log(`💰 Order ${order._id}: ${orderAmount} (status: ${order.status})`);
+        return total + orderAmount;
       }, 0);
 
       console.log('💰 Total revenue calculated:', totalRevenue);
 
       // Calculate order statistics
       const orderStats = {
-        pending: Array.isArray(ordersData) ? ordersData.filter(o => o.status === 'pending').length : 0,
-        confirmed: Array.isArray(ordersData) ? ordersData.filter(o => o.status === 'confirmed').length : 0,
-        preparing: Array.isArray(ordersData) ? ordersData.filter(o => o.status === 'preparing').length : 0,
-        ready: Array.isArray(ordersData) ? ordersData.filter(o => o.status === 'ready').length : 0,
-        out_for_delivery: Array.isArray(ordersData) ? ordersData.filter(o => o.status === 'out_for_delivery').length : 0,
+        pending: Array.isArray(ordersData) ? ordersData.filter(o => o.status?.toLowerCase() === 'pending').length : 0,
+        confirmed: Array.isArray(ordersData) ? ordersData.filter(o => o.status?.toLowerCase() === 'confirmed').length : 0,
+        preparing: Array.isArray(ordersData) ? ordersData.filter(o => o.status?.toLowerCase() === 'preparing').length : 0,
+        ready: Array.isArray(ordersData) ? ordersData.filter(o => o.status?.toLowerCase() === 'ready').length : 0,
+        out_for_delivery: Array.isArray(ordersData) ? ordersData.filter(o => o.status?.toLowerCase() === 'out_for_delivery').length : 0,
         delivered: deliveredOrders.length,
-        cancelled: Array.isArray(ordersData) ? ordersData.filter(o => o.status === 'cancelled').length : 0
+        cancelled: Array.isArray(ordersData) ? ordersData.filter(o => o.status?.toLowerCase() === 'cancelled').length : 0
       };
 
       console.log('📈 Order stats:', orderStats);
@@ -167,8 +205,7 @@ const AnalyticsTab = () => {
           
           if (order.status === 'delivered' || order.status === 'completed') {
             const orderAmount = parseFloat(order.totalAmount || order.total || order.amount || 0);
-            const serviceFee = 10;
-            restaurantOrderCount[restaurantId].revenue += orderAmount + serviceFee;
+            restaurantOrderCount[restaurantId].revenue += orderAmount;
           }
         });
       }
@@ -273,16 +310,30 @@ const AnalyticsTab = () => {
       try {
         const data = await fetchData(endpoint);
         console.log(`✅ ${endpoint}:`, Array.isArray(data) ? `${data.length} items` : 'Data received');
+        if (Array.isArray(data) && data.length > 0) {
+          console.log('Sample data:', data[0]);
+        }
       } catch (error) {
         console.log(`❌ ${endpoint}:`, error.message);
       }
     }
   };
 
-  // Call test on component mount for debugging
-  useEffect(() => {
-    testEndpoints();
-  }, []);
+  // Debug function to check order statuses
+  const debugOrders = async () => {
+    try {
+      const orders = await fetchData('/orders');
+      console.log('🔍 DEBUG - All orders:', orders);
+      console.log('🔍 DEBUG - Order statuses:', orders.map(o => ({
+        id: o._id,
+        status: o.status,
+        amount: o.totalAmount || o.total,
+        delivered: o.status === 'delivered' || o.status === 'completed'
+      })));
+    } catch (error) {
+      console.error('Debug failed:', error);
+    }
+  };
 
   if (loading) {
     return (
@@ -293,12 +344,20 @@ const AnalyticsTab = () => {
         <div className="text-center py-8">
           <div className="w-8 h-8 border-2 border-orange-300 border-t-orange-500 rounded-full animate-spin mx-auto"></div>
           <p className="text-gray-500 mt-2">Loading analytics data...</p>
-          <button 
-            onClick={testEndpoints}
-            className="mt-4 text-orange-600 hover:text-orange-800 text-sm"
-          >
-            Test API Endpoints
-          </button>
+          <div className="mt-4 space-x-2">
+            <button 
+              onClick={testEndpoints}
+              className="text-orange-600 hover:text-orange-800 text-sm px-3 py-1 border border-orange-300 rounded"
+            >
+              Test API Endpoints
+            </button>
+            <button 
+              onClick={debugOrders}
+              className="text-blue-600 hover:text-blue-800 text-sm px-3 py-1 border border-blue-300 rounded"
+            >
+              Debug Orders
+            </button>
+          </div>
         </div>
       </div>
     );
@@ -311,14 +370,22 @@ const AnalyticsTab = () => {
         <div className="flex-1">
           <h2 className="text-xl sm:text-2xl font-bold text-gray-900">Analytics & Reports</h2>
           <p className="text-gray-600 mt-1 text-sm">
-            Business insights with service fee calculation
+            Business insights and performance metrics
           </p>
-          <button 
-            onClick={testEndpoints}
-            className="mt-2 text-xs text-orange-600 hover:text-orange-800"
-          >
-            Debug: Test API Endpoints
-          </button>
+          <div className="mt-2 space-x-2">
+            <button 
+              onClick={testEndpoints}
+              className="text-xs text-orange-600 hover:text-orange-800"
+            >
+              Test API Endpoints
+            </button>
+            <button 
+              onClick={debugOrders}
+              className="text-xs text-blue-600 hover:text-blue-800"
+            >
+              Debug Orders
+            </button>
+          </div>
         </div>
         <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
           <select 
@@ -382,6 +449,9 @@ const AnalyticsTab = () => {
             <span className="font-medium">Revenue:</span> ₱{analytics.totalRevenue.toLocaleString()}
           </div>
         </div>
+        <div className="mt-2 text-center text-xs text-blue-600">
+          Delivered Orders: {analytics.orderStats.delivered} | Completion Rate: {calculateCompletionRate()}%
+        </div>
       </div>
 
       {/* Key Metrics */}
@@ -391,7 +461,7 @@ const AnalyticsTab = () => {
             <div className="flex-1">
               <p className="text-xs font-medium opacity-90">Total Revenue</p>
               <p className="text-lg font-bold mt-1">₱{analytics.totalRevenue.toLocaleString()}</p>
-              <p className="text-xs opacity-90 mt-1">Includes service fees</p>
+              <p className="text-xs opacity-90 mt-1">{analytics.orderStats.delivered} delivered orders</p>
             </div>
             <DollarSign size={20} className="opacity-90 ml-2" />
           </div>
@@ -563,12 +633,14 @@ const AnalyticsTab = () => {
         </div>
       </div>
 
-      {/* Revenue Info */}
-      <div className="mt-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
-        <h4 className="font-medium text-yellow-900 mb-2">Revenue Calculation</h4>
-        <div className="text-sm text-yellow-800">
-          <p>Includes ₱10 service fee per delivered order</p>
-          <p className="mt-1">Total Orders: {analytics.totalOrders} | Delivered: {analytics.orderStats.delivered}</p>
+      {/* Debug Information */}
+      <div className="mt-6 p-4 bg-gray-50 border border-gray-200 rounded-lg">
+        <h4 className="font-medium text-gray-900 mb-2">Debug Information</h4>
+        <div className="text-sm text-gray-600 space-y-1">
+          <p>Total Orders: {analytics.totalOrders}</p>
+          <p>Delivered Orders: {analytics.orderStats.delivered}</p>
+          <p>Total Revenue: ₱{analytics.totalRevenue}</p>
+          <p>API Status: {analytics.totalOrders > 0 ? '✅ Data Loaded' : '❌ No Data'}</p>
         </div>
       </div>
     </div>
