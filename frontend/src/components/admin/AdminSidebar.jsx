@@ -1,4 +1,4 @@
-// AdminSidebar.jsx - UPDATED FOR BETTER ALIGNMENT
+// AdminSidebar.jsx - WITH ACTUAL LOGO FROM PUBLIC FOLDER
 import React from 'react';
 import { 
   LayoutDashboard, 
@@ -25,33 +25,50 @@ const AdminSidebar = ({ activeTab, setActiveTab, isOpen, setIsOpen, onLogout }) 
 
   const handleTabClick = (tabId) => {
     setActiveTab(tabId);
+    if (window.innerWidth < 1024) {
+      setIsOpen(false);
+    }
   };
 
   return (
-    <div className="h-full bg-white border-r border-gray-200 flex flex-col shadow-lg">
-      {/* Sidebar Header */}
-      <div className="flex items-center justify-between p-6 border-b border-gray-200">
+    <div className="h-full bg-white border-r border-gray-200 flex flex-col shadow-xl">
+      {/* Sidebar Header with Logo */}
+      <div className="flex items-center justify-between p-6 border-b border-gray-200 bg-gradient-to-r from-orange-50 to-white">
         <div className="flex items-center space-x-3">
-          <div className="w-10 h-10 bg-gradient-to-r from-orange-500 to-orange-600 rounded-lg flex items-center justify-center shadow-md">
-            <Utensils size={20} className="text-white" />
+          {/* Your actual logo from public folder */}
+          <div className="w-12 h-12 rounded-xl flex items-center justify-center overflow-hidden bg-white border border-gray-200">
+            <img 
+              src="/logo.png" 
+              alt="FoodApp Logo" 
+              className="w-full h-full object-cover p-1"
+              onError={(e) => {
+                // Fallback if logo doesn't exist
+                e.target.style.display = 'none';
+                e.target.nextSibling?.style.display = 'flex';
+              }}
+            />
+            {/* Fallback logo */}
+            <div className="w-full h-full bg-gradient-to-r from-orange-500 to-orange-600 rounded-xl flex items-center justify-center text-white font-bold text-lg hidden">
+              <Utensils size={24} className="text-white" />
+            </div>
           </div>
           <div>
-            <h2 className="text-lg font-bold text-gray-900">FoodAdmin</h2>
-            <p className="text-xs text-gray-500">Management Panel</p>
+            <h2 className="text-xl font-bold text-gray-900">FoodAdmin</h2>
+            <p className="text-xs text-gray-600 font-medium">Management Panel</p>
           </div>
         </div>
         
         {/* Close button for mobile */}
         <button
           onClick={() => setIsOpen(false)}
-          className="lg:hidden p-1 hover:bg-gray-100 rounded transition-colors"
+          className="lg:hidden p-2 hover:bg-orange-100 rounded-lg transition-colors"
         >
-          <X size={20} className="text-gray-500" />
+          <X size={20} className="text-orange-600" />
         </button>
       </div>
 
       {/* Navigation Menu */}
-      <nav className="flex-1 px-4 py-6 space-y-2 overflow-y-auto">
+      <nav className="flex-1 px-4 py-6 space-y-1 overflow-y-auto">
         {menuItems.map((item) => {
           const Icon = item.icon;
           const isActive = activeTab === item.id;
@@ -63,17 +80,17 @@ const AdminSidebar = ({ activeTab, setActiveTab, isOpen, setIsOpen, onLogout }) 
               className={`
                 w-full flex items-center space-x-3 px-4 py-3 rounded-xl transition-all duration-200
                 ${isActive 
-                  ? 'bg-orange-50 border border-orange-200 text-orange-700 shadow-sm' 
-                  : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900 border border-transparent'
+                  ? 'bg-orange-500 text-white shadow-lg transform scale-[1.02]' 
+                  : 'text-gray-600 hover:bg-orange-50 hover:text-orange-700 border border-transparent'
                 }
               `}
             >
-              <Icon size={20} className={`${isActive ? 'text-orange-600' : 'text-gray-400'}`} />
+              <Icon size={20} className={`${isActive ? 'text-white' : 'text-gray-400'}`} />
               <span className="font-medium text-sm">{item.label}</span>
               
               {/* Active indicator */}
               {isActive && (
-                <div className="ml-auto w-2 h-2 bg-orange-500 rounded-full"></div>
+                <div className="ml-auto w-2 h-2 bg-white rounded-full"></div>
               )}
             </button>
           );
@@ -81,23 +98,36 @@ const AdminSidebar = ({ activeTab, setActiveTab, isOpen, setIsOpen, onLogout }) 
       </nav>
 
       {/* Sidebar Footer */}
-      <div className="p-4 border-t border-gray-200">
+      <div className="p-4 border-t border-gray-200 bg-gray-50">
         <button
           onClick={onLogout}
-          className="w-full flex items-center space-x-3 px-4 py-3 text-gray-600 hover:bg-red-50 hover:text-red-700 rounded-xl transition-all duration-200 border border-transparent hover:border-red-200"
+          className="w-full flex items-center space-x-3 px-4 py-3 text-gray-600 hover:bg-red-50 hover:text-red-700 rounded-xl transition-all duration-200 border border-transparent hover:border-red-200 mb-3"
         >
           <LogOut size={20} className="text-gray-400" />
           <span className="font-medium text-sm">Logout</span>
         </button>
         
         {/* Version Info */}
-        <div className="mt-4 px-4 py-2 bg-gray-50 rounded-lg border border-gray-200">
-          <p className="text-xs text-gray-500 text-center">
-            System v1.0.0
-          </p>
-          <div className="flex items-center justify-center space-x-1 mt-1">
-            <div className="w-1.5 h-1.5 bg-green-500 rounded-full"></div>
-            <span className="text-xs text-green-600">All Systems Operational</span>
+        <div className="px-4 py-3 bg-white rounded-lg border border-gray-200 shadow-sm">
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-xs font-medium text-gray-700">System Status</p>
+            <div className="flex items-center space-x-1">
+              <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+              <span className="text-xs text-green-600 font-medium">Live</span>
+            </div>
+          </div>
+          <div className="flex items-center justify-center space-x-2">
+            <img 
+              src="/logo.png" 
+              alt="FoodApp Logo" 
+              className="w-4 h-4"
+              onError={(e) => {
+                e.target.style.display = 'none';
+              }}
+            />
+            <p className="text-xs text-gray-500">
+              v1.0.0 • FoodAdmin System
+            </p>
           </div>
         </div>
       </div>

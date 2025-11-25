@@ -1,4 +1,4 @@
-// AdminDashboard.jsx - FIXED ALIGNMENT VERSION
+// AdminDashboard.jsx - WITH ACTUAL LOGO FROM PUBLIC FOLDER
 import React, { useState, useEffect } from 'react';
 import { Menu, X } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
@@ -86,13 +86,13 @@ const AdminDashboard = () => {
         />
       )}
 
-      {/* Sidebar */}
+      {/* Sidebar - Fixed position that doesn't affect header */}
       <div className={`
         fixed lg:static inset-y-0 left-0 z-50
         transform transition-transform duration-300 ease-in-out
         ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
-        lg:translate-x-0 lg:flex-shrink-0
-        w-64 lg:w-72
+        lg:translate-x-0
+        w-64
       `}>
         <AdminSidebar 
           activeTab={activeTab}
@@ -103,16 +103,18 @@ const AdminDashboard = () => {
         />
       </div>
 
-      {/* Main Content Area */}
-      <div className="flex-1 flex flex-col min-w-0 lg:ml-0">
-        {/* Sticky Header */}
+      {/* Main Content Area - Independent of sidebar */}
+      <div className={`flex-1 flex flex-col min-w-0 transition-all duration-300 ${
+        sidebarOpen && !isMobile ? 'lg:ml-64' : 'lg:ml-0'
+      }`}>
+        {/* Fixed Header - Doesn't move with sidebar */}
         <header className="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-30">
           <div className="flex items-center justify-between px-4 py-3 sm:px-6">
-            {/* Left Section - Menu Button and Title */}
+            {/* Left Section - Menu Button, Logo and Title */}
             <div className="flex items-center space-x-3 sm:space-x-4 flex-1 min-w-0">
               <button 
                 onClick={() => setSidebarOpen(!sidebarOpen)}
-                className="lg:hidden p-2 hover:bg-orange-50 rounded-lg transition-colors border border-gray-200"
+                className="p-2 hover:bg-orange-50 rounded-lg transition-colors border border-gray-200"
               >
                 {sidebarOpen ? (
                   <X size={20} className="text-orange-600" />
@@ -121,13 +123,35 @@ const AdminDashboard = () => {
                 )}
               </button>
               
-              <div className="min-w-0">
-                <h1 className="text-lg sm:text-xl font-bold text-gray-900 truncate">
+              {/* Logo from public folder */}
+              <div className="flex items-center space-x-3">
+                <div className="w-10 h-10 rounded-lg flex items-center justify-center overflow-hidden">
+                  <img 
+                    src="/logo.png" 
+                    alt="FoodApp Logo" 
+                    className="w-full h-full object-cover"
+                    onError={(e) => {
+                      // Fallback if logo doesn't exist
+                      e.target.style.display = 'none';
+                      e.target.nextSibling?.style.display = 'flex';
+                    }}
+                  />
+                  {/* Fallback logo */}
+                  <div className="w-full h-full bg-gradient-to-r from-orange-500 to-orange-600 rounded-lg flex items-center justify-center text-white font-bold text-sm hidden">
+                    FA
+                  </div>
+                </div>
+                <div className="hidden sm:block">
+                  <h1 className="text-lg font-bold text-gray-900">FoodAdmin</h1>
+                  <p className="text-xs text-gray-500">Management System</p>
+                </div>
+              </div>
+
+              {/* Page Title */}
+              <div className="hidden md:block border-l border-gray-300 pl-4 ml-2">
+                <h1 className="text-lg font-semibold text-gray-900">
                   {getTabTitle()}
                 </h1>
-                <p className="text-xs text-gray-500 hidden sm:block">
-                  Admin Panel • {user?.name || 'Administrator'}
-                </p>
               </div>
             </div>
 
@@ -150,17 +174,19 @@ const AdminDashboard = () => {
             </div>
           </div>
 
-          {/* Mobile User Info */}
-          <div className="sm:hidden px-4 pb-3 border-t border-gray-100 pt-3">
-            <div className="flex items-center space-x-3">
-              <div className="w-8 h-8 bg-gradient-to-r from-orange-500 to-orange-600 rounded-full flex items-center justify-center text-white font-bold text-xs">
-                {user?.name?.charAt(0)?.toUpperCase() || 'A'}
-              </div>
-              <div className="min-w-0 flex-1">
-                <p className="text-sm font-medium text-gray-900 truncate">
-                  {user?.name || 'Admin'}
-                </p>
-                <p className="text-xs text-orange-600">Administrator</p>
+          {/* Mobile Title Bar */}
+          <div className="md:hidden px-4 pb-3 border-t border-gray-100 pt-3">
+            <div className="flex items-center justify-between">
+              <h1 className="text-lg font-semibold text-gray-900">
+                {getTabTitle()}
+              </h1>
+              <div className="flex items-center space-x-2">
+                <div className="text-right">
+                  <p className="text-sm font-medium text-gray-900">
+                    {user?.name || 'Admin'}
+                  </p>
+                  <p className="text-xs text-orange-600">Administrator</p>
+                </div>
               </div>
             </div>
           </div>
@@ -176,9 +202,19 @@ const AdminDashboard = () => {
         {/* Footer */}
         <footer className="bg-white border-t border-gray-200 py-4 px-6">
           <div className="flex flex-col sm:flex-row justify-between items-center space-y-2 sm:space-y-0">
-            <p className="text-xs text-gray-500">
-              © 2024 Food Delivery Admin. All rights reserved.
-            </p>
+            <div className="flex items-center space-x-3">
+              <img 
+                src="/logo.png" 
+                alt="FoodApp Logo" 
+                className="w-6 h-6"
+                onError={(e) => {
+                  e.target.style.display = 'none';
+                }}
+              />
+              <p className="text-xs text-gray-500">
+                © 2024 Food Delivery Admin. All rights reserved.
+              </p>
+            </div>
             <div className="flex items-center space-x-4">
               <span className="text-xs text-gray-500">v1.0.0</span>
               <div className="flex items-center space-x-1">
