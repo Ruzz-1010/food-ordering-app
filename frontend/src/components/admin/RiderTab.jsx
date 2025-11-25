@@ -1,8 +1,9 @@
+// RiderTab.jsx - MODERN REDESIGN
 import React, { useState, useEffect } from 'react';
 import { 
   Bike, RefreshCw, CheckCircle, XCircle, Edit, Trash2, 
   MapPin, Phone, Mail, User, AlertCircle, ChevronDown, 
-  ChevronUp, Image, FileText, Download
+  ChevronUp, Image, FileText, Download, Search, Filter
 } from 'lucide-react';
 import { apiService } from '../../services/api';
 
@@ -13,6 +14,8 @@ const RiderTab = () => {
   const [deleteConfirm, setDeleteConfirm] = useState({ show: false, rider: null });
   const [expandedRider, setExpandedRider] = useState(null);
   const [imagePreview, setImagePreview] = useState({ show: false, imageData: '', riderName: '' });
+  const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState('all');
 
   const fetchRiders = async () => {
     try {
@@ -26,17 +29,6 @@ const RiderTab = () => {
       } else if (Array.isArray(data)) {
         ridersArray = data.filter(user => user.role === 'rider');
       }
-      
-      // 🐛 DEBUG: Check license data
-      console.log('🚴 Riders data from backend:', ridersArray);
-      ridersArray.forEach(rider => {
-        if (rider.licensePhoto) {
-          console.log(`📸 Rider ${rider.name} licensePhoto type:`, 
-            rider.licensePhoto.startsWith('data:image/') ? 'Base64' : 'URL',
-            'Length:', rider.licensePhoto.length
-          );
-        }
-      });
       
       setRiders(ridersArray);
       
@@ -53,7 +45,24 @@ const RiderTab = () => {
     fetchRiders();
   }, []);
 
-  // ✅ UPDATED: Handle both Base64 and URL images
+  // Filter riders based on search and status
+  const filteredRiders = riders.filter(rider => {
+    const matchesSearch = 
+      rider.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      rider.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      rider.phone?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      rider.licenseNumber?.toLowerCase().includes(searchTerm.toLowerCase());
+
+    const matchesStatus = statusFilter === 'all' || 
+      (statusFilter === 'approved' && rider.isApproved) ||
+      (statusFilter === 'pending' && !rider.isApproved) ||
+      (statusFilter === 'active' && rider.isActive) ||
+      (statusFilter === 'inactive' && !rider.isActive);
+
+    return matchesSearch && matchesStatus;
+  });
+
+  // Handle both Base64 and URL images
   const getLicenseImageData = (rider) => {
     // Check if it's a Base64 string (new format)
     if (rider.licensePhoto && rider.licensePhoto.startsWith('data:image/')) {
@@ -72,7 +81,7 @@ const RiderTab = () => {
     return null;
   };
 
-  // ✅ UPDATED: Download both Base64 and URL images
+  // Download both Base64 and URL images
   const downloadImage = async (imageData, imageType, riderName) => {
     try {
       let blob;
@@ -196,121 +205,146 @@ const RiderTab = () => {
 
   if (loading) {
     return (
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6">
+      <div className="bg-white rounded-xl shadow-sm border border-[#FFF0C4] p-4 sm:p-6">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
-          <h2 className="text-xl sm:text-2xl font-bold text-gray-900">Rider Management</h2>
+          <h2 className="text-xl sm:text-2xl font-bold text-[#3E0703]">Rider Management</h2>
         </div>
         <div className="text-center py-8">
-          <div className="w-8 h-8 border-2 border-gray-300 border-t-blue-500 rounded-full animate-spin mx-auto"></div>
-          <p className="text-gray-500 mt-2">Loading riders...</p>
+          <div className="w-8 h-8 border-2 border-[#FFF0C4] border-t-[#8C1007] rounded-full animate-spin mx-auto"></div>
+          <p className="text-[#660B05] mt-2">Loading riders...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6">
+    <div className="bg-white rounded-xl shadow-sm border border-[#FFF0C4] p-4 sm:p-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
-        <h2 className="text-xl sm:text-2xl font-bold text-gray-900">🚴 Rider Management</h2>
+        <h2 className="text-xl sm:text-2xl font-bold text-[#3E0703]">🚴 Rider Management</h2>
         <button
           onClick={handleRefresh}
           disabled={refreshing}
-          className="flex items-center space-x-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 w-full sm:w-auto justify-center"
+          className="flex items-center space-x-2 bg-gradient-to-r from-[#8C1007] to-[#660B05] text-white px-4 py-2 rounded-lg hover:shadow-md transition-all disabled:opacity-50 w-full sm:w-auto justify-center"
         >
           <RefreshCw size={16} className={refreshing ? 'animate-spin' : ''} />
           <span>{refreshing ? 'Refreshing...' : 'Refresh'}</span>
         </button>
       </div>
 
+      {/* Search and Filter */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+        <div className="relative">
+          <Search size={16} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+          <input
+            type="text"
+            placeholder="Search riders by name, email, phone..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#8C1007]"
+          />
+        </div>
+        <select 
+          value={statusFilter}
+          onChange={(e) => setStatusFilter(e.target.value)}
+          className="border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#8C1007]"
+        >
+          <option value="all">All Status</option>
+          <option value="approved">Approved</option>
+          <option value="pending">Pending</option>
+          <option value="active">Active</option>
+          <option value="inactive">Inactive</option>
+        </select>
+      </div>
+
       {/* Stats Summary */}
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-2 sm:gap-4 mb-6">
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+        <div className="bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-lg p-4 hover:shadow-md transition-all">
           <div className="flex items-center justify-between">
             <div className="min-w-0">
-              <p className="text-xs sm:text-sm font-medium text-blue-600 truncate">Total Riders</p>
-              <p className="text-lg sm:text-xl font-bold text-blue-800">{stats.total}</p>
+              <p className="text-xs sm:text-sm font-medium opacity-90 truncate">Total Riders</p>
+              <p className="text-lg sm:text-xl font-bold">{stats.total}</p>
             </div>
-            <Bike size={16} className="text-blue-600 flex-shrink-0 ml-2" />
+            <Bike size={16} className="opacity-90 flex-shrink-0 ml-2" />
           </div>
         </div>
         
-        <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+        <div className="bg-gradient-to-r from-green-500 to-green-600 text-white rounded-lg p-4 hover:shadow-md transition-all">
           <div className="flex items-center justify-between">
             <div className="min-w-0">
-              <p className="text-xs sm:text-sm font-medium text-green-600 truncate">Approved</p>
-              <p className="text-lg sm:text-xl font-bold text-green-800">
+              <p className="text-xs sm:text-sm font-medium opacity-90 truncate">Approved</p>
+              <p className="text-lg sm:text-xl font-bold">
                 {stats.approved}
               </p>
             </div>
-            <CheckCircle size={16} className="text-green-600 flex-shrink-0 ml-2" />
+            <CheckCircle size={16} className="opacity-90 flex-shrink-0 ml-2" />
           </div>
         </div>
         
-        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+        <div className="bg-gradient-to-r from-yellow-500 to-yellow-600 text-white rounded-lg p-4 hover:shadow-md transition-all">
           <div className="flex items-center justify-between">
             <div className="min-w-0">
-              <p className="text-xs sm:text-sm font-medium text-yellow-600 truncate">Pending</p>
-              <p className="text-lg sm:text-xl font-bold text-yellow-800">
+              <p className="text-xs sm:text-sm font-medium opacity-90 truncate">Pending</p>
+              <p className="text-lg sm:text-xl font-bold">
                 {stats.pending}
               </p>
             </div>
-            <XCircle size={16} className="text-yellow-600 flex-shrink-0 ml-2" />
+            <XCircle size={16} className="opacity-90 flex-shrink-0 ml-2" />
           </div>
         </div>
         
-        <div className="bg-purple-50 border border-purple-200 rounded-lg p-3">
+        <div className="bg-gradient-to-r from-purple-500 to-purple-600 text-white rounded-lg p-4 hover:shadow-md transition-all">
           <div className="flex items-center justify-between">
             <div className="min-w-0">
-              <p className="text-xs sm:text-sm font-medium text-purple-600 truncate">Active</p>
-              <p className="text-lg sm:text-xl font-bold text-purple-800">
+              <p className="text-xs sm:text-sm font-medium opacity-90 truncate">Active</p>
+              <p className="text-lg sm:text-xl font-bold">
                 {stats.active}
               </p>
             </div>
-            <Bike size={16} className="text-purple-600 flex-shrink-0 ml-2" />
+            <Bike size={16} className="opacity-90 flex-shrink-0 ml-2" />
           </div>
         </div>
 
-        <div className="bg-indigo-50 border border-indigo-200 rounded-lg p-3">
+        <div className="bg-gradient-to-r from-[#8C1007] to-[#660B05] text-white rounded-lg p-4 hover:shadow-md transition-all">
           <div className="flex items-center justify-between">
             <div className="min-w-0">
-              <p className="text-xs sm:text-sm font-medium text-indigo-600 truncate">With License</p>
-              <p className="text-lg sm:text-xl font-bold text-indigo-800">
+              <p className="text-xs sm:text-sm font-medium opacity-90 truncate">With License</p>
+              <p className="text-lg sm:text-xl font-bold">
                 {stats.withLicense}
               </p>
             </div>
-            <FileText size={16} className="text-indigo-600 flex-shrink-0 ml-2" />
+            <FileText size={16} className="opacity-90 flex-shrink-0 ml-2" />
           </div>
         </div>
       </div>
 
       {/* Riders List - Mobile Responsive */}
       <div className="space-y-4">
-        {riders.length === 0 ? (
+        {filteredRiders.length === 0 ? (
           <div className="text-center py-8">
             <Bike size={48} className="mx-auto mb-2 text-gray-300" />
-            <p className="text-gray-500">No riders found in database</p>
-            <p className="text-sm text-gray-500">Riders will appear here when users register as delivery riders</p>
+            <p className="text-[#660B05]">No riders found</p>
+            <p className="text-sm text-[#8C1007]">Try adjusting your search or filters</p>
           </div>
         ) : (
-          riders.map((rider) => {
+          filteredRiders.map((rider) => {
             const licenseData = getLicenseImageData(rider);
             
             return (
-              <div key={rider._id || rider.id} className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
+              <div key={rider._id || rider.id} className="border border-[#FFF0C4] rounded-lg p-4 hover:shadow-md transition-all duration-300 hover:-translate-y-1">
                 {/* Mobile Card Header */}
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center space-x-3 flex-1 min-w-0">
-                    <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
-                      <User size={16} className="text-blue-600" />
+                    <div className="w-10 h-10 bg-gradient-to-r from-[#8C1007] to-[#660B05] rounded-full flex items-center justify-center flex-shrink-0">
+                      <User size={16} className="text-white" />
                     </div>
                     <div className="min-w-0 flex-1">
-                      <p className="font-medium text-gray-900 truncate">{rider.name}</p>
-                      <p className="text-xs text-gray-500 truncate">{rider.email}</p>
+                      <p className="font-medium text-[#3E0703] truncate">{rider.name}</p>
+                      <p className="text-xs text-[#660B05] truncate">{rider.email}</p>
                     </div>
                   </div>
                   <button
                     onClick={() => toggleRiderExpand(rider._id || rider.id)}
-                    className="p-1 hover:bg-gray-100 rounded"
+                    className="p-1 hover:bg-[#FFF0C4] rounded transition-colors"
                   >
                     {expandedRider === (rider._id || rider.id) ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
                   </button>
@@ -319,7 +353,7 @@ const RiderTab = () => {
                 {/* Basic Info - Always Visible */}
                 <div className="grid grid-cols-2 gap-4 mb-3">
                   <div>
-                    <p className="text-xs text-gray-500">Status</p>
+                    <p className="text-xs text-[#660B05]">Status</p>
                     <div className="mt-1">
                       <span className={`px-2 py-1 text-xs rounded-full ${
                         rider.isActive 
@@ -331,7 +365,7 @@ const RiderTab = () => {
                     </div>
                   </div>
                   <div>
-                    <p className="text-xs text-gray-500">Approval</p>
+                    <p className="text-xs text-[#660B05]">Approval</p>
                     <div className="mt-1">
                       <span className={`px-2 py-1 text-xs rounded-full ${
                         rider.isApproved 
@@ -346,7 +380,7 @@ const RiderTab = () => {
 
                 {/* Vehicle Info */}
                 <div className="mb-3">
-                  <p className="text-xs text-gray-500">Vehicle</p>
+                  <p className="text-xs text-[#660B05]">Vehicle</p>
                   <span className={`px-2 py-1 text-xs rounded-full ${
                     rider.vehicleType === 'motorcycle' ? 'bg-blue-100 text-blue-800' :
                     rider.vehicleType === 'bicycle' ? 'bg-green-100 text-green-800' :
@@ -356,17 +390,17 @@ const RiderTab = () => {
                     rider.vehicleType === 'bicycle' ? '🚲 Bicycle' : '🚗 Car'}
                   </span>
                   {rider.licenseNumber && (
-                    <p className="text-xs text-gray-500 mt-1">License: {rider.licenseNumber}</p>
+                    <p className="text-xs text-[#660B05] mt-1">License: {rider.licenseNumber}</p>
                   )}
                 </div>
 
                 {/* License Image Preview - Always Visible if available */}
                 {licenseData && (
                   <div className="mb-3">
-                    <p className="text-xs text-gray-500 mb-2">License Photo</p>
+                    <p className="text-xs text-[#660B05] mb-2">License Photo</p>
                     <div className="flex items-center space-x-2">
                       <div 
-                        className="w-16 h-16 border border-gray-300 rounded-lg overflow-hidden cursor-pointer hover:opacity-80 transition-opacity"
+                        className="w-16 h-16 border-2 border-[#FFF0C4] rounded-lg overflow-hidden cursor-pointer hover:opacity-80 transition-opacity"
                         onClick={() => showImagePreview(licenseData.data, rider.name)}
                       >
                         <img 
@@ -378,13 +412,13 @@ const RiderTab = () => {
                             e.target.nextSibling.style.display = 'flex';
                           }}
                         />
-                        <div className="w-full h-full bg-gray-100 hidden items-center justify-center">
-                          <Image size={20} className="text-gray-400" />
+                        <div className="w-full h-full bg-[#FFF0C4] hidden items-center justify-center">
+                          <Image size={20} className="text-[#8C1007]" />
                         </div>
                       </div>
                       <button
                         onClick={() => showImagePreview(licenseData.data, rider.name)}
-                        className="text-xs text-blue-600 hover:text-blue-800 font-medium"
+                        className="text-xs text-[#8C1007] hover:text-[#660B05] font-medium"
                       >
                         View Full Size
                       </button>
@@ -395,7 +429,7 @@ const RiderTab = () => {
                 {/* No License Warning */}
                 {!licenseData && (
                   <div className="mb-3">
-                    <p className="text-xs text-gray-500 mb-2">License Photo</p>
+                    <p className="text-xs text-[#660B05] mb-2">License Photo</p>
                     <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-2">
                       <p className="text-xs text-yellow-800 flex items-center">
                         <AlertCircle size={12} className="mr-1" />
@@ -407,21 +441,21 @@ const RiderTab = () => {
 
                 {/* Expanded Details */}
                 {expandedRider === (rider._id || rider.id) && (
-                  <div className="border-t pt-3 space-y-3">
+                  <div className="border-t border-[#FFF0C4] pt-3 space-y-3">
                     <div className="grid grid-cols-1 gap-2">
                       <div className="flex items-center space-x-2">
-                        <Phone size={14} className="text-gray-400" />
-                        <span className="text-sm text-gray-700">{rider.phone || 'N/A'}</span>
+                        <Phone size={14} className="text-[#660B05]" />
+                        <span className="text-sm text-[#3E0703]">{rider.phone || 'N/A'}</span>
                       </div>
                       {rider.address && (
                         <div className="flex items-start space-x-2">
-                          <MapPin size={14} className="text-gray-400 mt-0.5" />
-                          <span className="text-sm text-gray-500 break-words">{rider.address}</span>
+                          <MapPin size={14} className="text-[#660B05] mt-0.5" />
+                          <span className="text-sm text-[#660B05] break-words">{rider.address}</span>
                         </div>
                       )}
                       <div>
-                        <p className="text-xs text-gray-500">Joined Date</p>
-                        <p className="text-sm text-gray-700">
+                        <p className="text-xs text-[#660B05]">Joined Date</p>
+                        <p className="text-sm text-[#3E0703]">
                           {rider.createdAt ? new Date(rider.createdAt).toLocaleDateString() : 'N/A'}
                         </p>
                       </div>
@@ -429,8 +463,8 @@ const RiderTab = () => {
                     
                     {/* License Image Actions in Expanded View */}
                     {licenseData && (
-                      <div className="bg-gray-50 rounded-lg p-3">
-                        <p className="text-xs font-medium text-gray-700 mb-2">License Photo Actions</p>
+                      <div className="bg-[#FFF0C4] rounded-lg p-3">
+                        <p className="text-xs font-medium text-[#660B05] mb-2">License Photo Actions</p>
                         <div className="flex space-x-2">
                           <button
                             onClick={() => showImagePreview(licenseData.data, rider.name)}
@@ -469,7 +503,7 @@ const RiderTab = () => {
                       >
                         {rider.isActive ? 'Deactivate' : 'Activate'}
                       </button>
-                      <button className="bg-blue-600 text-white px-3 py-2 rounded text-sm font-medium hover:bg-blue-700 transition-colors">
+                      <button className="bg-[#8C1007] text-white px-3 py-2 rounded text-sm font-medium hover:bg-[#660B05] transition-colors">
                         Edit
                       </button>
                       <button 
@@ -484,7 +518,7 @@ const RiderTab = () => {
 
                 {/* Action Buttons - Collapsed State */}
                 {expandedRider !== (rider._id || rider.id) && (
-                  <div className="flex space-x-2 border-t pt-3">
+                  <div className="flex space-x-2 border-t border-[#FFF0C4] pt-3">
                     {!rider.isApproved && (
                       <button 
                         onClick={() => handleApproveRider(rider._id || rider.id, rider.name)}
@@ -523,15 +557,15 @@ const RiderTab = () => {
           <div className="bg-white rounded-lg shadow-xl p-6 max-w-md w-full">
             <div className="text-center">
               <AlertCircle size={48} className="text-red-500 mx-auto mb-4" />
-              <h3 className="text-lg font-bold text-gray-900 mb-2">Delete Rider</h3>
-              <p className="text-gray-600 mb-6">
+              <h3 className="text-lg font-bold text-[#3E0703] mb-2">Delete Rider</h3>
+              <p className="text-[#660B05] mb-6">
                 Are you sure you want to delete rider <strong>"{deleteConfirm.rider?.name}"</strong>? 
                 This action cannot be undone.
               </p>
               <div className="flex space-x-4 justify-center">
                 <button
                   onClick={hideDeleteConfirm}
-                  className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+                  className="px-4 py-2 border border-gray-300 text-[#660B05] rounded-lg hover:bg-gray-50 transition-colors"
                 >
                   Cancel
                 </button>
@@ -552,7 +586,7 @@ const RiderTab = () => {
         <div className="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-hidden">
             <div className="flex justify-between items-center p-4 border-b">
-              <h3 className="text-lg font-bold text-gray-900">
+              <h3 className="text-lg font-bold text-[#3E0703]">
                 License Photo - {imagePreview.riderName}
               </h3>
               <div className="flex space-x-2">
@@ -586,8 +620,8 @@ const RiderTab = () => {
               />
               <div id="image-error" className="hidden text-center py-8">
                 <Image size={48} className="mx-auto mb-2 text-gray-400" />
-                <p className="text-gray-500">Failed to load image</p>
-                <p className="text-sm text-gray-400">The license photo may have been moved or deleted</p>
+                <p className="text-[#660B05]">Failed to load image</p>
+                <p className="text-sm text-[#8C1007]">The license photo may have been moved or deleted</p>
               </div>
             </div>
           </div>

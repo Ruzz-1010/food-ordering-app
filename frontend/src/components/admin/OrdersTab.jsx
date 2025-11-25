@@ -1,4 +1,4 @@
-// OrdersTab.jsx - COMPLETE UPDATED VERSION
+// OrdersTab.jsx - MODERN REDESIGN
 import React, { useState, useEffect } from 'react';
 import { 
   Package, RefreshCw, CheckCircle, Truck, 
@@ -99,11 +99,11 @@ const OrdersTab = () => {
         throw new Error(data.error || 'Failed to update order status');
       }
     } catch (error) {
-      alert(`Failed to update order status: ${error.message}`);
+      alert(`❌ Failed to update order status: ${error.message}`);
     }
   };
 
-  // NEW: Edit order function
+  // Edit order function
   const handleEditOrder = (order) => {
     setEditingOrder(order._id || order.id);
     setEditForm({
@@ -113,7 +113,7 @@ const OrdersTab = () => {
     });
   };
 
-  // NEW: Save edited order
+  // Save edited order
   const handleSaveEdit = async (orderId) => {
     try {
       const token = localStorage.getItem('token');
@@ -139,13 +139,13 @@ const OrdersTab = () => {
     }
   };
 
-  // NEW: Cancel edit
+  // Cancel edit
   const handleCancelEdit = () => {
     setEditingOrder(null);
     setEditForm({});
   };
 
-  // NEW: Delete order with confirmation
+  // Delete order with confirmation
   const showDeleteConfirm = (orderId, orderNumber) => {
     setDeleteConfirm({
       show: true,
@@ -185,7 +185,7 @@ const OrdersTab = () => {
     }
   };
 
-  // NEW: View order details
+  // View order details
   const handleViewOrder = (order) => {
     setSelectedOrder(order);
     setShowOrderModal(true);
@@ -246,27 +246,27 @@ const OrdersTab = () => {
 
   if (loading) {
     return (
-      <div className="bg-white rounded-xl shadow-sm border border-orange-200 p-4 sm:p-6">
+      <div className="bg-white rounded-xl shadow-sm border border-[#FFF0C4] p-4 sm:p-6">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
-          <h2 className="text-xl sm:text-2xl font-bold text-gray-900">Order Management</h2>
+          <h2 className="text-xl sm:text-2xl font-bold text-[#3E0703]">Order Management</h2>
         </div>
         <div className="text-center py-8">
-          <div className="w-8 h-8 border-2 border-orange-300 border-t-orange-500 rounded-full animate-spin mx-auto"></div>
-          <p className="text-gray-500 mt-2">Loading orders...</p>
+          <div className="w-8 h-8 border-2 border-[#FFF0C4] border-t-[#8C1007] rounded-full animate-spin mx-auto"></div>
+          <p className="text-[#660B05] mt-2">Loading orders...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-orange-200 p-4 sm:p-6">
+    <div className="bg-white rounded-xl shadow-sm border border-[#FFF0C4] p-4 sm:p-6">
       {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
-        <h2 className="text-xl sm:text-2xl font-bold text-gray-900">Order Management</h2>
+        <h2 className="text-xl sm:text-2xl font-bold text-[#3E0703]">📦 Order Management</h2>
         <button
           onClick={handleRefresh}
           disabled={refreshing}
-          className="flex items-center space-x-2 bg-orange-600 text-white px-4 py-2 rounded-lg hover:bg-orange-700 transition-colors disabled:opacity-50 w-full sm:w-auto justify-center"
+          className="flex items-center space-x-2 bg-gradient-to-r from-[#8C1007] to-[#660B05] text-white px-4 py-2 rounded-lg hover:shadow-md transition-all disabled:opacity-50 w-full sm:w-auto justify-center"
         >
           <RefreshCw size={16} className={refreshing ? 'animate-spin' : ''} />
           <span>{refreshing ? 'Refreshing...' : 'Refresh'}</span>
@@ -299,14 +299,14 @@ const OrdersTab = () => {
             placeholder="Search orders by ID, customer, or restaurant..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 border border-orange-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+            className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#8C1007]"
           />
         </div>
         <div className="flex space-x-2">
           <select 
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
-            className="flex-1 border border-orange-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-orange-500"
+            className="flex-1 border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#8C1007]"
           >
             <option value="all">All Statuses</option>
             <option value="pending">Pending</option>
@@ -318,54 +318,54 @@ const OrdersTab = () => {
             <option value="completed">Completed</option>
             <option value="cancelled">Cancelled</option>
           </select>
-          <div className="bg-orange-100 border border-orange-200 rounded-lg px-3 py-2 flex items-center">
-            <Filter size={16} className="text-orange-600 mr-2" />
-            <span className="text-sm font-medium text-orange-800">{filteredOrders.length}</span>
+          <div className="bg-[#FFF0C4] border border-[#8C1007] rounded-lg px-3 py-2 flex items-center">
+            <Filter size={16} className="text-[#8C1007] mr-2" />
+            <span className="text-sm font-medium text-[#660B05]">{filteredOrders.length}</span>
           </div>
         </div>
       </div>
 
       {/* Stats Summary */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
-        <div className="bg-orange-50 border border-orange-200 rounded-lg p-3">
+        <div className="bg-gradient-to-r from-[#8C1007] to-[#660B05] text-white rounded-lg p-4 hover:shadow-md transition-all">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-xs font-medium text-orange-600">Total Orders</p>
-              <p className="text-lg font-bold text-orange-800">{orders.length}</p>
+              <p className="text-xs font-medium opacity-90">Total Orders</p>
+              <p className="text-lg font-bold">{orders.length}</p>
             </div>
-            <Package size={16} className="text-orange-600 flex-shrink-0 ml-2" />
+            <Package size={16} className="opacity-90" />
           </div>
         </div>
         
-        <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+        <div className="bg-gradient-to-r from-green-500 to-green-600 text-white rounded-lg p-4 hover:shadow-md transition-all">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-xs font-medium text-green-600">Completed</p>
-              <p className="text-lg font-bold text-green-800">{completedOrders}</p>
+              <p className="text-xs font-medium opacity-90">Completed</p>
+              <p className="text-lg font-bold">{completedOrders}</p>
             </div>
-            <CheckCircle size={16} className="text-green-600 flex-shrink-0 ml-2" />
+            <CheckCircle size={16} className="opacity-90" />
           </div>
         </div>
         
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+        <div className="bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-lg p-4 hover:shadow-md transition-all">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-xs font-medium text-blue-600">In Progress</p>
-              <p className="text-lg font-bold text-blue-800">{inProgressOrders}</p>
+              <p className="text-xs font-medium opacity-90">In Progress</p>
+              <p className="text-lg font-bold">{inProgressOrders}</p>
             </div>
-            <Truck size={16} className="text-blue-600 flex-shrink-0 ml-2" />
+            <Truck size={16} className="opacity-90" />
           </div>
         </div>
         
-        <div className="bg-purple-50 border border-purple-200 rounded-lg p-3">
+        <div className="bg-gradient-to-r from-purple-500 to-purple-600 text-white rounded-lg p-4 hover:shadow-md transition-all">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-xs font-medium text-purple-600">Total Revenue</p>
-              <p className="text-lg font-bold text-purple-800">
+              <p className="text-xs font-medium opacity-90">Total Revenue</p>
+              <p className="text-lg font-bold">
                 ₱{getTotalRevenue().toLocaleString()}
               </p>
             </div>
-            <DollarSign size={16} className="text-purple-600 flex-shrink-0 ml-2" />
+            <DollarSign size={16} className="opacity-90" />
           </div>
         </div>
       </div>
@@ -375,16 +375,16 @@ const OrdersTab = () => {
         {filteredOrders.length === 0 ? (
           <div className="text-center py-8">
             <Package size={48} className="mx-auto mb-2 text-gray-300" />
-            <p className="text-gray-500">
+            <p className="text-[#660B05]">
               {orders.length === 0 ? 'No orders found' : 'No orders match your search'}
             </p>
-            <p className="text-sm text-gray-500">
+            <p className="text-sm text-[#8C1007]">
               {error ? 'Check backend connection' : 'Orders will appear here when placed'}
             </p>
             {error && (
               <button 
                 onClick={fetchOrders}
-                className="mt-3 bg-orange-600 text-white px-4 py-2 rounded-lg hover:bg-orange-700 transition-colors"
+                className="mt-3 bg-gradient-to-r from-[#8C1007] to-[#660B05] text-white px-4 py-2 rounded-lg hover:shadow-md transition-all"
               >
                 Retry Connection
               </button>
@@ -392,25 +392,25 @@ const OrdersTab = () => {
           </div>
         ) : (
           filteredOrders.map((order) => (
-            <div key={order._id || order.id} className="border border-orange-200 rounded-lg p-4 hover:shadow-md transition-shadow">
+            <div key={order._id || order.id} className="border border-[#FFF0C4] rounded-lg p-4 hover:shadow-md transition-all duration-300 hover:-translate-y-1">
               {/* Order Header */}
               <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center space-x-3 flex-1 min-w-0">
-                  <div className="w-10 h-10 bg-orange-100 rounded-full flex items-center justify-center flex-shrink-0">
-                    <Package size={16} className="text-orange-600" />
+                  <div className="w-10 h-10 bg-gradient-to-r from-[#8C1007] to-[#660B05] rounded-full flex items-center justify-center flex-shrink-0">
+                    <Package size={16} className="text-white" />
                   </div>
                   <div className="min-w-0 flex-1">
-                    <p className="font-medium text-gray-900 truncate">
+                    <p className="font-medium text-[#3E0703] truncate">
                       Order #{order.orderNumber || order._id?.substring(0, 8) || 'N/A'}
                     </p>
-                    <p className="text-xs text-gray-500 truncate">
+                    <p className="text-xs text-[#660B05] truncate">
                       {order.customer?.name || order.user?.name || 'Customer'}
                     </p>
                   </div>
                 </div>
                 <button
                   onClick={() => toggleOrderExpand(order._id || order.id)}
-                  className="p-1 hover:bg-orange-100 rounded transition-colors"
+                  className="p-1 hover:bg-[#FFF0C4] rounded transition-colors"
                 >
                   {expandedOrder === (order._id || order.id) ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
                 </button>
@@ -419,22 +419,22 @@ const OrdersTab = () => {
               {/* Basic Info */}
               <div className="grid grid-cols-2 gap-4 mb-3">
                 <div>
-                  <p className="text-xs text-gray-500">Amount</p>
+                  <p className="text-xs text-[#660B05]">Amount</p>
                   {editingOrder === (order._id || order.id) ? (
                     <input
                       type="number"
                       value={editForm.totalAmount}
                       onChange={(e) => setEditForm({...editForm, totalAmount: parseFloat(e.target.value)})}
-                      className="w-full border border-gray-300 rounded px-2 py-1 text-sm font-bold text-orange-600"
+                      className="w-full border border-gray-300 rounded px-2 py-1 text-sm font-bold text-[#8C1007] focus:outline-none focus:ring-1 focus:ring-[#8C1007]"
                     />
                   ) : (
-                    <p className="text-lg font-bold text-orange-600">
+                    <p className="text-lg font-bold text-[#8C1007]">
                       ₱{(order.totalAmount || order.total || order.amount || 0).toLocaleString()}
                     </p>
                   )}
                 </div>
                 <div>
-                  <p className="text-xs text-gray-500">Status</p>
+                  <p className="text-xs text-[#660B05]">Status</p>
                   <div className="mt-1">{getStatusBadge(order.status)}</div>
                 </div>
               </div>
@@ -442,60 +442,60 @@ const OrdersTab = () => {
               {/* Restaurant & Customer Info */}
               <div className="grid grid-cols-2 gap-4 mb-3">
                 <div>
-                  <p className="text-xs text-gray-500">Restaurant</p>
-                  <p className="text-sm text-gray-900 truncate">{order.restaurant?.name || 'N/A'}</p>
+                  <p className="text-xs text-[#660B05]">Restaurant</p>
+                  <p className="text-sm text-[#3E0703] truncate">{order.restaurant?.name || 'N/A'}</p>
                 </div>
                 <div>
-                  <p className="text-xs text-gray-500">Customer</p>
-                  <p className="text-sm text-gray-900 truncate">{order.customer?.name || order.user?.name || 'N/A'}</p>
+                  <p className="text-xs text-[#660B05]">Customer</p>
+                  <p className="text-sm text-[#3E0703] truncate">{order.customer?.name || order.user?.name || 'N/A'}</p>
                 </div>
               </div>
 
               {/* Expanded Details */}
               {expandedOrder === (order._id || order.id) && (
-                <div className="border-t border-orange-200 pt-3 space-y-3">
+                <div className="border-t border-[#FFF0C4] pt-3 space-y-3">
                   <div className="space-y-2">
                     <div className="flex items-center space-x-2">
-                      <User size={14} className="text-gray-400" />
-                      <span className="text-sm text-gray-700">
+                      <User size={14} className="text-[#660B05]" />
+                      <span className="text-sm text-[#3E0703]">
                         {order.customer?.name || order.user?.name || 'Customer'}
                       </span>
                     </div>
                     <div className="flex items-start space-x-2">
-                      <MapPin size={14} className="text-gray-400 mt-0.5" />
+                      <MapPin size={14} className="text-[#660B05] mt-0.5" />
                       {editingOrder === (order._id || order.id) ? (
                         <textarea
                           value={editForm.deliveryAddress}
                           onChange={(e) => setEditForm({...editForm, deliveryAddress: e.target.value})}
-                          className="flex-1 border border-gray-300 rounded px-2 py-1 text-sm"
+                          className="flex-1 border border-gray-300 rounded px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-[#8C1007]"
                           rows="2"
                           placeholder="Delivery address"
                         />
                       ) : (
-                        <span className="text-sm text-gray-500 break-words">
+                        <span className="text-sm text-[#660B05] break-words">
                           {order.deliveryAddress || order.address || 'No address provided'}
                         </span>
                       )}
                     </div>
                     <div className="flex items-center space-x-2">
-                      <Clock size={14} className="text-gray-400" />
-                      <span className="text-sm text-gray-700">
+                      <Clock size={14} className="text-[#660B05]" />
+                      <span className="text-sm text-[#3E0703]">
                         {order.createdAt ? new Date(order.createdAt).toLocaleString() : 'N/A'}
                       </span>
                     </div>
                     <div>
-                      <p className="text-xs text-gray-500">Items ({order.items?.length || 0})</p>
-                      <p className="text-sm text-gray-700">
+                      <p className="text-xs text-[#660B05]">Items ({order.items?.length || 0})</p>
+                      <p className="text-sm text-[#3E0703]">
                         {order.items?.map(item => item.name || item.product?.name).join(', ') || 'No items listed'}
                       </p>
                     </div>
                     {editingOrder === (order._id || order.id) && (
                       <div>
-                        <p className="text-xs text-gray-500">Special Instructions</p>
+                        <p className="text-xs text-[#660B05]">Special Instructions</p>
                         <textarea
                           value={editForm.specialInstructions}
                           onChange={(e) => setEditForm({...editForm, specialInstructions: e.target.value})}
-                          className="w-full border border-gray-300 rounded px-2 py-1 text-sm"
+                          className="w-full border border-gray-300 rounded px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-[#8C1007]"
                           rows="2"
                           placeholder="Special instructions"
                         />
@@ -533,7 +533,7 @@ const OrdersTab = () => {
                         </button>
                         <button 
                           onClick={() => handleEditOrder(order)}
-                          className="bg-yellow-600 text-white px-3 py-2 rounded text-sm font-medium hover:bg-yellow-700 transition-colors flex items-center justify-center space-x-1"
+                          className="bg-[#8C1007] text-white px-3 py-2 rounded text-sm font-medium hover:bg-[#660B05] transition-colors flex items-center justify-center space-x-1"
                         >
                           <Edit size={14} />
                           <span>Edit</span>
@@ -585,7 +585,7 @@ const OrdersTab = () => {
 
               {/* Quick Action Buttons - Collapsed State */}
               {expandedOrder !== (order._id || order.id) && !editingOrder && (
-                <div className="flex space-x-2 border-t border-orange-200 pt-3">
+                <div className="flex space-x-2 border-t border-[#FFF0C4] pt-3">
                   <button 
                     onClick={() => handleViewOrder(order)}
                     className="flex-1 bg-blue-600 text-white px-2 py-1 rounded text-xs font-medium hover:bg-blue-700 transition-colors flex items-center justify-center space-x-1"
@@ -595,7 +595,7 @@ const OrdersTab = () => {
                   </button>
                   <button 
                     onClick={() => handleEditOrder(order)}
-                    className="flex-1 bg-yellow-600 text-white px-2 py-1 rounded text-xs font-medium hover:bg-yellow-700 transition-colors flex items-center justify-center space-x-1"
+                    className="flex-1 bg-[#8C1007] text-white px-2 py-1 rounded text-xs font-medium hover:bg-[#660B05] transition-colors flex items-center justify-center space-x-1"
                   >
                     <Edit size={12} />
                     <span>Edit</span>
@@ -651,12 +651,12 @@ const OrdersTab = () => {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-lg shadow-xl p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-center mb-4">
-              <h3 className="text-xl font-bold text-gray-900">
+              <h3 className="text-xl font-bold text-[#3E0703]">
                 Order Details - #{selectedOrder.orderNumber || selectedOrder._id?.substring(0, 8)}
               </h3>
               <button 
                 onClick={() => setShowOrderModal(false)}
-                className="text-gray-400 hover:text-gray-600"
+                className="text-gray-400 hover:text-[#8C1007]"
               >
                 <X size={20} />
               </button>
@@ -665,7 +665,7 @@ const OrdersTab = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-4">
                 <div>
-                  <h4 className="font-semibold text-gray-900 mb-2">Customer Information</h4>
+                  <h4 className="font-semibold text-[#3E0703] mb-2">Customer Information</h4>
                   <div className="space-y-2">
                     <p><span className="font-medium">Name:</span> {selectedOrder.customer?.name || selectedOrder.user?.name || 'N/A'}</p>
                     <p><span className="font-medium">Email:</span> {selectedOrder.customer?.email || selectedOrder.user?.email || 'N/A'}</p>
@@ -674,7 +674,7 @@ const OrdersTab = () => {
                 </div>
                 
                 <div>
-                  <h4 className="font-semibold text-gray-900 mb-2">Restaurant Information</h4>
+                  <h4 className="font-semibold text-[#3E0703] mb-2">Restaurant Information</h4>
                   <div className="space-y-2">
                     <p><span className="font-medium">Name:</span> {selectedOrder.restaurant?.name || 'N/A'}</p>
                     <p><span className="font-medium">Address:</span> {selectedOrder.restaurant?.address || 'N/A'}</p>
@@ -685,7 +685,7 @@ const OrdersTab = () => {
               
               <div className="space-y-4">
                 <div>
-                  <h4 className="font-semibold text-gray-900 mb-2">Order Information</h4>
+                  <h4 className="font-semibold text-[#3E0703] mb-2">Order Information</h4>
                   <div className="space-y-2">
                     <p><span className="font-medium">Status:</span> {getStatusBadge(selectedOrder.status)}</p>
                     <p><span className="font-medium">Total Amount:</span> ₱{(selectedOrder.totalAmount || selectedOrder.total || 0).toLocaleString()}</p>
@@ -695,7 +695,7 @@ const OrdersTab = () => {
                 </div>
                 
                 <div>
-                  <h4 className="font-semibold text-gray-900 mb-2">Order Items</h4>
+                  <h4 className="font-semibold text-[#3E0703] mb-2">Order Items</h4>
                   <div className="space-y-2">
                     {selectedOrder.items?.map((item, index) => (
                       <div key={index} className="flex justify-between border-b pb-2">
@@ -711,7 +711,7 @@ const OrdersTab = () => {
             <div className="flex justify-end space-x-3 mt-6">
               <button
                 onClick={() => setShowOrderModal(false)}
-                className="px-4 py-2 text-gray-600 hover:text-gray-800 font-medium"
+                className="px-4 py-2 text-[#660B05] hover:text-[#3E0703] font-medium"
               >
                 Close
               </button>
@@ -726,15 +726,15 @@ const OrdersTab = () => {
           <div className="bg-white rounded-lg shadow-xl p-6 max-w-md w-full">
             <div className="text-center">
               <AlertCircle size={48} className="text-red-500 mx-auto mb-4" />
-              <h3 className="text-lg font-bold text-gray-900 mb-2">Delete Order</h3>
-              <p className="text-gray-600 mb-6">
+              <h3 className="text-lg font-bold text-[#3E0703] mb-2">Delete Order</h3>
+              <p className="text-[#660B05] mb-6">
                 Are you sure you want to delete order <strong>"{deleteConfirm.order?.number}"</strong>? 
                 This action cannot be undone and will permanently remove the order from the system.
               </p>
               <div className="flex space-x-4 justify-center">
                 <button
                   onClick={hideDeleteConfirm}
-                  className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+                  className="px-4 py-2 border border-gray-300 text-[#660B05] rounded-lg hover:bg-gray-50 transition-colors"
                 >
                   Cancel
                 </button>

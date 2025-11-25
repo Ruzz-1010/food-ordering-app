@@ -1,4 +1,4 @@
-// AnalyticsTab.jsx - FIXED VERSION
+// AnalyticsTab.jsx - MODERN REDESIGN
 import React, { useState, useEffect } from 'react';
 import { 
   TrendingUp, Users, Store, Package, DollarSign, 
@@ -26,7 +26,6 @@ const AnalyticsTab = () => {
   const fetchData = async (endpoint) => {
     try {
       const token = localStorage.getItem('token');
-      console.log(`🔄 Fetching from: ${RAILWAY_BACKEND_URL}${endpoint}`);
       
       const response = await fetch(`${RAILWAY_BACKEND_URL}${endpoint}`, {
         headers: {
@@ -35,14 +34,11 @@ const AnalyticsTab = () => {
         }
       });
 
-      console.log(`📊 Response status for ${endpoint}:`, response.status);
-
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
 
       const data = await response.json();
-      console.log(`📦 Data received from ${endpoint}:`, data);
 
       // Handle different response structures
       if (data.success) {
@@ -75,8 +71,6 @@ const AnalyticsTab = () => {
         return;
       }
 
-      console.log('🚀 Starting analytics data fetch...');
-
       // Fetch all data
       let ordersData = [];
       let usersData = [];
@@ -90,18 +84,12 @@ const AnalyticsTab = () => {
             const data = await fetchData(endpoint);
             if (Array.isArray(data) && data.length > 0) {
               ordersData = data;
-              console.log(`✅ Found ${data.length} orders from ${endpoint}`);
               break;
             }
           } catch (e) {
             console.log(`❌ ${endpoint} failed:`, e.message);
           }
         }
-        
-        if (ordersData.length === 0) {
-          console.log('⚠️ No orders found from any endpoint');
-        }
-
       } catch (orderError) {
         console.error('Failed to fetch orders:', orderError);
       }
@@ -114,7 +102,6 @@ const AnalyticsTab = () => {
             const data = await fetchData(endpoint);
             if (Array.isArray(data) && data.length > 0) {
               usersData = data;
-              console.log(`✅ Found ${data.length} users from ${endpoint}`);
               break;
             }
           } catch (e) {
@@ -133,7 +120,6 @@ const AnalyticsTab = () => {
             const data = await fetchData(endpoint);
             if (Array.isArray(data) && data.length > 0) {
               restaurantsData = data;
-              console.log(`✅ Found ${data.length} restaurants from ${endpoint}`);
               break;
             }
           } catch (e) {
@@ -144,33 +130,17 @@ const AnalyticsTab = () => {
         console.error('Failed to fetch restaurants:', restaurantError);
       }
 
-      console.log('📊 Raw data received:', {
-        orders: ordersData,
-        users: usersData,
-        restaurants: restaurantsData
-      });
-
-      // 🛠️ FIX: Process orders data properly
+      // Process orders data properly
       const deliveredOrders = Array.isArray(ordersData) ? ordersData.filter(order => {
         const status = order.status?.toLowerCase();
         return status === 'delivered' || status === 'completed';
       }) : [];
 
-      console.log('✅ Delivered/Completed orders:', deliveredOrders.length);
-      console.log('📋 All orders statuses:', ordersData.map(o => ({ 
-        id: o._id, 
-        status: o.status, 
-        amount: o.totalAmount || o.total 
-      })));
-
       // Calculate total revenue from delivered/completed orders
       const totalRevenue = deliveredOrders.reduce((total, order) => {
         const orderAmount = parseFloat(order.totalAmount || order.total || order.amount || 0);
-        console.log(`💰 Order ${order._id}: ${orderAmount} (status: ${order.status})`);
         return total + orderAmount;
       }, 0);
-
-      console.log('💰 Total revenue calculated:', totalRevenue);
 
       // Calculate order statistics
       const orderStats = {
@@ -182,8 +152,6 @@ const AnalyticsTab = () => {
         delivered: deliveredOrders.length,
         cancelled: Array.isArray(ordersData) ? ordersData.filter(o => o.status?.toLowerCase() === 'cancelled').length : 0
       };
-
-      console.log('📈 Order stats:', orderStats);
 
       // Calculate top restaurants
       const restaurantOrderCount = {};
@@ -220,16 +188,12 @@ const AnalyticsTab = () => {
         .sort((a, b) => b.orders - a.orders)
         .slice(0, 5);
 
-      console.log('🏆 Top restaurants:', topRestaurants);
-
       // Get recent orders
       const recentOrders = Array.isArray(ordersData) 
         ? ordersData
             .sort((a, b) => new Date(b.createdAt || b.orderDate || b.date) - new Date(a.createdAt || a.orderDate || a.date))
             .slice(0, 5)
         : [];
-
-      console.log('🕒 Recent orders:', recentOrders);
 
       // Update analytics state
       const newAnalytics = {
@@ -242,7 +206,6 @@ const AnalyticsTab = () => {
         orderStats
       };
 
-      console.log('🎯 Final analytics data:', newAnalytics);
       setAnalytics(newAnalytics);
 
     } catch (error) {
@@ -294,104 +257,35 @@ const AnalyticsTab = () => {
       : 0;
   };
 
-  // Test API endpoints function
-  const testEndpoints = async () => {
-    console.log('🧪 Testing API endpoints...');
-    const endpoints = [
-      '/orders',
-      '/admin/orders',
-      '/users', 
-      '/admin/users',
-      '/restaurants',
-      '/admin/restaurants'
-    ];
-
-    for (const endpoint of endpoints) {
-      try {
-        const data = await fetchData(endpoint);
-        console.log(`✅ ${endpoint}:`, Array.isArray(data) ? `${data.length} items` : 'Data received');
-        if (Array.isArray(data) && data.length > 0) {
-          console.log('Sample data:', data[0]);
-        }
-      } catch (error) {
-        console.log(`❌ ${endpoint}:`, error.message);
-      }
-    }
-  };
-
-  // Debug function to check order statuses
-  const debugOrders = async () => {
-    try {
-      const orders = await fetchData('/orders');
-      console.log('🔍 DEBUG - All orders:', orders);
-      console.log('🔍 DEBUG - Order statuses:', orders.map(o => ({
-        id: o._id,
-        status: o.status,
-        amount: o.totalAmount || o.total,
-        delivered: o.status === 'delivered' || o.status === 'completed'
-      })));
-    } catch (error) {
-      console.error('Debug failed:', error);
-    }
-  };
-
   if (loading) {
     return (
-      <div className="bg-white rounded-xl shadow-sm border border-orange-200 p-4 sm:p-6">
+      <div className="bg-white rounded-xl shadow-sm border border-[#FFF0C4] p-4 sm:p-6">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
-          <h2 className="text-xl sm:text-2xl font-bold text-gray-900">Analytics & Reports</h2>
+          <h2 className="text-xl sm:text-2xl font-bold text-[#3E0703]">Analytics & Reports</h2>
         </div>
         <div className="text-center py-8">
-          <div className="w-8 h-8 border-2 border-orange-300 border-t-orange-500 rounded-full animate-spin mx-auto"></div>
-          <p className="text-gray-500 mt-2">Loading analytics data...</p>
-          <div className="mt-4 space-x-2">
-            <button 
-              onClick={testEndpoints}
-              className="text-orange-600 hover:text-orange-800 text-sm px-3 py-1 border border-orange-300 rounded"
-            >
-              Test API Endpoints
-            </button>
-            <button 
-              onClick={debugOrders}
-              className="text-blue-600 hover:text-blue-800 text-sm px-3 py-1 border border-blue-300 rounded"
-            >
-              Debug Orders
-            </button>
-          </div>
+          <div className="w-8 h-8 border-2 border-[#FFF0C4] border-t-[#8C1007] rounded-full animate-spin mx-auto"></div>
+          <p className="text-[#660B05] mt-2">Loading analytics data...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-orange-200 p-4 sm:p-6">
+    <div className="bg-white rounded-xl shadow-sm border border-[#FFF0C4] p-4 sm:p-6">
       {/* Header */}
       <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 mb-6">
         <div className="flex-1">
-          <h2 className="text-xl sm:text-2xl font-bold text-gray-900">Analytics & Reports</h2>
-          <p className="text-gray-600 mt-1 text-sm">
+          <h2 className="text-xl sm:text-2xl font-bold text-[#3E0703]">📊 Analytics & Reports</h2>
+          <p className="text-[#660B05] mt-1 text-sm">
             Business insights and performance metrics
           </p>
-          <div className="mt-2 space-x-2">
-            <button 
-              onClick={testEndpoints}
-              className="text-xs text-orange-600 hover:text-orange-800"
-            >
-              Test API Endpoints
-            </button>
-            <button 
-              onClick={debugOrders}
-              className="text-xs text-blue-600 hover:text-blue-800"
-            >
-              Debug Orders
-            </button>
-          </div>
         </div>
         <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
           <select 
             value={timeRange}
             onChange={(e) => setTimeRange(e.target.value)}
-            className="border border-orange-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 w-full sm:w-auto"
+            className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#8C1007] w-full sm:w-auto"
           >
             <option value="week">Last 7 Days</option>
             <option value="month">Last 30 Days</option>
@@ -400,7 +294,7 @@ const AnalyticsTab = () => {
           <button
             onClick={handleRefresh}
             disabled={refreshing}
-            className="flex items-center space-x-2 bg-orange-600 text-white px-4 py-2 rounded-lg hover:bg-orange-700 transition-colors disabled:opacity-50 justify-center w-full sm:w-auto"
+            className="flex items-center space-x-2 bg-gradient-to-r from-[#8C1007] to-[#660B05] text-white px-4 py-2 rounded-lg hover:shadow-md transition-all disabled:opacity-50 justify-center w-full sm:w-auto"
           >
             <RefreshCw size={16} className={refreshing ? 'animate-spin' : ''} />
             <span>Refresh</span>
@@ -415,20 +309,12 @@ const AnalyticsTab = () => {
           <div className="flex-1">
             <p className="text-red-800 font-medium">Analytics Data Error</p>
             <p className="text-red-700 text-sm">{error}</p>
-            <div className="mt-2 space-x-2">
-              <button 
-                onClick={fetchAnalytics}
-                className="text-red-600 hover:text-red-800 text-sm font-medium"
-              >
-                Try Again
-              </button>
-              <button 
-                onClick={testEndpoints}
-                className="text-red-600 hover:text-red-800 text-sm font-medium"
-              >
-                Test Endpoints
-              </button>
-            </div>
+            <button 
+              onClick={fetchAnalytics}
+              className="mt-2 text-red-600 hover:text-red-800 text-sm font-medium"
+            >
+              Try Again
+            </button>
           </div>
         </div>
       )}
@@ -456,7 +342,7 @@ const AnalyticsTab = () => {
 
       {/* Key Metrics */}
       <div className="grid grid-cols-1 xs:grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
-        <div className="bg-gradient-to-r from-orange-500 to-orange-600 text-white rounded-lg p-4">
+        <div className="bg-gradient-to-r from-[#8C1007] to-[#660B05] text-white rounded-lg p-4 hover:shadow-md transition-all">
           <div className="flex items-center justify-between">
             <div className="flex-1">
               <p className="text-xs font-medium opacity-90">Total Revenue</p>
@@ -467,7 +353,7 @@ const AnalyticsTab = () => {
           </div>
         </div>
         
-        <div className="bg-gradient-to-r from-green-500 to-green-600 text-white rounded-lg p-4">
+        <div className="bg-gradient-to-r from-green-500 to-green-600 text-white rounded-lg p-4 hover:shadow-md transition-all">
           <div className="flex items-center justify-between">
             <div className="flex-1">
               <p className="text-xs font-medium opacity-90">Total Orders</p>
@@ -478,7 +364,7 @@ const AnalyticsTab = () => {
           </div>
         </div>
         
-        <div className="bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-lg p-4">
+        <div className="bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-lg p-4 hover:shadow-md transition-all">
           <div className="flex items-center justify-between">
             <div className="flex-1">
               <p className="text-xs font-medium opacity-90">Total Users</p>
@@ -489,7 +375,7 @@ const AnalyticsTab = () => {
           </div>
         </div>
         
-        <div className="bg-gradient-to-r from-purple-500 to-purple-600 text-white rounded-lg p-4">
+        <div className="bg-gradient-to-r from-purple-500 to-purple-600 text-white rounded-lg p-4 hover:shadow-md transition-all">
           <div className="flex items-center justify-between">
             <div className="flex-1">
               <p className="text-xs font-medium opacity-90">Restaurants</p>
@@ -504,32 +390,32 @@ const AnalyticsTab = () => {
       {/* Order Statistics and Top Restaurants */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
         {/* Order Status Breakdown */}
-        <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-            <PieChart size={20} className="text-orange-600 mr-2" />
+        <div className="bg-white border border-[#FFF0C4] rounded-lg p-4 hover:shadow-md transition-all">
+          <h3 className="text-lg font-semibold text-[#3E0703] mb-4 flex items-center">
+            <PieChart size={20} className="text-[#8C1007] mr-2" />
             Order Status Breakdown
           </h3>
           <div className="space-y-3">
             {Object.entries(analytics.orderStats).map(([status, count]) => (
               <div key={status} className="flex items-center justify-between">
-                <span className="text-sm font-medium text-gray-700 capitalize flex-1 mr-3 truncate">
+                <span className="text-sm font-medium text-[#3E0703] capitalize flex-1 mr-3 truncate">
                   {status.replace('_', ' ')}
                 </span>
                 <div className="flex items-center space-x-3">
-                  <div className="w-20 bg-orange-200 rounded-full h-2">
+                  <div className="w-20 bg-[#FFF0C4] rounded-full h-2">
                     <div 
                       className={`h-2 rounded-full ${
                         status === 'delivered' ? 'bg-green-500' :
                         status === 'pending' ? 'bg-yellow-500' :
                         status === 'cancelled' ? 'bg-red-500' :
-                        'bg-orange-500'
+                        'bg-[#8C1007]'
                       }`}
                       style={{ 
                         width: `${analytics.totalOrders > 0 ? Math.max((count / analytics.totalOrders) * 100, 5) : 0}%` 
                       }}
                     ></div>
                   </div>
-                  <span className="text-sm font-bold text-orange-600 w-6 text-right">
+                  <span className="text-sm font-bold text-[#8C1007] w-6 text-right">
                     {count}
                   </span>
                 </div>
@@ -539,50 +425,50 @@ const AnalyticsTab = () => {
         </div>
 
         {/* Top Restaurants */}
-        <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-            <BarChart3 size={20} className="text-green-600 mr-2" />
+        <div className="bg-white border border-[#FFF0C4] rounded-lg p-4 hover:shadow-md transition-all">
+          <h3 className="text-lg font-semibold text-[#3E0703] mb-4 flex items-center">
+            <BarChart3 size={20} className="text-[#8C1007] mr-2" />
             Top Restaurants
           </h3>
           <div className="space-y-3">
             {analytics.topRestaurants.map((restaurant, index) => (
-              <div key={restaurant.id} className="flex items-center justify-between">
+              <div key={restaurant.id} className="flex items-center justify-between hover:bg-[#FFF0C4] p-2 rounded transition-colors">
                 <div className="flex items-center space-x-3 flex-1">
-                  <div className="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center">
-                    <span className="text-green-600 font-bold text-sm">{index + 1}</span>
+                  <div className="w-8 h-8 bg-gradient-to-r from-[#8C1007] to-[#660B05] rounded-lg flex items-center justify-center">
+                    <span className="text-white font-bold text-sm">{index + 1}</span>
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="font-medium text-gray-900 text-sm truncate">{restaurant.name}</p>
-                    <p className="text-xs text-gray-500">{restaurant.orders} orders</p>
+                    <p className="font-medium text-[#3E0703] text-sm truncate">{restaurant.name}</p>
+                    <p className="text-xs text-[#660B05]">{restaurant.orders} orders</p>
                   </div>
                 </div>
-                <span className="text-sm font-bold text-green-600">
+                <span className="text-sm font-bold text-[#8C1007]">
                   ₱{restaurant.revenue.toLocaleString()}
                 </span>
               </div>
             ))}
             {analytics.topRestaurants.length === 0 && (
-              <p className="text-gray-500 text-center py-4">No restaurant data available</p>
+              <p className="text-[#660B05] text-center py-4">No restaurant data available</p>
             )}
           </div>
         </div>
       </div>
 
       {/* Recent Orders */}
-      <div className="bg-white border border-orange-200 rounded-lg p-4 mb-6">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-          <Clock size={20} className="text-orange-600 mr-2" />
+      <div className="bg-white border border-[#FFF0C4] rounded-lg p-4 mb-6 hover:shadow-md transition-all">
+        <h3 className="text-lg font-semibold text-[#3E0703] mb-4 flex items-center">
+          <Clock size={20} className="text-[#8C1007] mr-2" />
           Recent Orders
         </h3>
         <div className="space-y-3">
           {analytics.recentOrders.map((order) => (
-            <div key={order._id || order.id} className="border border-orange-100 rounded-lg p-3 hover:shadow-sm transition-shadow">
+            <div key={order._id || order.id} className="border border-[#FFF0C4] rounded-lg p-3 hover:shadow-sm transition-all">
               <div className="flex items-center justify-between mb-2">
                 <div className="flex-1 min-w-0">
-                  <p className="font-medium text-gray-900 text-sm truncate">
+                  <p className="font-medium text-[#3E0703] text-sm truncate">
                     Order #{order.orderNumber || order._id?.substring(0, 8) || 'N/A'}
                   </p>
-                  <p className="text-xs text-gray-500 truncate">
+                  <p className="text-xs text-[#660B05] truncate">
                     {order.customer?.name || order.user?.name || 'Customer'}
                   </p>
                 </div>
@@ -592,11 +478,11 @@ const AnalyticsTab = () => {
               </div>
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-bold text-orange-600">
+                  <p className="text-sm font-bold text-[#8C1007]">
                     ₱{parseFloat(order.totalAmount || order.total || order.amount || 0).toLocaleString()}
                   </p>
                 </div>
-                <p className="text-xs text-gray-600">
+                <p className="text-xs text-[#660B05]">
                   {order.createdAt ? new Date(order.createdAt).toLocaleDateString() : 'N/A'}
                 </p>
               </div>
@@ -605,7 +491,7 @@ const AnalyticsTab = () => {
           {analytics.recentOrders.length === 0 && (
             <div className="text-center py-6">
               <Package size={32} className="mx-auto mb-2 text-gray-300" />
-              <p className="text-gray-500">No recent orders found</p>
+              <p className="text-[#660B05]">No recent orders found</p>
             </div>
           )}
         </div>
@@ -613,34 +499,23 @@ const AnalyticsTab = () => {
 
       {/* Performance Metrics */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-center">
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-center hover:shadow-md transition-all">
           <div className="text-2xl font-bold text-blue-600">
             {calculateCompletionRate()}%
           </div>
           <div className="text-sm text-blue-800 mt-1">Completion Rate</div>
         </div>
-        <div className="bg-green-50 border border-green-200 rounded-lg p-4 text-center">
+        <div className="bg-green-50 border border-green-200 rounded-lg p-4 text-center hover:shadow-md transition-all">
           <div className="text-2xl font-bold text-green-600">
             ₱{calculateAverageOrderValue()}
           </div>
           <div className="text-sm text-green-800 mt-1">Avg. Order Value</div>
         </div>
-        <div className="bg-purple-50 border border-purple-200 rounded-lg p-4 text-center">
-          <div className="text-2xl font-bold text-purple-600">
+        <div className="bg-[#FFF0C4] border border-[#8C1007] rounded-lg p-4 text-center hover:shadow-md transition-all">
+          <div className="text-2xl font-bold text-[#8C1007]">
             {calculateOrdersPerUser()}
           </div>
-          <div className="text-sm text-purple-800 mt-1">Orders per User</div>
-        </div>
-      </div>
-
-      {/* Debug Information */}
-      <div className="mt-6 p-4 bg-gray-50 border border-gray-200 rounded-lg">
-        <h4 className="font-medium text-gray-900 mb-2">Debug Information</h4>
-        <div className="text-sm text-gray-600 space-y-1">
-          <p>Total Orders: {analytics.totalOrders}</p>
-          <p>Delivered Orders: {analytics.orderStats.delivered}</p>
-          <p>Total Revenue: ₱{analytics.totalRevenue}</p>
-          <p>API Status: {analytics.totalOrders > 0 ? '✅ Data Loaded' : '❌ No Data'}</p>
+          <div className="text-sm text-[#660B05] mt-1">Orders per User</div>
         </div>
       </div>
     </div>
