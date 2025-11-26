@@ -2140,7 +2140,7 @@ const RestaurantCard = ({ restaurant, onAddToCart, user }) => {
     };
 
     const reviewCount = restaurantReviews.length;
-    const displayRating = averageRating > 0 ? averageRating : (restaurant.rating || 4.5);
+    const displayRating = averageRating > 0 ? averageRating : (restaurant.rating || 0);
 
     return (
         <>
