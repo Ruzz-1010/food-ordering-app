@@ -78,6 +78,7 @@ const RiderDashboard = () => {
       console.error('Error updating rider status:', error);
       setRiderStatus(newStatus);
     }
+    setShowMobileMenu(false);
   };
 
   // Fetch available orders
@@ -342,9 +343,9 @@ const RiderDashboard = () => {
   const OrderMap = ({ order, currentLocation, customerLocation }) => {
     if (!currentLocation || !customerLocation) {
       return (
-        <div className="h-48 sm:h-64 bg-gray-100 rounded-lg flex items-center justify-center">
+        <div className="h-48 bg-gray-100 rounded-lg flex items-center justify-center">
           <div className="text-center">
-            <Map className="mx-auto text-gray-400 mb-2 w-8 h-8 sm:w-12 sm:h-12" />
+            <Map className="mx-auto text-gray-400 mb-2 w-8 h-8" />
             <p className="text-gray-500 text-sm">Loading map...</p>
           </div>
         </div>
@@ -352,7 +353,7 @@ const RiderDashboard = () => {
     }
 
     return (
-      <div className="h-48 sm:h-64 bg-gray-100 rounded-lg overflow-hidden relative">
+      <div className="h-48 bg-gray-100 rounded-lg overflow-hidden relative">
         <iframe
           width="100%"
           height="100%"
@@ -384,89 +385,99 @@ const RiderDashboard = () => {
     );
   };
 
-  // Order Details Modal - Responsive
+  // Order Details Modal - Improved Responsive
   const OrderDetailsModal = ({ order, onClose, showMap }) => {
     if (!order) return null;
 
     const customerLoc = customerLocation || getCustomerLocation(order);
 
     return (
-      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-2 sm:p-4">
-        <div className="bg-white rounded-lg w-full max-w-4xl max-h-[95vh] overflow-y-auto">
-          <div className="p-4 sm:p-6 border-b sticky top-0 bg-white z-10">
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-2">
+        <div className="bg-white rounded-lg w-full max-w-2xl max-h-[90vh] overflow-y-auto mx-2">
+          {/* Header - Sticky */}
+          <div className="p-4 border-b sticky top-0 bg-white z-10">
             <div className="flex justify-between items-center">
-              <h2 className="text-lg sm:text-xl font-bold text-gray-900 truncate">
+              <h2 className="text-lg font-bold text-gray-900 truncate pr-2">
                 Order #{order.orderId || order._id}
               </h2>
-              <button onClick={onClose} className="p-1 sm:p-2 hover:bg-gray-100 rounded">
-                <X className="w-5 h-5 sm:w-6 sm:h-6" />
+              <button 
+                onClick={onClose} 
+                className="p-2 hover:bg-gray-100 rounded-lg flex-shrink-0"
+              >
+                <X className="w-5 h-5" />
               </button>
             </div>
           </div>
 
-          <div className="p-4 sm:p-6">
-            {/* Order Summary */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 mb-6">
-              <div className="space-y-4">
-                <div className="bg-gray-50 p-3 sm:p-4 rounded-lg">
-                  <h3 className="font-semibold text-gray-900 mb-2 sm:mb-3 flex items-center text-sm sm:text-base">
-                    <User className="mr-2 w-4 h-4 sm:w-5 sm:h-5" />
-                    Customer Information
-                  </h3>
-                  <div className="space-y-1 sm:space-y-2 text-xs sm:text-sm">
-                    <p><strong>Name:</strong> {order.user?.name || 'Customer'}</p>
-                    <p><strong>Phone:</strong> {order.user?.phone || 'Not provided'}</p>
-                    <p><strong>Address:</strong> {order.deliveryAddress || 'No address provided'}</p>
+          {/* Content */}
+          <div className="p-4">
+            {/* Order Summary - Single Column on Mobile */}
+            <div className="space-y-4 mb-6">
+              {/* Customer Info */}
+              <div className="bg-gray-50 p-4 rounded-lg">
+                <h3 className="font-semibold text-gray-900 mb-3 flex items-center text-sm">
+                  <User className="mr-2 w-4 h-4" />
+                  Customer Information
+                </h3>
+                <div className="space-y-2 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Name:</span>
+                    <span className="font-medium">{order.user?.name || 'Customer'}</span>
                   </div>
-                </div>
-
-                <div className="bg-gray-50 p-3 sm:p-4 rounded-lg">
-                  <h3 className="font-semibold text-gray-900 mb-2 sm:mb-3 flex items-center text-sm sm:text-base">
-                    <Store className="mr-2 w-4 h-4 sm:w-5 sm:h-5" />
-                    Restaurant Information
-                  </h3>
-                  <div className="space-y-1 sm:space-y-2 text-xs sm:text-sm">
-                    <p><strong>Name:</strong> {order.restaurant?.name || 'Unknown Restaurant'}</p>
-                    <p><strong>Address:</strong> {order.restaurant?.address || 'No address'}</p>
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Phone:</span>
+                    <span className="font-medium">{order.user?.phone || 'Not provided'}</span>
+                  </div>
+                  <div>
+                    <span className="text-gray-600">Address:</span>
+                    <p className="font-medium text-sm mt-1">{order.deliveryAddress || 'No address provided'}</p>
                   </div>
                 </div>
               </div>
 
-              <div className="space-y-4">
-                <div className="bg-gray-50 p-3 sm:p-4 rounded-lg">
-                  <h3 className="font-semibold text-gray-900 mb-2 sm:mb-3 flex items-center text-sm sm:text-base">
-                    <Package className="mr-2 w-4 h-4 sm:w-5 sm:h-5" />
-                    Order Information
-                  </h3>
-                  <div className="space-y-1 sm:space-y-2 text-xs sm:text-sm">
-                    <p><strong>Order ID:</strong> {order.orderId || order._id}</p>
-                    <p><strong>Order Date:</strong> {formatDate(order.createdAt)}</p>
-                    <p className="flex items-center">
-                      <strong>Status:</strong> 
-                      <span className={`ml-2 px-2 py-1 text-xs rounded ${
-                        order.status === 'delivered' ? 'bg-green-100 text-green-800' : 
-                        order.status === 'out_for_delivery' ? 'bg-blue-100 text-blue-800' :
-                        order.status === 'ready' ? 'bg-green-100 text-green-800' :
-                        'bg-orange-100 text-orange-800'
-                      }`}>
-                        {order.status}
-                      </span>
-                    </p>
-                    <p><strong>Total Amount:</strong> {formatCurrency(order.total || order.totalAmount)}</p>
+              {/* Restaurant Info */}
+              <div className="bg-gray-50 p-4 rounded-lg">
+                <h3 className="font-semibold text-gray-900 mb-3 flex items-center text-sm">
+                  <Store className="mr-2 w-4 h-4" />
+                  Restaurant Information
+                </h3>
+                <div className="space-y-2 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Name:</span>
+                    <span className="font-medium">{order.restaurant?.name || 'Unknown Restaurant'}</span>
+                  </div>
+                  <div>
+                    <span className="text-gray-600">Address:</span>
+                    <p className="font-medium text-sm mt-1">{order.restaurant?.address || 'No address'}</p>
                   </div>
                 </div>
+              </div>
 
-                <div className="bg-gray-50 p-3 sm:p-4 rounded-lg">
-                  <h3 className="font-semibold text-gray-900 mb-2 sm:mb-3 flex items-center text-sm sm:text-base">
-                    <DollarSign className="mr-2 w-4 h-4 sm:w-5 sm:h-5" />
-                    Payment Information
-                  </h3>
-                  <div className="space-y-1 sm:space-y-2 text-xs sm:text-sm">
-                    <p><strong>Payment Method:</strong> {order.paymentMethod || 'Cash on Delivery'}</p>
-                    <p><strong>Delivery Fee:</strong> {formatCurrency(order.deliveryFee || 35)}</p>
-                    {order.specialInstructions && (
-                      <p><strong>Instructions:</strong> {order.specialInstructions}</p>
-                    )}
+              {/* Order Info */}
+              <div className="bg-gray-50 p-4 rounded-lg">
+                <h3 className="font-semibold text-gray-900 mb-3 flex items-center text-sm">
+                  <Package className="mr-2 w-4 h-4" />
+                  Order Information
+                </h3>
+                <div className="space-y-2 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Order Date:</span>
+                    <span className="font-medium">{formatDate(order.createdAt)}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-gray-600">Status:</span>
+                    <span className={`px-2 py-1 text-xs rounded ${
+                      order.status === 'delivered' ? 'bg-green-100 text-green-800' : 
+                      order.status === 'out_for_delivery' ? 'bg-blue-100 text-blue-800' :
+                      order.status === 'ready' ? 'bg-green-100 text-green-800' :
+                      'bg-orange-100 text-orange-800'
+                    }`}>
+                      {order.status}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Total Amount:</span>
+                    <span className="font-medium text-green-600">{formatCurrency(order.total || order.totalAmount)}</span>
                   </div>
                 </div>
               </div>
@@ -474,19 +485,19 @@ const RiderDashboard = () => {
 
             {/* Order Items */}
             <div className="mb-6">
-              <h3 className="font-semibold text-gray-900 mb-3 text-sm sm:text-base">Order Items</h3>
-              <div className="bg-gray-50 rounded-lg p-3 sm:p-4">
+              <h3 className="font-semibold text-gray-900 mb-3 text-sm">Order Items</h3>
+              <div className="bg-gray-50 rounded-lg p-4">
                 {order.items?.length > 0 ? (
-                  <div className="space-y-2">
+                  <div className="space-y-3">
                     {order.items.map((item, index) => (
                       <div key={index} className="flex justify-between items-center py-2 border-b last:border-b-0">
                         <div className="flex-1 min-w-0">
-                          <p className="font-medium text-sm sm:text-base truncate">
+                          <p className="font-medium text-sm truncate">
                             {item.productName || item.product?.name || `Item ${index + 1}`}
                           </p>
                           <p className="text-xs text-gray-600">Quantity: {item.quantity}</p>
                         </div>
-                        <p className="font-semibold text-sm sm:text-base ml-2 flex-shrink-0">
+                        <p className="font-semibold text-sm ml-2 flex-shrink-0">
                           {formatCurrency(item.price * item.quantity)}
                         </p>
                       </div>
@@ -501,8 +512,8 @@ const RiderDashboard = () => {
             {/* Map Section */}
             {showMap && (
               <div className="mb-6">
-                <h3 className="font-semibold text-gray-900 mb-3 flex items-center text-sm sm:text-base">
-                  <Map className="mr-2 w-4 h-4 sm:w-5 sm:h-5" />
+                <h3 className="font-semibold text-gray-900 mb-3 flex items-center text-sm">
+                  <Map className="mr-2 w-4 h-4" />
                   Delivery Route
                 </h3>
                 <OrderMap 
@@ -510,44 +521,44 @@ const RiderDashboard = () => {
                   currentLocation={currentLocation} 
                   customerLocation={customerLoc}
                 />
-                <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-4 text-xs sm:text-sm">
+                <div className="mt-3 space-y-2 text-xs">
                   <div className="flex items-center space-x-2">
-                    <MapPin className="text-blue-600 w-3 h-3 sm:w-4 sm:h-4" />
+                    <MapPin className="text-blue-600 w-4 h-4" />
                     <span className="truncate">You: {currentLocation ? `${currentLocation.lat.toFixed(4)}, ${currentLocation.lng.toFixed(4)}` : 'Unknown'}</span>
                   </div>
                   <div className="flex items-center space-x-2">
-                    <Home className="text-red-600 w-3 h-3 sm:w-4 sm:h-4" />
+                    <Home className="text-red-600 w-4 h-4" />
                     <span className="truncate">Customer: {customerLoc ? `${customerLoc.lat.toFixed(4)}, ${customerLoc.lng.toFixed(4)}` : 'Unknown'}</span>
                   </div>
                 </div>
               </div>
             )}
 
-            {/* Action Buttons */}
-            <div className="flex flex-col sm:flex-row justify-end space-y-2 sm:space-y-0 sm:space-x-3 pt-4 border-t">
+            {/* Action Buttons - Stack on Mobile */}
+            <div className="flex flex-col space-y-2 pt-4 border-t">
               {order.user?.phone && (
                 <div className="flex space-x-2">
                   <a 
                     href={`tel:${order.user.phone}`}
-                    className="flex items-center justify-center space-x-2 bg-blue-600 text-white px-3 sm:px-4 py-2 rounded-lg hover:bg-blue-700 text-sm flex-1 sm:flex-none"
+                    className="flex items-center justify-center space-x-2 bg-blue-600 text-white px-4 py-3 rounded-lg hover:bg-blue-700 text-sm flex-1"
                   >
-                    <Phone className="w-3 h-3 sm:w-4 sm:h-4" />
-                    <span>Call</span>
+                    <Phone className="w-4 h-4" />
+                    <span>Call Customer</span>
                   </a>
                   <a 
                     href={`sms:${order.user.phone}`}
-                    className="flex items-center justify-center space-x-2 bg-green-600 text-white px-3 sm:px-4 py-2 rounded-lg hover:bg-green-700 text-sm flex-1 sm:flex-none"
+                    className="flex items-center justify-center space-x-2 bg-green-600 text-white px-4 py-3 rounded-lg hover:bg-green-700 text-sm flex-1"
                   >
-                    <MessageCircle className="w-3 h-3 sm:w-4 sm:h-4" />
-                    <span>SMS</span>
+                    <MessageCircle className="w-4 h-4" />
+                    <span>Send SMS</span>
                   </a>
                 </div>
               )}
               <button 
                 onClick={() => setShowMap(!showMap)}
-                className="flex items-center justify-center space-x-2 bg-gray-600 text-white px-3 sm:px-4 py-2 rounded-lg hover:bg-gray-700 text-sm"
+                className="flex items-center justify-center space-x-2 bg-gray-600 text-white px-4 py-3 rounded-lg hover:bg-gray-700 text-sm"
               >
-                <Map className="w-3 h-3 sm:w-4 sm:h-4" />
+                <Map className="w-4 h-4" />
                 <span>{showMap ? 'Hide Map' : 'Show Map'}</span>
               </button>
             </div>
@@ -595,27 +606,39 @@ const RiderDashboard = () => {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header */}
+      {/* Header - Improved Mobile */}
       <header className="bg-white shadow-sm border-b">
-        <div className="max-w-7xl mx-auto px-3 sm:px-4 py-3 sm:py-4">
+        <div className="px-4 py-3">
           <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-2 sm:space-x-3">
-              <div className="w-8 h-8 sm:w-10 sm:h-10 bg-orange-600 rounded-lg flex items-center justify-center flex-shrink-0">
-                <Navigation className="text-white w-4 h-4 sm:w-5 sm:h-5" />
+            <div className="flex items-center space-x-3 min-w-0 flex-1">
+              <div className="w-10 h-10 bg-orange-600 rounded-lg flex items-center justify-center flex-shrink-0">
+                <Navigation className="text-white w-5 h-5" />
               </div>
               <div className="min-w-0 flex-1">
-                <h1 className="text-lg sm:text-xl font-bold text-gray-900 truncate">Rider Dashboard</h1>
-                <p className="text-xs sm:text-sm text-gray-500 truncate">{user.name} • {user.email}</p>
+                <h1 className="text-lg font-bold text-gray-900 truncate">Rider Dashboard</h1>
+                <p className="text-sm text-gray-500 truncate">{user.name}</p>
                 <p className="text-xs text-gray-400 truncate">
-                  Available: {stats.availableOrders} | My Deliveries: {stats.myDeliveries} | Earnings: {formatCurrency(earnings.total)}
+                  {riderStatus === 'online' ? '🟢 Online' : '🔴 Offline'} • {stats.availableOrders} available
                 </p>
               </div>
             </div>
 
             {/* Mobile Menu Button */}
-            <div className="flex items-center space-x-1 sm:space-x-3">
+            <div className="flex items-center space-x-2">
+              {/* Status Toggle - Mobile Only */}
+              <button 
+                onClick={toggleRiderStatus}
+                className={`sm:hidden p-2 rounded-lg ${
+                  riderStatus === 'online' 
+                    ? 'bg-green-600 text-white' 
+                    : 'bg-gray-600 text-white'
+                }`}
+              >
+                {riderStatus === 'online' ? <Wifi className="w-5 h-5" /> : <WifiOff className="w-5 h-5" />}
+              </button>
+
               {/* Mobile Menu */}
-              <div className="sm:hidden relative">
+              <div className="relative">
                 <button 
                   onClick={() => setShowMobileMenu(!showMobileMenu)}
                   className="p-2 hover:bg-gray-100 rounded-lg"
@@ -627,7 +650,7 @@ const RiderDashboard = () => {
                   <div className="absolute right-0 top-full mt-2 w-48 bg-white rounded-lg shadow-lg border py-2 z-50">
                     <button 
                       onClick={toggleRiderStatus}
-                      className={`flex items-center space-x-2 w-full px-4 py-2 text-left ${
+                      className={`flex items-center space-x-3 w-full px-4 py-2 text-left ${
                         riderStatus === 'online' 
                           ? 'text-green-600 hover:bg-green-50' 
                           : 'text-gray-600 hover:bg-gray-50'
@@ -639,7 +662,7 @@ const RiderDashboard = () => {
                     
                     <button 
                       onClick={getCurrentLocation}
-                      className="flex items-center space-x-2 w-full px-4 py-2 text-left text-blue-600 hover:bg-blue-50"
+                      className="flex items-center space-x-3 w-full px-4 py-2 text-left text-blue-600 hover:bg-blue-50"
                     >
                       <MapPin className="w-4 h-4" />
                       <span>Update Location</span>
@@ -647,7 +670,7 @@ const RiderDashboard = () => {
                     
                     <button 
                       onClick={loadData} 
-                      className="flex items-center space-x-2 w-full px-4 py-2 text-left text-gray-600 hover:bg-gray-50"
+                      className="flex items-center space-x-3 w-full px-4 py-2 text-left text-gray-600 hover:bg-gray-50"
                     >
                       <RefreshCw className="w-4 h-4" />
                       <span>Refresh</span>
@@ -655,7 +678,7 @@ const RiderDashboard = () => {
                     
                     <button 
                       onClick={logout} 
-                      className="flex items-center space-x-2 w-full px-4 py-2 text-left text-red-600 hover:bg-red-50"
+                      className="flex items-center space-x-3 w-full px-4 py-2 text-left text-red-600 hover:bg-red-50"
                     >
                       <LogOut className="w-4 h-4" />
                       <span>Logout</span>
@@ -675,7 +698,7 @@ const RiderDashboard = () => {
                   }`}
                 >
                   {riderStatus === 'online' ? <Wifi className="w-4 h-4" /> : <WifiOff className="w-4 h-4" />}
-                  <span className="hidden sm:inline">{riderStatus === 'online' ? 'Online' : 'Offline'}</span>
+                  <span>{riderStatus === 'online' ? 'Online' : 'Offline'}</span>
                 </button>
 
                 <button 
@@ -683,7 +706,7 @@ const RiderDashboard = () => {
                   className="flex items-center space-x-2 bg-blue-600 text-white px-3 py-2 rounded-lg hover:bg-blue-700 text-sm"
                 >
                   <MapPin className="w-4 h-4" />
-                  <span className="hidden sm:inline">Location</span>
+                  <span>Location</span>
                 </button>
 
                 <button 
@@ -691,15 +714,7 @@ const RiderDashboard = () => {
                   className="flex items-center space-x-2 bg-gray-600 text-white px-3 py-2 rounded-lg hover:bg-gray-700 text-sm"
                 >
                   <RefreshCw className="w-4 h-4" />
-                  <span className="hidden sm:inline">Refresh</span>
-                </button>
-                
-                <button 
-                  onClick={logout} 
-                  className="flex items-center space-x-2 bg-red-600 text-white px-3 py-2 rounded-lg hover:bg-red-700 text-sm"
-                >
-                  <LogOut className="w-4 h-4" />
-                  <span className="hidden sm:inline">Logout</span>
+                  <span>Refresh</span>
                 </button>
               </div>
             </div>
@@ -707,87 +722,69 @@ const RiderDashboard = () => {
         </div>
       </header>
 
-      <div className="max-w-7xl mx-auto px-3 sm:px-4 py-4 sm:py-6">
-        {/* Stats - Responsive Grid */}
-        <div className="grid grid-cols-2 lg:grid-cols-6 gap-2 sm:gap-4 mb-4 sm:mb-6">
+      <div className="px-4 py-4">
+        {/* Stats - Improved Mobile Grid */}
+        <div className="grid grid-cols-2 gap-3 mb-4">
           {/* Delivery Stats */}
-          <div className="bg-white p-3 sm:p-4 rounded-lg shadow-sm border text-center">
-            <p className="text-xs sm:text-sm text-gray-600 mb-1">Available</p>
-            <p className="text-xl sm:text-2xl font-bold text-gray-900">{stats.availableOrders}</p>
+          <div className="bg-white p-3 rounded-lg shadow-sm border text-center">
+            <p className="text-xs text-gray-600 mb-1">Available</p>
+            <p className="text-xl font-bold text-gray-900">{stats.availableOrders}</p>
             <p className="text-xs text-blue-600">orders</p>
           </div>
-          <div className="bg-white p-3 sm:p-4 rounded-lg shadow-sm border text-center">
-            <p className="text-xs sm:text-sm text-gray-600 mb-1">My Deliveries</p>
-            <p className="text-xl sm:text-2xl font-bold text-gray-900">{stats.myDeliveries}</p>
+          <div className="bg-white p-3 rounded-lg shadow-sm border text-center">
+            <p className="text-xs text-gray-600 mb-1">My Deliveries</p>
+            <p className="text-xl font-bold text-gray-900">{stats.myDeliveries}</p>
             <p className="text-xs text-orange-600">assigned</p>
           </div>
-          <div className="bg-white p-3 sm:p-4 rounded-lg shadow-sm border text-center">
-            <p className="text-xs sm:text-sm text-gray-600 mb-1">In Progress</p>
-            <p className="text-xl sm:text-2xl font-bold text-orange-600">{stats.pendingDeliveries}</p>
+          <div className="bg-white p-3 rounded-lg shadow-sm border text-center">
+            <p className="text-xs text-gray-600 mb-1">In Progress</p>
+            <p className="text-xl font-bold text-orange-600">{stats.pendingDeliveries}</p>
             <p className="text-xs text-orange-600">active</p>
           </div>
-          <div className="bg-white p-3 sm:p-4 rounded-lg shadow-sm border text-center">
-            <p className="text-xs sm:text-sm text-gray-600 mb-1">Completed</p>
-            <p className="text-xl sm:text-2xl font-bold text-green-600">{stats.completedDeliveries}</p>
+          <div className="bg-white p-3 rounded-lg shadow-sm border text-center">
+            <p className="text-xs text-gray-600 mb-1">Completed</p>
+            <p className="text-xl font-bold text-green-600">{stats.completedDeliveries}</p>
             <p className="text-xs text-green-600">delivered</p>
-          </div>
-          
-          {/* Earnings Stats */}
-          <div className="bg-white p-3 sm:p-4 rounded-lg shadow-sm border text-center col-span-2 lg:col-span-1">
-            <div className="flex items-center justify-center mb-1">
-              <Wallet className="text-green-600 w-4 h-4 mr-1" />
-              <p className="text-xs sm:text-sm text-gray-600">Today's Earnings</p>
-            </div>
-            <p className="text-xl sm:text-2xl font-bold text-green-600">{formatCurrency(earnings.today)}</p>
-            <p className="text-xs text-green-600">{earnings.completedDeliveries} deliveries</p>
-          </div>
-          <div className="bg-white p-3 sm:p-4 rounded-lg shadow-sm border text-center col-span-2 lg:col-span-1">
-            <div className="flex items-center justify-center mb-1">
-              <TrendingUp className="text-blue-600 w-4 h-4 mr-1" />
-              <p className="text-xs sm:text-sm text-gray-600">Total Earnings</p>
-            </div>
-            <p className="text-xl sm:text-2xl font-bold text-blue-600">{formatCurrency(earnings.total)}</p>
-            <p className="text-xs text-blue-600">₱35 per delivery</p>
           </div>
         </div>
 
-        {/* Earnings Summary Card */}
-        <div className="bg-gradient-to-r from-green-500 to-green-600 rounded-lg p-4 sm:p-6 mb-4 sm:mb-6 text-white">
-          <div className="flex items-center justify-between">
+        {/* Earnings Summary Card - Simplified for Mobile */}
+        <div className="bg-gradient-to-r from-green-500 to-green-600 rounded-lg p-4 mb-4 text-white">
+          <div className="flex items-center justify-between mb-3">
             <div>
-              <h3 className="text-lg sm:text-xl font-bold mb-1">Your Earnings</h3>
-              <p className="text-green-100 text-sm sm:text-base">₱35 per successful delivery</p>
+              <h3 className="text-lg font-bold">Your Earnings</h3>
+              <p className="text-green-100 text-sm">₱35 per delivery</p>
             </div>
             <div className="text-right">
-              <p className="text-2xl sm:text-3xl font-bold">{formatCurrency(earnings.total)}</p>
-              <p className="text-green-100 text-sm">Total earned</p>
+              <p className="text-2xl font-bold">{formatCurrency(earnings.total)}</p>
+              <p className="text-green-100 text-sm">Total</p>
             </div>
           </div>
           
-          <div className="grid grid-cols-3 gap-4 mt-4">
-            <div className="text-center">
-              <p className="text-lg sm:text-xl font-bold">{formatCurrency(earnings.today)}</p>
-              <p className="text-green-100 text-xs sm:text-sm">Today</p>
+          <div className="grid grid-cols-3 gap-2 text-center">
+            <div>
+              <p className="font-bold">{formatCurrency(earnings.today)}</p>
+              <p className="text-green-100 text-xs">Today</p>
             </div>
-            <div className="text-center">
-              <p className="text-lg sm:text-xl font-bold">{formatCurrency(earnings.weekly)}</p>
-              <p className="text-green-100 text-xs sm:text-sm">This Week</p>
+            <div>
+              <p className="font-bold">{formatCurrency(earnings.weekly)}</p>
+              <p className="text-green-100 text-xs">Week</p>
             </div>
-            <div className="text-center">
-              <p className="text-lg sm:text-xl font-bold">{formatCurrency(earnings.monthly)}</p>
-              <p className="text-green-100 text-xs sm:text-sm">This Month</p>
+            <div>
+              <p className="font-bold">{formatCurrency(earnings.monthly)}</p>
+              <p className="text-green-100 text-xs">Month</p>
             </div>
           </div>
         </div>
 
         {/* Status Alert */}
         {riderStatus === 'offline' && (
-          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 sm:p-4 mb-4 sm:mb-6">
+          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mb-4">
             <div className="flex items-center">
-              <AlertCircle className="text-yellow-600 mr-2 sm:mr-3 flex-shrink-0 w-4 h-4 sm:w-5 sm:h-5" />
+              <AlertCircle className="text-yellow-600 mr-3 flex-shrink-0 w-5 h-5" />
               <div>
-                <p className="text-yellow-800 font-medium text-sm sm:text-base">You are currently offline</p>
-                <p className="text-yellow-700 text-xs sm:text-sm">Go online to receive and accept delivery orders.</p>
+                <p className="text-yellow-800 font-medium text-sm">You are offline</p>
+                <p className="text-yellow-700 text-xs">Go online to receive orders</p>
               </div>
             </div>
           </div>
@@ -795,13 +792,13 @@ const RiderDashboard = () => {
 
         {/* Current Location Display */}
         {currentLocation && (
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 sm:p-4 mb-4 sm:mb-6">
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
             <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-2 sm:space-x-3 min-w-0 flex-1">
-                <MapPin className="text-blue-600 flex-shrink-0 w-4 h-4 sm:w-5 sm:h-5" />
+              <div className="flex items-center space-x-3 min-w-0 flex-1">
+                <MapPin className="text-blue-600 flex-shrink-0 w-5 h-5" />
                 <div className="min-w-0 flex-1">
-                  <p className="text-blue-800 font-medium text-sm sm:text-base truncate">Your Current Location</p>
-                  <p className="text-blue-700 text-xs sm:text-sm truncate">
+                  <p className="text-blue-800 font-medium text-sm truncate">Your Location</p>
+                  <p className="text-blue-700 text-xs truncate">
                     {currentLocation.lat.toFixed(4)}, {currentLocation.lng.toFixed(4)}
                   </p>
                 </div>
@@ -813,11 +810,11 @@ const RiderDashboard = () => {
           </div>
         )}
 
-        {/* Tabs - Responsive */}
-        <div className="flex space-x-2 sm:space-x-4 mb-4 sm:mb-6 overflow-x-auto">
+        {/* Tabs - Horizontal Scroll on Mobile */}
+        <div className="flex space-x-2 mb-4 overflow-x-auto pb-2">
           <button 
             onClick={() => setActiveTab('available')} 
-            className={`px-4 py-2 sm:px-6 sm:py-3 rounded-lg font-medium text-sm sm:text-base whitespace-nowrap flex-shrink-0 ${
+            className={`px-4 py-3 rounded-lg font-medium text-sm whitespace-nowrap flex-shrink-0 ${
               activeTab === 'available' 
                 ? 'bg-orange-600 text-white' 
                 : 'bg-white text-gray-700 border hover:bg-gray-50'
@@ -827,7 +824,7 @@ const RiderDashboard = () => {
           </button>
           <button 
             onClick={() => setActiveTab('my-deliveries')} 
-            className={`px-4 py-2 sm:px-6 sm:py-3 rounded-lg font-medium text-sm sm:text-base whitespace-nowrap flex-shrink-0 ${
+            className={`px-4 py-3 rounded-lg font-medium text-sm whitespace-nowrap flex-shrink-0 ${
               activeTab === 'my-deliveries' 
                 ? 'bg-orange-600 text-white' 
                 : 'bg-white text-gray-700 border hover:bg-gray-50'
@@ -837,7 +834,7 @@ const RiderDashboard = () => {
           </button>
           <button 
             onClick={() => setActiveTab('earnings')} 
-            className={`px-4 py-2 sm:px-6 sm:py-3 rounded-lg font-medium text-sm sm:text-base whitespace-nowrap flex-shrink-0 ${
+            className={`px-4 py-3 rounded-lg font-medium text-sm whitespace-nowrap flex-shrink-0 ${
               activeTab === 'earnings' 
                 ? 'bg-orange-600 text-white' 
                 : 'bg-white text-gray-700 border hover:bg-gray-50'
@@ -849,29 +846,29 @@ const RiderDashboard = () => {
 
         {/* Available Orders */}
         {activeTab === 'available' && (
-          <div className="space-y-3 sm:space-y-4">
+          <div className="space-y-3">
             {available.length === 0 ? (
-              <div className="text-center py-8 sm:py-12 bg-white rounded-lg shadow-sm border">
-                <Package className="mx-auto text-gray-300 mb-3 sm:mb-4 w-8 h-8 sm:w-12 sm:h-12" />
-                <p className="text-gray-500 text-base sm:text-lg mb-2">No available orders</p>
-                <p className="text-gray-400 text-sm sm:text-base mb-4">Orders ready for delivery will appear here</p>
+              <div className="text-center py-12 bg-white rounded-lg shadow-sm border">
+                <Package className="mx-auto text-gray-300 mb-4 w-12 h-12" />
+                <p className="text-gray-500 text-lg mb-2">No available orders</p>
+                <p className="text-gray-400 text-sm mb-4">Orders ready for delivery will appear here</p>
                 <button 
                   onClick={loadData} 
-                  className="bg-orange-600 text-white px-4 sm:px-6 py-2 rounded-lg hover:bg-orange-700 text-sm sm:text-base"
+                  className="bg-orange-600 text-white px-6 py-2 rounded-lg hover:bg-orange-700"
                 >
                   Check Again
                 </button>
               </div>
             ) : (
               available.map(order => (
-                <div key={order._id} className="bg-white rounded-lg shadow-sm border p-4 sm:p-6 hover:shadow-md transition-shadow">
-                  <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-3 mb-4">
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-start justify-between mb-2">
-                        <h3 className="font-semibold text-gray-900 text-base sm:text-lg truncate">
+                <div key={order._id} className="bg-white rounded-lg shadow-sm border p-4 hover:shadow-md transition-shadow">
+                  <div className="flex justify-between items-start mb-3">
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center space-x-2 mb-1">
+                        <h3 className="font-semibold text-gray-900 text-base truncate">
                           Order #{order.orderId || order._id}
                         </h3>
-                        <span className={`px-2 py-1 text-xs rounded flex-shrink-0 ml-2 ${
+                        <span className={`px-2 py-1 text-xs rounded flex-shrink-0 ${
                           order.status === 'ready' ? 'bg-green-100 text-green-800' : 
                           'bg-yellow-100 text-yellow-800'
                         }`}>
@@ -879,82 +876,63 @@ const RiderDashboard = () => {
                         </span>
                       </div>
                       
-                      <p className="text-xs sm:text-sm text-gray-600 mb-3">
+                      <p className="text-xs text-gray-600 mb-2">
                         {formatDate(order.createdAt)}
                       </p>
 
-                      <div className="space-y-2 mb-3">
+                      <div className="space-y-2 text-sm">
                         <div className="flex items-start space-x-2">
-                          <Store className="text-gray-400 mt-0.5 flex-shrink-0 w-3 h-3 sm:w-4 sm:h-4" />
-                          <div className="min-w-0 flex-1">
-                            <p className="font-medium text-xs sm:text-sm">Restaurant</p>
-                            <p className="text-gray-600 text-xs sm:text-sm truncate">{order.restaurant?.name || 'Unknown Restaurant'}</p>
-                          </div>
+                          <Store className="text-gray-400 mt-0.5 flex-shrink-0 w-4 h-4" />
+                          <p className="text-gray-600 truncate">{order.restaurant?.name || 'Unknown Restaurant'}</p>
                         </div>
                         
                         <div className="flex items-start space-x-2">
-                          <MapPin className="text-gray-400 mt-0.5 flex-shrink-0 w-3 h-3 sm:w-4 sm:h-4" />
-                          <div className="min-w-0 flex-1">
-                            <p className="font-medium text-xs sm:text-sm">Delivery Address</p>
-                            <p className="text-gray-600 text-xs sm:text-sm truncate">{order.deliveryAddress || 'No address provided'}</p>
-                          </div>
+                          <MapPin className="text-gray-400 mt-0.5 flex-shrink-0 w-4 h-4" />
+                          <p className="text-gray-600 truncate">{order.deliveryAddress || 'No address provided'}</p>
                         </div>
                       </div>
-
-                      {order.user && (
-                        <div className="flex items-start space-x-2">
-                          <User className="text-gray-400 mt-0.5 flex-shrink-0 w-3 h-3 sm:w-4 sm:h-4" />
-                          <div className="min-w-0 flex-1">
-                            <p className="font-medium text-xs sm:text-sm">Customer</p>
-                            <p className="text-gray-600 text-xs sm:text-sm truncate">{order.user.name || 'Customer'}</p>
-                            {order.user.phone && (
-                              <p className="text-xs text-gray-500 truncate">{order.user.phone}</p>
-                            )}
-                          </div>
-                        </div>
-                      )}
                     </div>
                     
-                    <div className="text-right sm:text-left sm:ml-4">
+                    <div className="text-right ml-3 flex-shrink-0">
                       <p className="text-lg font-bold text-green-600">
                         {formatCurrency(order.total || order.totalAmount)}
                       </p>
                       <p className="text-sm text-green-500 font-medium">
-                        +{formatCurrency(order.deliveryFee || 35)} for you
+                        +{formatCurrency(order.deliveryFee || 35)}
                       </p>
                     </div>
                   </div>
 
-                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center pt-3 sm:pt-4 border-t gap-3">
+                  <div className="flex flex-col space-y-2 pt-3 border-t">
                     <button 
                       onClick={() => showOrderWithMap(order)}
                       className="flex items-center space-x-2 text-orange-600 hover:text-orange-700 text-sm"
                     >
-                      <Eye className="w-3 h-3 sm:w-4 sm:h-4" />
+                      <Eye className="w-4 h-4" />
                       <span>View Details & Map</span>
                     </button>
                     
-                    <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2 w-full sm:w-auto">
+                    <div className="flex space-x-2">
                       {order.user?.phone && (
                         <a 
                           href={`tel:${order.user.phone}`}
-                          className="flex items-center justify-center space-x-2 bg-gray-600 text-white px-3 py-2 rounded-lg hover:bg-gray-700 text-sm"
+                          className="flex items-center justify-center space-x-2 bg-gray-600 text-white px-3 py-2 rounded-lg hover:bg-gray-700 text-sm flex-1"
                         >
-                          <Phone className="w-3 h-3 sm:w-4 sm:h-4" />
-                          <span>Call Customer</span>
+                          <Phone className="w-4 h-4" />
+                          <span>Call</span>
                         </a>
                       )}
                       <button 
                         onClick={() => acceptOrder(order._id)}
                         disabled={riderStatus === 'offline'}
-                        className={`flex items-center justify-center space-x-2 px-3 py-2 rounded-lg text-sm ${
+                        className={`flex items-center justify-center space-x-2 px-3 py-2 rounded-lg text-sm flex-1 ${
                           riderStatus === 'offline'
                             ? 'bg-gray-400 text-gray-200 cursor-not-allowed'
                             : 'bg-orange-600 text-white hover:bg-orange-700'
                         }`}
                       >
-                        <CheckCircle className="w-3 h-3 sm:w-4 sm:h-4" />
-                        <span>Accept Order</span>
+                        <CheckCircle className="w-4 h-4" />
+                        <span>Accept</span>
                       </button>
                     </div>
                   </div>
@@ -966,112 +944,90 @@ const RiderDashboard = () => {
 
         {/* My Deliveries */}
         {activeTab === 'my-deliveries' && (
-          <div className="space-y-3 sm:space-y-4">
+          <div className="space-y-3">
             {myDeliveries.length === 0 ? (
-              <div className="text-center py-8 sm:py-12 bg-white rounded-lg shadow-sm border">
-                <Package className="mx-auto text-gray-300 mb-3 sm:mb-4 w-8 h-8 sm:w-12 sm:h-12" />
-                <p className="text-gray-500 text-base sm:text-lg mb-2">No deliveries assigned</p>
-                <p className="text-gray-400 text-sm sm:text-base mb-4">Accepted orders will appear here</p>
+              <div className="text-center py-12 bg-white rounded-lg shadow-sm border">
+                <Package className="mx-auto text-gray-300 mb-4 w-12 h-12" />
+                <p className="text-gray-500 text-lg mb-2">No deliveries assigned</p>
+                <p className="text-gray-400 text-sm mb-4">Accepted orders will appear here</p>
                 <button 
                   onClick={() => setActiveTab('available')}
-                  className="bg-orange-600 text-white px-4 sm:px-6 py-2 rounded-lg hover:bg-orange-700 text-sm sm:text-base"
+                  className="bg-orange-600 text-white px-6 py-2 rounded-lg hover:bg-orange-700"
                 >
                   View Available Orders
                 </button>
               </div>
             ) : (
               myDeliveries.map(order => (
-                <div key={order._id} className="bg-white rounded-lg shadow-sm border p-4 sm:p-6 hover:shadow-md transition-shadow">
-                  <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-3 mb-4">
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-start justify-between mb-2">
-                        <div className="flex items-center space-x-2 min-w-0">
-                          <h3 className="font-semibold text-gray-900 text-base sm:text-lg truncate">
-                            Order #{order.orderId || order._id}
-                          </h3>
-                          <span className={`px-2 py-1 text-xs rounded flex-shrink-0 ${
-                            order.status === 'delivered' ? 'bg-green-100 text-green-800' : 
-                            order.status === 'out_for_delivery' ? 'bg-blue-100 text-blue-800' :
-                            'bg-orange-100 text-orange-800'
-                          }`}>
-                            {order.status}
-                          </span>
-                        </div>
+                <div key={order._id} className="bg-white rounded-lg shadow-sm border p-4 hover:shadow-md transition-shadow">
+                  <div className="flex justify-between items-start mb-3">
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center space-x-2 mb-1">
+                        <h3 className="font-semibold text-gray-900 text-base truncate">
+                          Order #{order.orderId || order._id}
+                        </h3>
+                        <span className={`px-2 py-1 text-xs rounded flex-shrink-0 ${
+                          order.status === 'delivered' ? 'bg-green-100 text-green-800' : 
+                          order.status === 'out_for_delivery' ? 'bg-blue-100 text-blue-800' :
+                          'bg-orange-100 text-orange-800'
+                        }`}>
+                          {order.status}
+                        </span>
                       </div>
                       
-                      <p className="text-xs sm:text-sm text-gray-600 mb-3">
+                      <p className="text-xs text-gray-600 mb-2">
                         {formatDate(order.createdAt)}
                       </p>
 
-                      <div className="space-y-2 mb-3">
+                      <div className="space-y-2 text-sm">
                         <div className="flex items-start space-x-2">
-                          <Store className="text-gray-400 mt-0.5 flex-shrink-0 w-3 h-3 sm:w-4 sm:h-4" />
-                          <div className="min-w-0 flex-1">
-                            <p className="font-medium text-xs sm:text-sm">Restaurant</p>
-                            <p className="text-gray-600 text-xs sm:text-sm truncate">{order.restaurant?.name || 'Unknown Restaurant'}</p>
-                          </div>
+                          <Store className="text-gray-400 mt-0.5 flex-shrink-0 w-4 h-4" />
+                          <p className="text-gray-600 truncate">{order.restaurant?.name || 'Unknown Restaurant'}</p>
                         </div>
                         
                         <div className="flex items-start space-x-2">
-                          <MapPin className="text-gray-400 mt-0.5 flex-shrink-0 w-3 h-3 sm:w-4 sm:h-4" />
-                          <div className="min-w-0 flex-1">
-                            <p className="font-medium text-xs sm:text-sm">Delivery Address</p>
-                            <p className="text-gray-600 text-xs sm:text-sm truncate">{order.deliveryAddress || 'No address provided'}</p>
-                          </div>
+                          <MapPin className="text-gray-400 mt-0.5 flex-shrink-0 w-4 h-4" />
+                          <p className="text-gray-600 truncate">{order.deliveryAddress || 'No address provided'}</p>
                         </div>
                       </div>
-
-                      {order.user && (
-                        <div className="flex items-start space-x-2">
-                          <User className="text-gray-400 mt-0.5 flex-shrink-0 w-3 h-3 sm:w-4 sm:h-4" />
-                          <div className="min-w-0 flex-1">
-                            <p className="font-medium text-xs sm:text-sm">Customer</p>
-                            <p className="text-gray-600 text-xs sm:text-sm truncate">{order.user.name || 'Customer'}</p>
-                            {order.user.phone && (
-                              <p className="text-xs text-gray-500 truncate">{order.user.phone}</p>
-                            )}
-                          </div>
-                        </div>
-                      )}
                     </div>
                     
-                    <div className="text-right sm:text-left sm:ml-4">
+                    <div className="text-right ml-3 flex-shrink-0">
                       <p className="text-lg font-bold text-green-600">
                         {formatCurrency(order.total || order.totalAmount)}
                       </p>
                       <p className="text-sm text-green-500 font-medium">
-                        +{formatCurrency(order.deliveryFee || 35)} for you
+                        +{formatCurrency(order.deliveryFee || 35)}
                       </p>
-                      <p className="text-xs sm:text-sm text-gray-500">Delivery Fee</p>
                     </div>
                   </div>
 
-                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center pt-3 sm:pt-4 border-t gap-3">
+                  <div className="flex flex-col space-y-2 pt-3 border-t">
                     <button 
                       onClick={() => showOrderWithMap(order)}
                       className="flex items-center space-x-2 text-orange-600 hover:text-orange-700 text-sm"
                     >
-                      <Eye className="w-3 h-3 sm:w-4 sm:h-4" />
+                      <Eye className="w-4 h-4" />
                       <span>View Details & Map</span>
                     </button>
                     
-                    <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2 w-full sm:w-auto">
+                    <div className="flex space-x-2">
                       {order.user?.phone && (
                         <a 
                           href={`tel:${order.user.phone}`}
-                          className="flex items-center justify-center space-x-2 bg-gray-600 text-white px-3 py-2 rounded-lg hover:bg-gray-700 text-sm"
+                          className="flex items-center justify-center space-x-2 bg-gray-600 text-white px-3 py-2 rounded-lg hover:bg-gray-700 text-sm flex-1"
                         >
-                          <Phone className="w-3 h-3 sm:w-4 sm:h-4" />
-                          <span>Call Customer</span>
+                          <Phone className="w-4 h-4" />
+                          <span>Call</span>
                         </a>
                       )}
                       
                       {order.status === 'assigned' && (
                         <button 
                           onClick={() => updateStatus(order._id, 'out_for_delivery')}
-                          className="flex items-center justify-center space-x-2 bg-blue-600 text-white px-3 py-2 rounded-lg hover:bg-blue-700 text-sm"
+                          className="flex items-center justify-center space-x-2 bg-blue-600 text-white px-3 py-2 rounded-lg hover:bg-blue-700 text-sm flex-1"
                         >
-                          <Navigation className="w-3 h-3 sm:w-4 sm:h-4" />
+                          <Navigation className="w-4 h-4" />
                           <span>Start Delivery</span>
                         </button>
                       )}
@@ -1079,9 +1035,9 @@ const RiderDashboard = () => {
                       {order.status === 'out_for_delivery' && (
                         <button 
                           onClick={() => updateStatus(order._id, 'delivered')}
-                          className="flex items-center justify-center space-x-2 bg-green-600 text-white px-3 py-2 rounded-lg hover:bg-green-700 text-sm"
+                          className="flex items-center justify-center space-x-2 bg-green-600 text-white px-3 py-2 rounded-lg hover:bg-green-700 text-sm flex-1"
                         >
-                          <CheckCircle className="w-3 h-3 sm:w-4 sm:h-4" />
+                          <CheckCircle className="w-4 h-4" />
                           <span>Mark Delivered</span>
                         </button>
                       )}
@@ -1093,14 +1049,14 @@ const RiderDashboard = () => {
           </div>
         )}
 
-        {/* Earnings Tab */}
+        {/* Earnings Tab - Simplified for Mobile */}
         {activeTab === 'earnings' && (
-          <div className="space-y-4 sm:space-y-6">
+          <div className="space-y-4">
             {/* Earnings Summary */}
-            <div className="bg-white rounded-lg shadow-sm border p-4 sm:p-6">
-              <h3 className="text-lg sm:text-xl font-bold text-gray-900 mb-4">Earnings Summary</h3>
+            <div className="bg-white rounded-lg shadow-sm border p-4">
+              <h3 className="text-lg font-bold text-gray-900 mb-4">Earnings Summary</h3>
               
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+              <div className="space-y-3 mb-6">
                 <div className="bg-green-50 p-4 rounded-lg border border-green-200">
                   <div className="flex items-center justify-between">
                     <div>
@@ -1133,22 +1089,11 @@ const RiderDashboard = () => {
                   </div>
                   <p className="text-purple-700 text-sm mt-2">{Math.round(earnings.monthly / 35)} deliveries this month</p>
                 </div>
-
-                <div className="bg-orange-50 p-4 rounded-lg border border-orange-200">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-orange-800 font-semibold">All Time</p>
-                      <p className="text-2xl font-bold text-orange-600">{formatCurrency(earnings.total)}</p>
-                    </div>
-                    <DollarSign className="text-orange-600 w-8 h-8" />
-                  </div>
-                  <p className="text-orange-700 text-sm mt-2">{earnings.completedDeliveries} total deliveries</p>
-                </div>
               </div>
 
               {/* Earnings Breakdown */}
-              <div className="border-t pt-6">
-                <h4 className="font-semibold text-gray-900 mb-4">Earnings Breakdown</h4>
+              <div className="border-t pt-4">
+                <h4 className="font-semibold text-gray-900 mb-3">Earnings Breakdown</h4>
                 <div className="space-y-3">
                   <div className="flex justify-between items-center">
                     <span className="text-gray-600">Completed Deliveries</span>
@@ -1164,43 +1109,6 @@ const RiderDashboard = () => {
                   </div>
                 </div>
               </div>
-            </div>
-
-            {/* Recent Completed Deliveries */}
-            <div className="bg-white rounded-lg shadow-sm border p-4 sm:p-6">
-              <h3 className="text-lg sm:text-xl font-bold text-gray-900 mb-4">Recent Completed Deliveries</h3>
-              
-              {myDeliveries.filter(order => order.status === 'delivered').length === 0 ? (
-                <div className="text-center py-8">
-                  <Package className="mx-auto text-gray-300 mb-3 w-12 h-12" />
-                  <p className="text-gray-500">No completed deliveries yet</p>
-                  <p className="text-gray-400 text-sm mt-1">Completed deliveries will appear here</p>
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  {myDeliveries
-                    .filter(order => order.status === 'delivered')
-                    .slice(0, 5)
-                    .map((order, index) => (
-                      <div key={order._id} className="flex items-center justify-between p-3 border rounded-lg">
-                        <div className="flex items-center space-x-3">
-                          <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
-                            <CheckCircle className="text-green-600 w-4 h-4" />
-                          </div>
-                          <div>
-                            <p className="font-medium text-gray-900">Order #{order.orderId || order._id}</p>
-                            <p className="text-sm text-gray-500">{formatDate(order.updatedAt || order.createdAt)}</p>
-                          </div>
-                        </div>
-                        <div className="text-right">
-                          <p className="font-semibold text-green-600">+₱35.00</p>
-                          <p className="text-sm text-gray-500">Delivery Fee</p>
-                        </div>
-                      </div>
-                    ))
-                  }
-                </div>
-              )}
             </div>
           </div>
         )}
