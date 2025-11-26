@@ -30,7 +30,7 @@ const productRoutes = require('./routes/products');
 const cartRoutes = require('./routes/cart');
 const adminRoutes = require('./routes/admin');
 const riderRoutes = require('./routes/riders'); // ADD THIS LINE
-
+const reviewRoutes = require('./routes/reviews');
 // USE ROUTES
 app.use('/api', healthRoutes);
 app.use('/api/auth', authRoutes);
@@ -41,6 +41,7 @@ app.use('/api/products', productRoutes);
 app.use('/api/cart', cartRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/riders', riderRoutes); // ADD THIS LINE
+app.use('/api/reviews', reviewRoutes);
 
 // Basic route
 app.get('/', (req, res) => {

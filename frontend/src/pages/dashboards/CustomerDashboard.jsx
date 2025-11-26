@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { 
     Search, MapPin, Clock, Star, 
@@ -21,6 +20,7 @@ const getAuthHeaders = () => {
         ...(token && { 'Authorization': `Bearer ${token}` })
     };
 };
+
 // Image compression function for Base64
 const compressImage = (file, maxWidth = 800, quality = 0.7) => {
     return new Promise((resolve) => {
@@ -59,6 +59,7 @@ const compressImage = (file, maxWidth = 800, quality = 0.7) => {
       reader.onerror = error => reject(error);
     });
   };
+
 // Cart Hook for State Management
 const useCart = () => {
     const [cart, setCart] = useState([]);
@@ -830,6 +831,365 @@ const LocationMap = ({ onLocationSelect, initialAddress = '', showCurrentLocatio
     );
 };
 
+// Review Components
+const StarRating = ({ rating, onRatingChange, readonly = false, size = 16 }) => {
+    return (
+        <div className="flex space-x-1">
+            {[1, 2, 3, 4, 5].map((star) => (
+                <button
+                    key={star}
+                    type={readonly ? "button" : "button"}
+                    onClick={() => !readonly && onRatingChange(star)}
+                    disabled={readonly}
+                    className={`${
+                        readonly ? 'cursor-default' : 'cursor-pointer hover:scale-110'
+                    } transition-transform`}
+                >
+                    <Star
+                        size={size}
+                        className={`${
+                            star <= rating
+                                ? 'text-yellow-400 fill-current'
+                                : 'text-gray-300'
+                        }`}
+                    />
+                </button>
+            ))}
+        </div>
+    );
+};
+
+const ReviewForm = ({ restaurant, onSubmit, onCancel, user }) => {
+    const [rating, setRating] = useState(0);
+    const [comment, setComment] = useState('');
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState('');
+
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        
+        if (rating === 0) {
+            setError('Please select a rating');
+            return;
+        }
+
+        if (!comment.trim()) {
+            setError('Please write a review');
+            return;
+        }
+
+        setLoading(true);
+        setError('');
+
+        try {
+            const reviewData = {
+                restaurantId: restaurant._id,
+                rating: rating,
+                comment: comment.trim(),
+                userId: user._id,
+                userName: user.name
+            };
+
+            const response = await fetch('https://food-ordering-app-production-35eb.up.railway.app/api/reviews', {
+                method: 'POST',
+                headers: getAuthHeaders(),
+                body: JSON.stringify(reviewData)
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                onSubmit(data.review);
+            } else {
+                setError(data.message || 'Failed to submit review');
+            }
+        } catch (error) {
+            console.error('Error submitting review:', error);
+            setError('Network error submitting review');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    return (
+        <div className="bg-white rounded-lg shadow-lg p-4 sm:p-6">
+            <h3 className="text-lg font-bold text-gray-900 mb-4">Write a Review</h3>
+            
+            {error && (
+                <div className="bg-red-100 border border-red-400 text-red-700 px-3 py-2 rounded mb-4 text-sm">
+                    {error}
+                </div>
+            )}
+
+            <form onSubmit={handleSubmit} className="space-y-4">
+                <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Your Rating
+                    </label>
+                    <StarRating rating={rating} onRatingChange={setRating} />
+                </div>
+
+                <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Your Review
+                    </label>
+                    <textarea
+                        value={comment}
+                        onChange={(e) => setComment(e.target.value)}
+                        rows="4"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-800 focus:border-red-800 text-sm"
+                        placeholder="Share your experience with this restaurant..."
+                        maxLength="500"
+                    />
+                    <p className="text-xs text-gray-500 mt-1 text-right">
+                        {comment.length}/500 characters
+                    </p>
+                </div>
+
+                <div className="flex space-x-3">
+                    <button
+                        type="submit"
+                        disabled={loading}
+                        className="flex-1 bg-red-800 text-white py-2 rounded-lg font-semibold hover:bg-red-900 transition-colors disabled:opacity-50 text-sm"
+                    >
+                        {loading ? 'Submitting...' : 'SUBMIT REVIEW'}
+                    </button>
+                    <button
+                        type="button"
+                        onClick={onCancel}
+                        disabled={loading}
+                        className="flex-1 bg-gray-300 text-gray-700 py-2 rounded-lg font-semibold hover:bg-gray-400 transition-colors disabled:opacity-50 text-sm"
+                    >
+                        CANCEL
+                    </button>
+                </div>
+            </form>
+        </div>
+    );
+};
+
+const ReviewCard = ({ review }) => {
+    const [expanded, setExpanded] = useState(false);
+
+    const formatDate = (dateString) => {
+        return new Date(dateString).toLocaleDateString('en-US', {
+            year: 'numeric',
+            month: 'short',
+            day: 'numeric'
+        });
+    };
+
+    const displayComment = review.comment && (expanded || review.comment.length <= 150) 
+        ? review.comment 
+        : review.comment?.substring(0, 150) + '...';
+
+    return (
+        <div className="border-b border-gray-200 pb-4 last:border-b-0">
+            <div className="flex justify-between items-start mb-2">
+                <div>
+                    <h4 className="font-semibold text-gray-900 text-sm">
+                        {review.userName || 'Anonymous'}
+                    </h4>
+                    <div className="flex items-center space-x-2 mt-1">
+                        <StarRating rating={review.rating} readonly={true} size={14} />
+                        <span className="text-xs text-gray-500">
+                            {formatDate(review.createdAt)}
+                        </span>
+                    </div>
+                </div>
+            </div>
+            
+            {review.comment && (
+                <div>
+                    <p className="text-gray-700 text-sm leading-relaxed">
+                        {displayComment}
+                    </p>
+                    {review.comment.length > 150 && (
+                        <button
+                            onClick={() => setExpanded(!expanded)}
+                            className="text-red-800 hover:text-red-900 text-xs font-medium mt-1"
+                        >
+                            {expanded ? 'Show less' : 'Read more'}
+                        </button>
+                    )}
+                </div>
+            )}
+        </div>
+    );
+};
+
+const RestaurantReviews = ({ restaurant, user, onClose }) => {
+    const [reviews, setReviews] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState('');
+    const [showReviewForm, setShowReviewForm] = useState(false);
+    const [hasUserReviewed, setHasUserReviewed] = useState(false);
+
+    useEffect(() => {
+        fetchReviews();
+    }, [restaurant._id]);
+
+    const fetchReviews = async () => {
+        try {
+            setLoading(true);
+            const response = await fetch(
+                `https://food-ordering-app-production-35eb.up.railway.app/api/reviews/restaurant/${restaurant._id}`
+            );
+
+            if (response.ok) {
+                const data = await response.json();
+                if (data.success) {
+                    setReviews(data.reviews || []);
+                    
+                    // Check if user has already reviewed
+                    if (user) {
+                        const userReview = data.reviews.find(review => review.userId === user._id);
+                        setHasUserReviewed(!!userReview);
+                    }
+                }
+            } else {
+                setError('Failed to load reviews');
+            }
+        } catch (error) {
+            console.error('Error fetching reviews:', error);
+            setError('Network error loading reviews');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleReviewSubmit = (newReview) => {
+        setReviews(prev => [newReview, ...prev]);
+        setShowReviewForm(false);
+        setHasUserReviewed(true);
+    };
+
+    const calculateAverageRating = () => {
+        if (reviews.length === 0) return 0;
+        const total = reviews.reduce((sum, review) => sum + review.rating, 0);
+        return (total / reviews.length).toFixed(1);
+    };
+
+    const getRatingDistribution = () => {
+        const distribution = { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 };
+        reviews.forEach(review => {
+            distribution[review.rating]++;
+        });
+        return distribution;
+    };
+
+    const ratingDistribution = getRatingDistribution();
+    const averageRating = calculateAverageRating();
+
+    return (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-hidden">
+                <div className="bg-red-800 text-white p-4">
+                    <div className="flex justify-between items-center">
+                        <div>
+                            <h2 className="text-xl font-bold">{restaurant.name} Reviews</h2>
+                            <p className="text-red-100 text-sm">{reviews.length} reviews</p>
+                        </div>
+                        <button
+                            onClick={onClose}
+                            className="text-white hover:text-gray-200 p-1"
+                        >
+                            <X size={24} />
+                        </button>
+                    </div>
+                </div>
+
+                <div className="overflow-y-auto max-h-[calc(90vh-80px)]">
+                    <div className="p-4">
+                        {/* Rating Summary */}
+                        <div className="bg-gray-50 rounded-lg p-4 mb-4">
+                            <div className="flex flex-col sm:flex-row items-center space-y-4 sm:space-y-0 sm:space-x-6">
+                                <div className="text-center">
+                                    <div className="text-3xl font-bold text-gray-900">{averageRating}</div>
+                                    <StarRating rating={Math.round(averageRating)} readonly={true} size={16} />
+                                    <div className="text-sm text-gray-600 mt-1">
+                                        {reviews.length} review{reviews.length !== 1 ? 's' : ''}
+                                    </div>
+                                </div>
+                                
+                                <div className="flex-1 space-y-1">
+                                    {[5, 4, 3, 2, 1].map((rating) => (
+                                        <div key={rating} className="flex items-center space-x-2">
+                                            <span className="text-sm text-gray-600 w-4">{rating}</span>
+                                            <Star size={12} className="text-yellow-400 fill-current" />
+                                            <div className="flex-1 bg-gray-200 rounded-full h-2">
+                                                <div 
+                                                    className="bg-yellow-400 h-2 rounded-full"
+                                                    style={{ 
+                                                        width: `${reviews.length > 0 ? (ratingDistribution[rating] / reviews.length) * 100 : 0}%` 
+                                                    }}
+                                                />
+                                            </div>
+                                            <span className="text-xs text-gray-500 w-8 text-right">
+                                                {ratingDistribution[rating]}
+                                            </span>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Write Review Button */}
+                        {user && !hasUserReviewed && !showReviewForm && (
+                            <button
+                                onClick={() => setShowReviewForm(true)}
+                                className="w-full bg-red-800 text-white py-3 rounded-lg font-semibold hover:bg-red-900 transition-colors mb-4 text-sm"
+                            >
+                                WRITE A REVIEW
+                            </button>
+                        )}
+
+                        {/* Review Form */}
+                        {showReviewForm && (
+                            <div className="mb-6">
+                                <ReviewForm
+                                    restaurant={restaurant}
+                                    onSubmit={handleReviewSubmit}
+                                    onCancel={() => setShowReviewForm(false)}
+                                    user={user}
+                                />
+                            </div>
+                        )}
+
+                        {/* Reviews List */}
+                        {loading ? (
+                            <div className="flex justify-center items-center py-8">
+                                <div className="text-center">
+                                    <div className="w-8 h-8 border-4 border-red-800 border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>
+                                    <p className="text-gray-600 text-sm">Loading reviews...</p>
+                                </div>
+                            </div>
+                        ) : error ? (
+                            <div className="bg-red-100 border border-red-400 text-red-700 px-3 py-2 rounded text-sm">
+                                {error}
+                            </div>
+                        ) : reviews.length === 0 ? (
+                            <div className="text-center py-8">
+                                <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                                    <Star size={24} className="text-gray-400" />
+                                </div>
+                                <h3 className="text-lg font-semibold text-gray-900 mb-1">No Reviews Yet</h3>
+                                <p className="text-gray-600 text-sm">Be the first to review this restaurant!</p>
+                            </div>
+                        ) : (
+                            <div className="space-y-4">
+                                {reviews.map((review) => (
+                                    <ReviewCard key={review._id} review={review} />
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+};
+
 // Login Form Component
 const LoginForm = ({ onLogin, onSwitchToRegister, onClose, loading }) => {
     const [email, setEmail] = useState('');
@@ -1408,7 +1768,6 @@ const RiderRegisterForm = ({ onRegister, onSwitchToLogin, onSwitchToCustomer, on
         return requirements.every(req => req);
     };
 
-    // ✅ UPDATED HANDLE SUBMIT WITH BASE64
     const handleSubmit = async (e) => {
         e.preventDefault();
         setError('');
@@ -1459,7 +1818,6 @@ const RiderRegisterForm = ({ onRegister, onSwitchToLogin, onSwitchToCustomer, on
         }
     };
 
-    // ... KEEP THE REST OF THE COMPONENT THE SAME ...
     const handleChange = (e) => {
         const { name, value } = e.target;
         setFormData({ ...formData, [name]: value });
@@ -1495,7 +1853,6 @@ const RiderRegisterForm = ({ onRegister, onSwitchToLogin, onSwitchToCustomer, on
                 )}
 
                 <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
-                    {/* KEEP ALL THE FORM FIELDS EXACTLY THE SAME */}
                     <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">Full Name *</label>
                         <input
@@ -1670,12 +2027,42 @@ const RiderRegisterForm = ({ onRegister, onSwitchToLogin, onSwitchToCustomer, on
     );
 };
 
-// RestaurantCard Component
+// RestaurantCard Component with Reviews
 const RestaurantCard = ({ restaurant, onAddToCart, user }) => {
     const [showProducts, setShowProducts] = useState(false);
     const [products, setProducts] = useState([]);
     const [loadingProducts, setLoadingProducts] = useState(false);
     const [error, setError] = useState('');
+    const [showReviews, setShowReviews] = useState(false);
+    const [restaurantReviews, setRestaurantReviews] = useState([]);
+    const [averageRating, setAverageRating] = useState(0);
+
+    useEffect(() => {
+        fetchRestaurantReviews();
+    }, [restaurant._id]);
+
+    const fetchRestaurantReviews = async () => {
+        try {
+            const response = await fetch(
+                `https://food-ordering-app-production-35eb.up.railway.app/api/reviews/restaurant/${restaurant._id}`
+            );
+
+            if (response.ok) {
+                const data = await response.json();
+                if (data.success) {
+                    setRestaurantReviews(data.reviews || []);
+                    
+                    // Calculate average rating
+                    if (data.reviews && data.reviews.length > 0) {
+                        const total = data.reviews.reduce((sum, review) => sum + review.rating, 0);
+                        setAverageRating(total / data.reviews.length);
+                    }
+                }
+            }
+        } catch (error) {
+            console.error('Error fetching reviews:', error);
+        }
+    };
 
     const fetchProducts = async () => {
         if (showProducts) {
@@ -1752,6 +2139,9 @@ const RestaurantCard = ({ restaurant, onAddToCart, user }) => {
         }
     };
 
+    const reviewCount = restaurantReviews.length;
+    const displayRating = averageRating > 0 ? averageRating : (restaurant.rating || 4.5);
+
     return (
         <>
             {/* Restaurant Card (Normal View) */}
@@ -1776,7 +2166,7 @@ const RestaurantCard = ({ restaurant, onAddToCart, user }) => {
                         <h3 className="text-lg font-bold text-gray-900 line-clamp-1">{restaurant.name || 'Restaurant Name'}</h3>
                         <div className="flex items-center space-x-1">
                             <Star size={14} className="text-yellow-400 fill-current" />
-                            <span className="text-sm font-bold">{restaurant.rating || '4.5'}</span>
+                            <span className="text-sm font-bold">{displayRating.toFixed(1)}</span>
                         </div>
                     </div>
                     
@@ -1793,6 +2183,20 @@ const RestaurantCard = ({ restaurant, onAddToCart, user }) => {
                         </span>
                     </div>
 
+                    {/* Reviews Button */}
+                    <div className="flex items-center justify-between mb-2">
+                        <button
+                            onClick={() => setShowReviews(true)}
+                            className="flex items-center space-x-1 text-blue-600 hover:text-blue-800 text-xs"
+                        >
+                            <Star size={12} className="text-yellow-400 fill-current" />
+                            <span>{reviewCount} review{reviewCount !== 1 ? 's' : ''}</span>
+                        </button>
+                        <span className="text-xs text-gray-500">
+                            {restaurantReviews.length > 0 ? `${averageRating.toFixed(1)} avg rating` : 'No reviews yet'}
+                        </span>
+                    </div>
+
                     <button
                         onClick={fetchProducts}
                         disabled={loadingProducts}
@@ -1805,7 +2209,7 @@ const RestaurantCard = ({ restaurant, onAddToCart, user }) => {
                             </>
                         ) : (
                             <>
-                                <span> VIEW FULLMENU</span>
+                                <span> VIEW FULL MENU</span>
                             </>
                         )}
                     </button>
@@ -1822,6 +2226,15 @@ const RestaurantCard = ({ restaurant, onAddToCart, user }) => {
                     </div>
                 </div>
             </div>
+
+            {/* Reviews Modal */}
+            {showReviews && (
+                <RestaurantReviews
+                    restaurant={restaurant}
+                    user={user}
+                    onClose={() => setShowReviews(false)}
+                />
+            )}
 
             {/* FULL SCREEN MENU MODAL */}
             {showProducts && (
@@ -1846,7 +2259,7 @@ const RestaurantCard = ({ restaurant, onAddToCart, user }) => {
                                 <div className="text-right">
                                     <div className="flex items-center space-x-1 text-yellow-300">
                                         <Star size={16} className="fill-current" />
-                                        <span className="font-bold">{restaurant.rating || '4.5'}</span>
+                                        <span className="font-bold">{displayRating.toFixed(1)}</span>
                                     </div>
                                     <p className="text-red-100 text-xs">{products.length} items</p>
                                 </div>

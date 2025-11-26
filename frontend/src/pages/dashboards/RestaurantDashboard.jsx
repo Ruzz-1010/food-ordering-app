@@ -265,37 +265,35 @@ const RestaurantDashboard = () => {
     }
   };
 
-  // NEW: Fetch available riders
-  const fetchAvailableRiders = async () => {
-    const token = localStorage.getItem('token');
-    try {
-      const res = await fetch(`${API_URL}/riders/available`, {
-        headers: { 
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
-      
-      if (res.ok) {
-        const data = await res.json();
-        if (data.success) {
-          setAvailableRiders(data.riders || []);
-        } else {
-          setAvailableRiders([]);
-        }
+ // NEW: Fetch available riders - REAL DATA ONLY
+const fetchAvailableRiders = async () => {
+  const token = localStorage.getItem('token');
+  try {
+    const res = await fetch(`${API_URL}/riders/active`, {
+      headers: { 
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      }
+    });
+    
+    if (res.ok) {
+      const data = await res.json();
+      if (data.success) {
+        setAvailableRiders(data.riders || []);
+        console.log('🚴 Available riders from API:', data.riders);
       } else {
         setAvailableRiders([]);
+        console.log('⚠️ No riders available');
       }
-    } catch (error) {
-      console.error('❌ Error fetching riders:', error);
-      // For demo purposes, create sample riders
-      setAvailableRiders([
-        { _id: '1', name: 'Juan Dela Cruz', phone: '+63 912 345 6789', status: 'available' },
-        { _id: '2', name: 'Maria Santos', phone: '+63 917 654 3210', status: 'available' },
-        { _id: '3', name: 'Pedro Reyes', phone: '+63 918 777 8888', status: 'busy' }
-      ]);
+    } else {
+      console.log('❌ Riders endpoint not available');
+      setAvailableRiders([]);
     }
-  };
+  } catch (error) {
+    console.error('❌ Error fetching riders:', error);
+    setAvailableRiders([]);
+  }
+};
 
   // Load all data
   const fetchData = async () => {

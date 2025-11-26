@@ -52,11 +52,16 @@ const restaurantSchema = new mongoose.Schema({
     default: 35,
     min: [0, 'Delivery fee cannot be negative']
   },
+  // Review fields - make sure you only have ONE rating field
   rating: {
     type: Number,
-    default: 4.5,
+    default: 0,
     min: [0, 'Rating cannot be less than 0'],
     max: [5, 'Rating cannot exceed 5']
+  },
+  reviewCount: {
+    type: Number,
+    default: 0
   },
   isActive: {
     type: Boolean,
@@ -64,7 +69,7 @@ const restaurantSchema = new mongoose.Schema({
   },
   isApproved: {
     type: Boolean,
-    default: true // Auto-approve for now
+    default: true
   },
   openingHours: {
     open: { 
