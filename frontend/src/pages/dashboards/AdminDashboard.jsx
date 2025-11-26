@@ -140,10 +140,10 @@ const AdminDashboard = () => {
               {/* Logo */}
               <div className="flex items-center space-x-3">
                 <div className="w-10 h-10 rounded-lg flex items-center justify-center overflow-hidden bg-gradient-to-r from-[#8C1007] to-[#660B05]">
-                  <span className="text-white font-bold text-sm">FD</span>
+                  <span className="text-white font-bold text-sm">FX</span>
                 </div>
                 <div className="hidden sm:block">
-                  <h1 className="text-lg font-bold text-[#3E0703]">FoodDash</h1>
+                  <h1 className="text-lg font-bold text-[#3E0703]">FoodSxpress</h1>
                   <p className="text-xs text-[#660B05]">Admin System</p>
                 </div>
               </div>
@@ -285,7 +285,7 @@ const AdminDashboard = () => {
                 <span className="text-white text-xs font-bold">FD</span>
               </div>
               <p className="text-xs text-gray-500">
-                © 2024 FoodDash Admin. All rights reserved.
+                © 2024 FoodExpress Admin. All rights reserved.
               </p>
             </div>
             <div className="flex items-center space-x-4">

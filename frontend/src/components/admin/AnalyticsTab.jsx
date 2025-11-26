@@ -276,7 +276,7 @@ const AnalyticsTab = () => {
       {/* Header */}
       <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 mb-6">
         <div className="flex-1">
-          <h2 className="text-xl sm:text-2xl font-bold text-[#3E0703]">📊 Analytics & Reports</h2>
+          <h2 className="text-xl sm:text-2xl font-bold text-[#3E0703]"> Analytics & Reports</h2>
           <p className="text-[#660B05] mt-1 text-sm">
             Business insights and performance metrics
           </p>

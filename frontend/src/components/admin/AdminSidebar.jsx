@@ -40,7 +40,7 @@ const AdminSidebar = ({ activeTab, setActiveTab, isOpen, setIsOpen, onLogout }) 
             <Utensils size={24} className="text-white" />
           </div>
           <div>
-            <h2 className="text-xl font-bold text-[#3E0703]">FoodDash</h2>
+            <h2 className="text-xl font-bold text-[#3E0703]">FoodExpress</h2>
             <p className="text-xs text-[#660B05] font-medium">Admin Panel</p>
           </div>
         </div>
@@ -108,7 +108,7 @@ const AdminSidebar = ({ activeTab, setActiveTab, isOpen, setIsOpen, onLogout }) 
             </div>
           </div>
           <p className="text-xs text-[#660B05] text-center">
-            v2.0.0 • FoodDash System
+            v2.0.0 • FoodExpress System
           </p>
         </div>
       </div>

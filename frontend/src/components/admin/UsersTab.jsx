@@ -212,7 +212,7 @@ const UsersTab = () => {
   return (
     <div className="bg-white rounded-xl shadow-sm border border-[#FFF0C4] p-4 sm:p-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
-        <h2 className="text-xl sm:text-2xl font-bold text-[#3E0703]">👥 User Management</h2>
+        <h2 className="text-xl sm:text-2xl font-bold text-[#3E0703]"> User Management</h2>
         <button
           onClick={handleRefresh}
           disabled={refreshing}
