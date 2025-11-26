@@ -94,9 +94,7 @@ router.put('/:orderId/cancel', auth, async (req, res) => {
 // ---------- RESTAURANT ----------
 router.get('/restaurant', auth, requireRole(['restaurant']), async (req, res) => {
   try {
-    console.log('🔎 Restaurant search owner:', req.user._id);   // ← DITO ilagay
-
-
+    console.log('🔎 Restaurant search owner:', req.user._id);
 
     const restaurant = await Restaurant.findOne({ owner: req.user._id });
     if (!restaurant) return res.status(404).json({ success: false, message: 'Restaurant not found for this user' });
@@ -133,10 +131,16 @@ router.put('/:orderId/status', auth, requireRole(['restaurant']), async (req, re
 // ---------- RIDER ----------
 router.get('/rider/available', auth, requireRole(['rider']), async (req, res) => {
   try {
-    const orders = await Order.find({ status: 'ready', rider: { $exists: false } })
-      .populate('restaurant', 'name address phone')
-      .populate('user', 'name phone deliveryAddress')
+    const orders = await Order.find({ 
+      status: 'ready', 
+      rider: { $exists: false } 
+    })
+      .populate('restaurant', 'name address phone location')
+      .populate('user', 'name phone')
+      .populate('items.product', 'name price')
       .sort({ createdAt: 1 });
+    
+    console.log(`📦 Found ${orders.length} available orders for rider`);
     res.json({ success: true, orders });
   } catch (error) {
     console.error('Get available orders error', error);
@@ -146,11 +150,16 @@ router.get('/rider/available', auth, requireRole(['rider']), async (req, res) =>
 
 router.get('/rider/my-deliveries', auth, requireRole(['rider']), async (req, res) => {
   try {
-    const orders = await Order.find({ rider: req.user._id })
-      .populate('restaurant', 'name address phone')
-      .populate('user', 'name phone deliveryAddress')
+    const orders = await Order.find({ 
+      rider: req.user._id,
+      status: { $in: ['assigned', 'out_for_delivery', 'delivered'] }
+    })
+      .populate('restaurant', 'name address phone location')
+      .populate('user', 'name phone')
       .populate('items.product', 'name price')
       .sort({ createdAt: -1 });
+    
+    console.log(`🚚 Found ${orders.length} deliveries for rider ${req.user._id}`);
     res.json({ success: true, orders });
   } catch (error) {
     console.error('Get rider deliveries error', error);
@@ -161,19 +170,39 @@ router.get('/rider/my-deliveries', auth, requireRole(['rider']), async (req, res
 // ✅ Rider Accept Order (moves order from "ready" → "assigned")
 router.put('/:orderId/accept', auth, requireRole(['rider']), async (req, res) => {
   try {
+    const { riderId } = req.body;
+    
     const order = await Order.findOne({
       _id: req.params.orderId,
       status: 'ready',
       rider: { $exists: false }
     });
-    if (!order) return res.status(404).json({ success: false, message: 'Order not available' });
+    
+    if (!order) {
+      return res.status(404).json({ 
+        success: false, 
+        message: 'Order not available or already taken' 
+      });
+    }
 
-    order.rider = req.user._id;
-    order.status = 'assigned';   // valid enum value
+    order.rider = riderId || req.user._id;
+    order.status = 'assigned';
+    order.assignedAt = new Date(); // ADD THIS
     order.estimatedDelivery = new Date(Date.now() + 30 * 60000);
+    
     await order.save();
+    
+    // Populate before sending response
+    await order.populate('restaurant', 'name address phone');
+    await order.populate('user', 'name phone');
+    await order.populate('items.product', 'name price');
 
-    res.json({ success: true, message: 'Order assigned to you', order });
+    console.log(`✅ Order ${order.orderId} assigned to rider ${order.rider}`);
+    res.json({ 
+      success: true, 
+      message: 'Order assigned to you successfully', 
+      order 
+    });
   } catch (error) {
     console.error('Accept order error', error);
     res.status(500).json({ success: false, message: 'Server error' });
@@ -185,13 +214,55 @@ router.put('/:orderId/delivery-status', auth, requireRole(['rider']), async (req
   try {
     const { status } = req.body;
     const validStatuses = ['out_for_delivery', 'delivered'];
-    if (!validStatuses.includes(status)) return res.status(400).json({ success: false, message: 'Invalid status' });
-    const order = await Order.findOne({ _id: req.params.orderId, rider: req.user._id });
-    if (!order) return res.status(404).json({ success: false, message: 'Order not found' });
+    
+    if (!validStatuses.includes(status)) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Invalid status. Must be: out_for_delivery or delivered' 
+      });
+    }
+    
+    const order = await Order.findOne({ 
+      _id: req.params.orderId, 
+      rider: req.user._id 
+    });
+    
+    if (!order) {
+      return res.status(404).json({ 
+        success: false, 
+        message: 'Order not found or you are not assigned to this order' 
+      });
+    }
+
+    // Validate status transition
+    if (status === 'out_for_delivery' && order.status !== 'assigned') {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Order must be in assigned status before going out for delivery' 
+      });
+    }
+
+    if (status === 'delivered' && order.status !== 'out_for_delivery') {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Order must be out for delivery before marking as delivered' 
+      });
+    }
+
     order.status = status;
-    if (status === 'delivered') order.deliveredAt = new Date();
+    
+    if (status === 'delivered') {
+      order.deliveredAt = new Date();
+    }
+    
     await order.save();
-    res.json({ success: true, message: `Delivery status updated to ${status}`, order });
+
+    console.log(`📦 Order ${order.orderId} status updated to ${status} by rider ${req.user._id}`);
+    res.json({ 
+      success: true, 
+      message: `Delivery status updated to ${status}`, 
+      order 
+    });
   } catch (error) {
     console.error('Update delivery status error', error);
     res.status(500).json({ success: false, message: 'Status update failed' });

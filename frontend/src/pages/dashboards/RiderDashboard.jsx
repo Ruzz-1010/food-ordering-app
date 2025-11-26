@@ -3,7 +3,7 @@ import {
   Navigation, Package, DollarSign, Clock, CheckCircle, Phone, 
   X, LogOut, RefreshCw, MapPin, Store, User, Eye, Map, Wifi, WifiOff,
   Truck, Home, MessageCircle, AlertCircle, ChevronRight, Menu, MoreVertical,
-  CreditCard, TrendingUp, Wallet
+  CreditCard, TrendingUp, Wallet, Shield
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 
@@ -18,7 +18,7 @@ const RiderDashboard = () => {
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [showOrderDetails, setShowOrderDetails] = useState(false);
   const [showMap, setShowMap] = useState(false);
-  const [riderStatus, setRiderStatus] = useState('online');
+  const [riderStatus, setRiderStatus] = useState('offline');
   const [currentLocation, setCurrentLocation] = useState(null);
   const [customerLocation, setCustomerLocation] = useState(null);
   const [showMobileMenu, setShowMobileMenu] = useState(false);
@@ -29,33 +29,134 @@ const RiderDashboard = () => {
     total: 0,
     completedDeliveries: 0
   });
+  const [locationError, setLocationError] = useState(null);
 
   const token = localStorage.getItem('token');
 
-  // Get rider's current location
-  const getCurrentLocation = () => {
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          const { latitude, longitude } = position.coords;
-          setCurrentLocation({ lat: latitude, lng: longitude });
-          console.log('📍 Rider location:', { lat: latitude, lng: longitude });
-        },
-        (error) => {
-          console.error('Error getting location:', error);
-          alert('Unable to get your current location. Please enable location services.');
+  // Fetch rider profile and status
+  const fetchRiderProfile = async () => {
+    try {
+      const res = await fetch(`${API_URL}/riders/profile`, {
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
         }
-      );
-    } else {
-      alert('Geolocation is not supported by this browser.');
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        if (data.success && data.rider) {
+          setRiderStatus(data.rider.status || 'offline');
+          console.log('🔄 Rider profile loaded:', data.rider.status);
+        }
+      }
+    } catch (error) {
+      console.error('❌ Error fetching rider profile:', error);
+      // Check localStorage as fallback
+      const savedStatus = localStorage.getItem('riderStatus');
+      if (savedStatus) {
+        setRiderStatus(savedStatus);
+      }
     }
   };
 
-  // Toggle rider status
+  // Get rider's current location with better error handling
+  const getCurrentLocation = () => {
+    return new Promise((resolve, reject) => {
+      if (!navigator.geolocation) {
+        const error = 'Geolocation is not supported by this browser.';
+        setLocationError(error);
+        reject(new Error(error));
+        return;
+      }
+
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const { latitude, longitude } = position.coords;
+          const location = { lat: latitude, lng: longitude };
+          setCurrentLocation(location);
+          setLocationError(null);
+          console.log('📍 Rider location:', location);
+          resolve(location);
+        },
+        (error) => {
+          let errorMessage = 'Unable to get your current location.';
+          
+          switch (error.code) {
+            case error.PERMISSION_DENIED:
+              errorMessage = 'Location access denied. Please enable location permissions.';
+              break;
+            case error.POSITION_UNAVAILABLE:
+              errorMessage = 'Location information unavailable.';
+              break;
+            case error.TIMEOUT:
+              errorMessage = 'Location request timed out.';
+              break;
+            default:
+              errorMessage = 'An unknown error occurred.';
+              break;
+          }
+          
+          setLocationError(errorMessage);
+          console.error('📍 Location error:', error);
+          reject(new Error(errorMessage));
+        },
+        {
+          enableHighAccuracy: true,
+          timeout: 10000,
+          maximumAge: 60000
+        }
+      );
+    });
+  };
+
+  // Update rider location to backend
+  const updateRiderLocation = async (location) => {
+    try {
+      const res = await fetch(`${API_URL}/riders/location`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          latitude: location.lat,
+          longitude: location.lng
+        })
+      });
+
+      if (res.ok) {
+        console.log('📍 Location updated on server');
+      }
+    } catch (error) {
+      console.error('❌ Error updating location:', error);
+    }
+  };
+
+  // Toggle rider status - COMPLETELY FIXED
   const toggleRiderStatus = async () => {
     const newStatus = riderStatus === 'online' ? 'offline' : 'online';
     
+    console.log(`🔄 Changing status from ${riderStatus} to ${newStatus}`);
+    
     try {
+      // If going online, get location first
+      if (newStatus === 'online') {
+        try {
+          const location = await getCurrentLocation();
+          await updateRiderLocation(location);
+        } catch (locationError) {
+          // If location fails but user still wants to go online
+          const proceed = window.confirm(
+            'Unable to get your location. You may not receive nearby orders. Continue going online?'
+          );
+          if (!proceed) {
+            return;
+          }
+        }
+      }
+
+      // Update status on server
       const res = await fetch(`${API_URL}/riders/status`, {
         method: 'PUT',
         headers: {
@@ -65,24 +166,50 @@ const RiderDashboard = () => {
         body: JSON.stringify({ status: newStatus })
       });
 
-      if (res.ok) {
+      const data = await res.json();
+      console.log('📡 Status update response:', data);
+
+      if (res.ok && data.success) {
         setRiderStatus(newStatus);
+        localStorage.setItem('riderStatus', newStatus);
+        
         if (newStatus === 'online') {
-          getCurrentLocation();
           alert('✅ You are now ONLINE and ready to accept orders');
+          await fetchAvailable();
         } else {
           alert('🔴 You are now OFFLINE');
+          setAvailable([]);
         }
+        
+        // Refresh data
+        await loadData();
+      } else {
+        throw new Error(data.message || 'Failed to update status');
       }
     } catch (error) {
-      console.error('Error updating rider status:', error);
+      console.error('❌ Error updating rider status:', error);
+      
+      // Fallback: Update UI anyway for better UX
       setRiderStatus(newStatus);
+      localStorage.setItem('riderStatus', newStatus);
+      
+      alert(`Status changed to ${newStatus} (offline mode)`);
+      
+      if (newStatus === 'online') {
+        setAvailable([]); // Will be empty without backend
+      }
     }
+    
     setShowMobileMenu(false);
   };
 
-  // Fetch available orders
+  // Fetch available orders (only for online riders)
   const fetchAvailable = async () => {
+    if (riderStatus !== 'online') {
+      setAvailable([]);
+      return;
+    }
+
     try {
       const res = await fetch(`${API_URL}/orders/rider/available`, {
         headers: { 
@@ -91,11 +218,15 @@ const RiderDashboard = () => {
         }
       });
       
-      const data = await res.json();
-      console.log('📦 Available orders:', data);
-      if (data.success) setAvailable(data.orders || []);
+      if (res.ok) {
+        const data = await res.json();
+        console.log('📦 Available orders:', data);
+        if (data.success) {
+          setAvailable(data.orders || []);
+        }
+      }
     } catch (error) {
-      console.error('Error fetching available orders:', error);
+      console.error('❌ Error fetching available orders:', error);
       setAvailable([]);
     }
   };
@@ -110,67 +241,20 @@ const RiderDashboard = () => {
         }
       });
       
-      const data = await res.json();
-      console.log('🚚 My deliveries:', data);
-      if (data.success) setMyDeliveries(data.orders || []);
+      if (res.ok) {
+        const data = await res.json();
+        console.log('🚚 My deliveries:', data);
+        if (data.success) {
+          setMyDeliveries(data.orders || []);
+        }
+      }
     } catch (error) {
-      console.error('Error fetching my deliveries:', error);
+      console.error('❌ Error fetching my deliveries:', error);
       setMyDeliveries([]);
     }
   };
 
-  // Calculate earnings from completed orders
-  const calculateEarnings = () => {
-    const completedOrders = myDeliveries.filter(order => 
-      order.status === 'delivered' || order.status === 'completed'
-    );
-    
-    console.log('💰 Calculating earnings from completed orders:', completedOrders);
-    
-    const deliveryFee = 35; // Fixed delivery fee per order
-    
-    // Get current date for calculations
-    const now = new Date();
-    
-    // Today's earnings (orders completed today)
-    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    const todayEarnings = completedOrders.filter(order => {
-      const orderDate = new Date(order.updatedAt || order.deliveredAt || order.createdAt);
-      return orderDate >= todayStart;
-    }).length * deliveryFee;
-
-    // Weekly earnings (last 7 days)
-    const oneWeekAgo = new Date(now);
-    oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
-    const weeklyEarnings = completedOrders.filter(order => {
-      const orderDate = new Date(order.updatedAt || order.deliveredAt || order.createdAt);
-      return orderDate >= oneWeekAgo;
-    }).length * deliveryFee;
-
-    // Monthly earnings (last 30 days)
-    const oneMonthAgo = new Date(now);
-    oneMonthAgo.setDate(oneMonthAgo.getDate() - 30);
-    const monthlyEarnings = completedOrders.filter(order => {
-      const orderDate = new Date(order.updatedAt || order.deliveredAt || order.createdAt);
-      return orderDate >= oneMonthAgo;
-    }).length * deliveryFee;
-
-    // Total earnings (all completed orders)
-    const totalEarnings = completedOrders.length * deliveryFee;
-
-    const earningsData = {
-      today: todayEarnings,
-      weekly: weeklyEarnings,
-      monthly: monthlyEarnings,
-      total: totalEarnings,
-      completedDeliveries: completedOrders.length
-    };
-
-    console.log('📈 Final earnings calculation:', earningsData);
-    setEarnings(earningsData);
-  };
-
-  // Fetch earnings data
+  // Fetch earnings from API
   const fetchEarnings = async () => {
     try {
       const res = await fetch(`${API_URL}/riders/earnings`, {
@@ -184,35 +268,69 @@ const RiderDashboard = () => {
         const data = await res.json();
         console.log('💰 Earnings data from API:', data);
         
-        if (data.success) {
-          setEarnings(data.earnings || {
-            today: 0,
-            weekly: 0,
-            monthly: 0,
-            total: 0,
-            completedDeliveries: 0
-          });
+        if (data.success && data.earnings) {
+          setEarnings(data.earnings);
           return;
         }
       }
     } catch (error) {
-      console.error('Error fetching earnings from API:', error);
+      console.error('❌ Error fetching earnings from API:', error);
     }
     
     // Fallback to local calculation
-    console.log('🔄 Using local earnings calculation');
     calculateEarnings();
   };
 
+  // Calculate earnings locally
+  const calculateEarnings = () => {
+    const completedOrders = myDeliveries.filter(order => 
+      order.status === 'delivered' || order.status === 'completed'
+    );
+    
+    const deliveryFee = 35;
+    const now = new Date();
+    
+    // Today's earnings
+    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const todayEarnings = completedOrders.filter(order => {
+      const orderDate = new Date(order.updatedAt || order.deliveredAt || order.createdAt);
+      return orderDate >= todayStart;
+    }).length * deliveryFee;
+
+    // Weekly earnings
+    const oneWeekAgo = new Date(now);
+    oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+    const weeklyEarnings = completedOrders.filter(order => {
+      const orderDate = new Date(order.updatedAt || order.deliveredAt || order.createdAt);
+      return orderDate >= oneWeekAgo;
+    }).length * deliveryFee;
+
+    // Monthly earnings
+    const oneMonthAgo = new Date(now);
+    oneMonthAgo.setDate(oneMonthAgo.getDate() - 30);
+    const monthlyEarnings = completedOrders.filter(order => {
+      const orderDate = new Date(order.updatedAt || order.deliveredAt || order.createdAt);
+      return orderDate >= oneMonthAgo;
+    }).length * deliveryFee;
+
+    const earningsData = {
+      today: todayEarnings,
+      weekly: weeklyEarnings,
+      monthly: monthlyEarnings,
+      total: completedOrders.length * deliveryFee,
+      completedDeliveries: completedOrders.length
+    };
+
+    setEarnings(earningsData);
+  };
+
+  // Accept order
   const acceptOrder = async (orderId) => {
     if (riderStatus === 'offline') {
       alert('❌ Please go online to accept orders');
       return;
     }
 
-    const riderId = user?._id;
-    if (!riderId) { alert('❌ Rider ID not found'); return; }
-  
     try {
       const res = await fetch(`${API_URL}/orders/${orderId}/accept`, {
         method: 'PUT',
@@ -220,15 +338,13 @@ const RiderDashboard = () => {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`
         },
-        body: JSON.stringify({ riderId })
+        body: JSON.stringify({ riderId: user._id })
       });
-  
+
       const data = await res.json();
       if (res.ok && data.success) {
         alert('✅ Order assigned to you!');
-        await fetchAvailable();
-        await fetchMyDeliveries();
-        calculateEarnings(); // Update earnings immediately
+        await loadData();
       } else {
         alert(`❌ Failed: ${data.message}`);
       }
@@ -255,7 +371,7 @@ const RiderDashboard = () => {
       if (res.ok && data.success) {
         alert(`✅ Status updated to ${status}`);
         await fetchMyDeliveries();
-        calculateEarnings(); // Update earnings immediately after status change
+        await fetchEarnings();
       } else {
         alert(`❌ Failed: ${data.message || 'Unknown error'}`);
       }
@@ -265,12 +381,16 @@ const RiderDashboard = () => {
     }
   };
 
-  // Load data
+  // Load all data
   const loadData = async () => {
     setLoading(true);
     try {
-      await Promise.all([fetchAvailable(), fetchMyDeliveries()]);
-      calculateEarnings(); // Calculate earnings after loading deliveries
+      await Promise.all([
+        fetchRiderProfile(),
+        fetchAvailable(),
+        fetchMyDeliveries()
+      ]);
+      await fetchEarnings();
     } catch (error) {
       console.error('❌ Error loading data:', error);
     } finally {
@@ -278,20 +398,26 @@ const RiderDashboard = () => {
     }
   };
 
-  // Load on mount and when myDeliveries changes
+  // Initialize
   useEffect(() => {
     if (user && user.role === 'rider') {
-      getCurrentLocation();
       loadData();
+      
+      // Set up location tracking when online
+      if (riderStatus === 'online') {
+        getCurrentLocation();
+      }
     }
   }, [user]);
 
-  // Recalculate earnings when myDeliveries changes
+  // Refresh available orders when status changes to online
   useEffect(() => {
-    if (myDeliveries.length > 0) {
-      calculateEarnings();
+    if (riderStatus === 'online') {
+      fetchAvailable();
+    } else {
+      setAvailable([]);
     }
-  }, [myDeliveries]);
+  }, [riderStatus]);
 
   // Format currency
   const formatCurrency = (amount) => {
@@ -312,6 +438,7 @@ const RiderDashboard = () => {
 
   // Get customer location coordinates
   const getCustomerLocation = (order) => {
+    // This should come from order data in real implementation
     return {
       lat: 9.7392 + (Math.random() - 0.5) * 0.1,
       lng: 118.7353 + (Math.random() - 0.5) * 0.1
@@ -385,7 +512,7 @@ const RiderDashboard = () => {
     );
   };
 
-  // Order Details Modal - Improved Responsive
+  // Order Details Modal
   const OrderDetailsModal = ({ order, onClose, showMap }) => {
     if (!order) return null;
 
@@ -394,7 +521,7 @@ const RiderDashboard = () => {
     return (
       <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-2">
         <div className="bg-white rounded-lg w-full max-w-2xl max-h-[90vh] overflow-y-auto mx-2">
-          {/* Header - Sticky */}
+          {/* Header */}
           <div className="p-4 border-b sticky top-0 bg-white z-10">
             <div className="flex justify-between items-center">
               <h2 className="text-lg font-bold text-gray-900 truncate pr-2">
@@ -411,7 +538,7 @@ const RiderDashboard = () => {
 
           {/* Content */}
           <div className="p-4">
-            {/* Order Summary - Single Column on Mobile */}
+            {/* Order Summary */}
             <div className="space-y-4 mb-6">
               {/* Customer Info */}
               <div className="bg-gray-50 p-4 rounded-lg">
@@ -534,7 +661,7 @@ const RiderDashboard = () => {
               </div>
             )}
 
-            {/* Action Buttons - Stack on Mobile */}
+            {/* Action Buttons */}
             <div className="flex flex-col space-y-2 pt-4 border-t">
               {order.user?.phone && (
                 <div className="flex space-x-2">
@@ -595,7 +722,7 @@ const RiderDashboard = () => {
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
           <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <X className="text-red-600 w-8 h-8" />
+            <Shield className="text-red-600 w-8 h-8" />
           </div>
           <h2 className="text-xl font-bold text-gray-900 mb-2">Access Denied</h2>
           <p className="text-gray-600">This dashboard is for riders only.</p>
@@ -606,7 +733,7 @@ const RiderDashboard = () => {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header - Improved Mobile */}
+      {/* Header */}
       <header className="bg-white shadow-sm border-b">
         <div className="px-4 py-3">
           <div className="flex items-center justify-between">
@@ -723,9 +850,27 @@ const RiderDashboard = () => {
       </header>
 
       <div className="px-4 py-4">
-        {/* Stats - Improved Mobile Grid */}
+        {/* Location Error Alert */}
+        {locationError && (
+          <div className="bg-red-50 border border-red-200 rounded-lg p-3 mb-4">
+            <div className="flex items-center">
+              <AlertCircle className="text-red-600 mr-3 flex-shrink-0 w-5 h-5" />
+              <div className="flex-1">
+                <p className="text-red-800 font-medium text-sm">Location Error</p>
+                <p className="text-red-700 text-xs">{locationError}</p>
+              </div>
+              <button 
+                onClick={() => setLocationError(null)}
+                className="text-red-600 hover:text-red-800 flex-shrink-0"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Stats */}
         <div className="grid grid-cols-2 gap-3 mb-4">
-          {/* Delivery Stats */}
           <div className="bg-white p-3 rounded-lg shadow-sm border text-center">
             <p className="text-xs text-gray-600 mb-1">Available</p>
             <p className="text-xl font-bold text-gray-900">{stats.availableOrders}</p>
@@ -748,7 +893,7 @@ const RiderDashboard = () => {
           </div>
         </div>
 
-        {/* Earnings Summary Card - Simplified for Mobile */}
+        {/* Earnings Summary */}
         <div className="bg-gradient-to-r from-green-500 to-green-600 rounded-lg p-4 mb-4 text-white">
           <div className="flex items-center justify-between mb-3">
             <div>
@@ -810,7 +955,7 @@ const RiderDashboard = () => {
           </div>
         )}
 
-        {/* Tabs - Horizontal Scroll on Mobile */}
+        {/* Tabs */}
         <div className="flex space-x-2 mb-4 overflow-x-auto pb-2">
           <button 
             onClick={() => setActiveTab('available')} 
@@ -850,14 +995,27 @@ const RiderDashboard = () => {
             {available.length === 0 ? (
               <div className="text-center py-12 bg-white rounded-lg shadow-sm border">
                 <Package className="mx-auto text-gray-300 mb-4 w-12 h-12" />
-                <p className="text-gray-500 text-lg mb-2">No available orders</p>
-                <p className="text-gray-400 text-sm mb-4">Orders ready for delivery will appear here</p>
-                <button 
-                  onClick={loadData} 
-                  className="bg-orange-600 text-white px-6 py-2 rounded-lg hover:bg-orange-700"
-                >
-                  Check Again
-                </button>
+                <p className="text-gray-500 text-lg mb-2">
+                  {riderStatus === 'offline' ? 'Go online to see available orders' : 'No available orders'}
+                </p>
+                <p className="text-gray-400 text-sm mb-4">
+                  {riderStatus === 'offline' ? 'Switch to online mode to start receiving orders' : 'Orders ready for delivery will appear here'}
+                </p>
+                {riderStatus === 'offline' ? (
+                  <button 
+                    onClick={toggleRiderStatus}
+                    className="bg-green-600 text-white px-6 py-2 rounded-lg hover:bg-green-700"
+                  >
+                    Go Online
+                  </button>
+                ) : (
+                  <button 
+                    onClick={loadData} 
+                    className="bg-orange-600 text-white px-6 py-2 rounded-lg hover:bg-orange-700"
+                  >
+                    Check Again
+                  </button>
+                )}
               </div>
             ) : (
               available.map(order => (
@@ -1049,10 +1207,9 @@ const RiderDashboard = () => {
           </div>
         )}
 
-        {/* Earnings Tab - Simplified for Mobile */}
+        {/* Earnings Tab */}
         {activeTab === 'earnings' && (
           <div className="space-y-4">
-            {/* Earnings Summary */}
             <div className="bg-white rounded-lg shadow-sm border p-4">
               <h3 className="text-lg font-bold text-gray-900 mb-4">Earnings Summary</h3>
               
@@ -1091,7 +1248,6 @@ const RiderDashboard = () => {
                 </div>
               </div>
 
-              {/* Earnings Breakdown */}
               <div className="border-t pt-4">
                 <h4 className="font-semibold text-gray-900 mb-3">Earnings Breakdown</h4>
                 <div className="space-y-3">

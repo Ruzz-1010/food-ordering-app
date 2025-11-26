@@ -78,6 +78,7 @@ const orderSchema = new mongoose.Schema({
         ref: 'User'
     },
     estimatedDelivery: Date,
+    assignedAt: Date, // ADD THIS FIELD
     deliveredAt: Date,
     createdAt: {
         type: Date,
@@ -87,7 +88,6 @@ const orderSchema = new mongoose.Schema({
         type: Date,
         default: Date.now
     }
-    
 });
 
 // Update timestamp on save
@@ -101,5 +101,6 @@ orderSchema.index({ user: 1, createdAt: -1 });
 orderSchema.index({ restaurant: 1, createdAt: -1 });
 orderSchema.index({ status: 1 });
 orderSchema.index({ orderId: 1 });
+orderSchema.index({ rider: 1 }); // ADD THIS INDEX FOR RIDER QUERIES
 
 module.exports = mongoose.model('Order', orderSchema);

@@ -28,9 +28,8 @@ const restaurantRoutes = require('./routes/restaurants');
 const orderRoutes = require('./routes/orders');
 const productRoutes = require('./routes/products');
 const cartRoutes = require('./routes/cart');
-
-// ✅ ADD THIS LINE - IMPORT ADMIN ROUTES
 const adminRoutes = require('./routes/admin');
+const riderRoutes = require('./routes/riders'); // ADD THIS LINE
 
 // USE ROUTES
 app.use('/api', healthRoutes);
@@ -40,9 +39,8 @@ app.use('/api/restaurants', restaurantRoutes);
 app.use('/api/orders', orderRoutes);
 app.use('/api/products', productRoutes);
 app.use('/api/cart', cartRoutes);
-
-// ✅ ADD THIS LINE - USE ADMIN ROUTES
 app.use('/api/admin', adminRoutes);
+app.use('/api/riders', riderRoutes); // ADD THIS LINE
 
 // Basic route
 app.get('/', (req, res) => {

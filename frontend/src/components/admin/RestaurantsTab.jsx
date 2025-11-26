@@ -1,4 +1,4 @@
-// RestaurantTab.jsx - UPDATED FOR YOUR BACKEND
+// RestaurantTab.jsx - UPDATED WITH YOUR RAILWAY BACKEND
 import React, { useState, useEffect } from 'react';
 import { 
   Utensils, Plus, Search, Filter, MapPin, Phone, 
@@ -17,7 +17,10 @@ const RestaurantTab = () => {
   const [statusFilter, setStatusFilter] = useState('all');
   const [imagePreview, setImagePreview] = useState(null);
 
-  // New restaurant form state - UPDATED TO MATCH YOUR SCHEMA
+  // ✅ USE YOUR RAILWAY BACKEND URL
+  const API_URL = 'https://food-ordering-app-production-35eb.up.railway.app/api';
+
+  // New restaurant form state
   const [newRestaurant, setNewRestaurant] = useState({
     name: '',
     description: '',
@@ -33,16 +36,18 @@ const RestaurantTab = () => {
     },
     image: '',
     bannerImage: '',
-    owner: '' // You'll need to get this from your auth context
+    owner: ''
   });
-
-  const API_URL = 'http://localhost:5000/api';
 
   const fetchRestaurants = async () => {
     try {
       setRefreshing(true);
+      console.log('📡 Fetching restaurants from:', `${API_URL}/restaurants`);
+      
       const response = await fetch(`${API_URL}/restaurants`);
       const data = await response.json();
+      
+      console.log('📦 Restaurant data received:', data);
       
       if (data.success) {
         setRestaurants(data.restaurants);
@@ -91,6 +96,12 @@ const RestaurantTab = () => {
     setImagePreview(value);
   };
 
+  // Remove selected image
+  const removeImage = () => {
+    setNewRestaurant(prev => ({ ...prev, image: '' }));
+    setImagePreview(null);
+  };
+
   // Add new restaurant
   const handleAddRestaurant = async (e) => {
     e.preventDefault();
@@ -105,11 +116,12 @@ const RestaurantTab = () => {
 
     try {
       // For demo - you'll need to get the owner ID from your auth context
-      // This is a temporary solution - in real app, get from logged in user
       const restaurantData = {
         ...newRestaurant,
         owner: '65d8f1a9e4b0a1b2c3d4e5f6' // TEMPORARY - replace with actual owner ID
       };
+
+      console.log('📤 Sending restaurant data:', restaurantData);
 
       const response = await fetch(`${API_URL}/restaurants`, {
         method: 'POST',
@@ -120,6 +132,7 @@ const RestaurantTab = () => {
       });
 
       const result = await response.json();
+      console.log('📥 Create restaurant response:', result);
 
       if (result.success) {
         // Refresh the restaurants list
