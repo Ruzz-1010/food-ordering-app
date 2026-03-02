@@ -35,7 +35,7 @@ const OrdersTab = () => {
         return;
       }
 
-      const response = await fetch(`${RAILWAY_BACKEND_URL}/admin/orders`, {
+      const response = await fetch(`${API_URL}/admin/orders`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -77,7 +77,7 @@ const OrdersTab = () => {
     try {
       const token = localStorage.getItem('token');
       
-      const response = await fetch(`${RAILWAY_BACKEND_URL}/admin/orders/${orderId}/status`, {
+      const response = await fetch(`${API_URL}/admin/orders/${orderId}/status`, {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -117,7 +117,7 @@ const OrdersTab = () => {
   const handleSaveEdit = async (orderId) => {
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch(`${RAILWAY_BACKEND_URL}/admin/orders/${orderId}`, {
+      const response = await fetch(`${API_URL}/admin/orders/${orderId}`, {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -164,7 +164,7 @@ const OrdersTab = () => {
 
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch(`${RAILWAY_BACKEND_URL}/admin/orders/${orderId}`, {
+      const response = await fetch(`${API_URL}/admin/orders/${orderId}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`

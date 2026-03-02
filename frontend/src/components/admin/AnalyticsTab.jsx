@@ -21,13 +21,12 @@ const AnalyticsTab = () => {
   const [error, setError] = useState('');
 
   const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
-
   // Enhanced fetch function with better error handling
   const fetchData = async (endpoint) => {
     try {
       const token = localStorage.getItem('token');
       
-      const response = await fetch(`${RAILWAY_BACKEND_URL}${endpoint}`, {
+      const response = await fetch(`${API_URL}${endpoint}`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'

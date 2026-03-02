@@ -26,16 +26,15 @@ const DashboardTab = () => {
 
   const [recentRaw, setRecentRaw] = useState([]);        // 5 latest orders
   const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
-  // ---------- data fetching ----------
   const fetchAdminData = useCallback(async (endpoint, name) => {
     const token = localStorage.getItem('token');
-    const res = await fetch(`${RAILWAY_BACKEND_URL}/admin${endpoint}`, {
+    const res = await fetch(`${API_URL}/admin${endpoint}`, {
       headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }
     });
     if (!res.ok) throw new Error(`${name} API ${res.status}`);
     const json = await res.json();
     return json.data ?? json[name.toLowerCase()] ?? json ?? [];
-  }, [RAILWAY_BACKEND_URL]);
+  }, [API_URL]);
 
   const fetchData = useCallback(async () => {
     setRefreshing(true);
