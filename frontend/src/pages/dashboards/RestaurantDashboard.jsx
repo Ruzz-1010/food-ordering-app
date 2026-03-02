@@ -265,35 +265,36 @@ const RestaurantDashboard = () => {
     }
   };
 
- // NEW: Fetch available riders - REAL DATA ONLY
-const fetchAvailableRiders = async () => {
-  const token = localStorage.getItem('token');
-  try {
-    const res = await fetch(`${API_URL}/riders/active`, {
-      headers: { 
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json'
-      }
-    });
-    
-    if (res.ok) {
-      const data = await res.json();
-      if (data.success) {
-        setAvailableRiders(data.riders || []);
-        console.log('🚴 Available riders from API:', data.riders);
+  // FIXED: Fetch available riders - REAL DATA ONLY
+  const fetchAvailableRiders = async () => {
+    const token = localStorage.getItem('token');
+    try {
+      console.log('🔄 Fetching available riders...');
+      const res = await fetch(`${API_URL}/riders/active`, {
+        headers: { 
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      if (res.ok) {
+        const data = await res.json();
+        if (data.success) {
+          setAvailableRiders(data.riders || []);
+          console.log('🚴 Available riders from API:', data.riders);
+        } else {
+          setAvailableRiders([]);
+          console.log('⚠️ No riders available in response');
+        }
       } else {
+        console.log('❌ Riders endpoint returned error:', res.status);
         setAvailableRiders([]);
-        console.log('⚠️ No riders available');
       }
-    } else {
-      console.log('❌ Riders endpoint not available');
+    } catch (error) {
+      console.error('❌ Error fetching riders:', error);
       setAvailableRiders([]);
     }
-  } catch (error) {
-    console.error('❌ Error fetching riders:', error);
-    setAvailableRiders([]);
-  }
-};
+  };
 
   // Load all data
   const fetchData = async () => {
@@ -305,7 +306,7 @@ const fetchAvailableRiders = async () => {
       if (id) {
         await fetchMenu(id);
         await fetchOrders();
-        await fetchAvailableRiders(); // NEW: Fetch riders
+        await fetchAvailableRiders(); // Fetch riders
       } else {
         setError(new Error('No restaurant data found. Please contact support.'));
       }
@@ -405,7 +406,7 @@ const fetchAvailableRiders = async () => {
     }
   };
 
-  // NEW: Edit product
+  // Edit product
   const handleEditProduct = async (e) => {
     e.preventDefault();
     if (!editingProduct) return;
@@ -452,7 +453,7 @@ const fetchAvailableRiders = async () => {
     }
   };
 
-  // NEW: Delete product
+  // Delete product
   const handleDeleteProduct = async (productId) => {
     showConfirmation(
       'Are you sure you want to delete this product? This action cannot be undone.',
@@ -486,7 +487,7 @@ const fetchAvailableRiders = async () => {
     );
   };
 
-  // NEW: Toggle product availability
+  // Toggle product availability
   const handleToggleAvailability = async (product) => {
     const token = localStorage.getItem('token');
     
@@ -543,7 +544,7 @@ const fetchAvailableRiders = async () => {
     }
   };
 
-  // NEW: Reject order
+  // Reject order
   const handleRejectOrder = async (orderId) => {
     showConfirmation(
       'Are you sure you want to reject this order? The customer will be notified.',
@@ -557,7 +558,7 @@ const fetchAvailableRiders = async () => {
               'Content-Type': 'application/json',
               'Authorization': `Bearer ${token}`
             },
-            body: JSON.stringify({ status: 'rejected' })
+            body: JSON.stringify({ status: 'cancelled' })
           });
           
           const data = await res.json();
@@ -577,11 +578,13 @@ const fetchAvailableRiders = async () => {
     );
   };
 
-  // NEW: Assign rider to order
+  // FIXED: Assign rider to order
   const handleAssignRider = async (orderId, riderId) => {
     const token = localStorage.getItem('token');
     
     try {
+      console.log(`🔄 Assigning rider ${riderId} to order ${orderId}`);
+      
       const res = await fetch(`${API_URL}/orders/${orderId}/assign-rider`, {
         method: 'PUT',
         headers: {
@@ -593,7 +596,7 @@ const fetchAvailableRiders = async () => {
       
       const data = await res.json();
       
-      if (res.ok) {
+      if (res.ok && data.success) {
         await fetchData();
         setShowRiderAssignment(false);
         setSelectedOrderForRider(null);
@@ -677,7 +680,7 @@ const fetchAvailableRiders = async () => {
     }
   };
 
-  // NEW: Generate sales report data
+  // Generate sales report data
   const generateSalesReport = () => {
     const now = new Date();
     let startDate, endDate;
@@ -735,7 +738,7 @@ const fetchAvailableRiders = async () => {
     };
   };
 
-  // NEW: Export report to CSV
+  // Export report to CSV
   const exportReportToCSV = (report) => {
     const headers = ['Date', 'Order ID', 'Customer', 'Items', 'Total Amount', 'Status'];
     const csvData = [
@@ -1232,7 +1235,7 @@ const fetchAvailableRiders = async () => {
                           ))}
                         </div>
                         <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                          <h4 className="font-semibold text-blue-900 mb-2">💰 Total Revenue</h4>
+                          <h4 className="font-semibold text-blue-900 mb-2"> Total Revenue</h4>
                           <p className="text-2xl font-bold text-blue-900">{formatCurrency(stats.totalRevenue)}</p>
                           <p className="text-sm text-blue-700">From {stats.completedOrders} completed orders</p>
                         </div>
@@ -1483,7 +1486,7 @@ const fetchAvailableRiders = async () => {
         </div>
       )}
 
-      {/* Rider Assignment Modal */}
+      {/* FIXED: Rider Assignment Modal */}
       {showRiderAssignment && selectedOrderForRider && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-lg shadow-lg max-w-md w-full max-h-[90vh] overflow-y-auto">
@@ -1495,39 +1498,81 @@ const fetchAvailableRiders = async () => {
                 </button>
               </div>
               
-              <div className="mb-4">
-                <p className="text-sm text-gray-600">Order: #{selectedOrderForRider.orderId || selectedOrderForRider._id}</p>
-                <p className="text-sm text-gray-600">Customer: {selectedOrderForRider.user?.name || selectedOrderForRider.customerId?.name || 'Customer'}</p>
-                <p className="text-sm text-gray-600">Address: {selectedOrderForRider.deliveryAddress || 'No address'}</p>
+              <div className="mb-4 bg-blue-50 border border-blue-200 rounded-lg p-3">
+                <p className="text-sm font-medium text-blue-800">Order Details</p>
+                <p className="text-sm text-blue-700">#{selectedOrderForRider.orderId || selectedOrderForRider._id}</p>
+                <p className="text-sm text-blue-700">Customer: {selectedOrderForRider.user?.name || 'Customer'}</p>
+                <p className="text-sm text-blue-700">Address: {selectedOrderForRider.deliveryAddress || 'No address'}</p>
               </div>
 
               <div className="space-y-3">
-                <h4 className="font-semibold text-gray-900">Available Riders</h4>
+                <h4 className="font-semibold text-gray-900 flex items-center">
+                  <Truck className="w-4 h-4 mr-2" />
+                  Available Riders ({availableRiders.filter(r => r.status === 'online').length})
+                </h4>
+                
                 {availableRiders.length === 0 ? (
-                  <p className="text-gray-500 text-sm">No riders available at the moment</p>
-                ) : (
-                  availableRiders.map((rider) => (
-                    <div key={rider._id} className="border rounded-lg p-3 hover:shadow-md transition-shadow">
-                      <div className="flex justify-between items-center">
-                        <div>
-                          <p className="font-medium text-gray-900">{rider.name}</p>
-                          <p className="text-sm text-gray-600">{rider.phone}</p>
-                          <span className={`text-xs px-2 py-1 rounded-full ${
-                            rider.status === 'available' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
-                          }`}>
-                            {rider.status}
-                          </span>
-                        </div>
-                        <button
-                          onClick={() => handleAssignRider(selectedOrderForRider._id, rider._id)}
-                          disabled={rider.status !== 'available'}
-                          className="bg-orange-600 text-white px-3 py-2 rounded-lg hover:bg-orange-700 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
-                        >
-                          Assign
-                        </button>
-                      </div>
+                  <div className="text-center py-8">
+                    <Truck className="mx-auto text-gray-300 mb-4 w-12 h-12" />
+                    <p className="text-gray-500 font-medium">No Riders Available</p>
+                    <p className="text-sm text-gray-400 mt-2">
+                      There are currently no online riders in the system.
+                    </p>
+                    <div className="mt-4 space-y-2">
+                      <p className="text-xs text-gray-500">To fix this:</p>
+                      <ul className="text-xs text-gray-500 text-left space-y-1">
+                        <li>• Create rider accounts in the database</li>
+                        <li>• Ensure riders have status: "online"</li>
+                        <li>• Riders must be approved and active</li>
+                      </ul>
                     </div>
-                  ))
+                  </div>
+                ) : availableRiders.filter(rider => rider.status === 'online').length === 0 ? (
+                  <div className="text-center py-4">
+                    <Truck className="mx-auto text-gray-300 mb-2 w-8 h-8" />
+                    <p className="text-gray-500 text-sm">All riders are currently offline</p>
+                    <p className="text-xs text-gray-400">Riders need to go online in their app</p>
+                  </div>
+                ) : (
+                  availableRiders
+                    .filter(rider => rider.status === 'online')
+                    .map((rider) => (
+                      <div key={rider._id} className="border rounded-lg p-4 hover:shadow-md transition-shadow">
+                        <div className="flex justify-between items-start">
+                          <div className="flex-1">
+                            <div className="flex items-center space-x-2 mb-2">
+                              <p className="font-semibold text-gray-900">{rider.name}</p>
+                              <span className="bg-green-100 text-green-800 text-xs px-2 py-1 rounded-full">
+                                🟢 Online
+                              </span>
+                            </div>
+                            <div className="space-y-1 text-sm text-gray-600">
+                              <p className="flex items-center">
+                                <Phone className="w-3 h-3 mr-2" />
+                                {rider.phone}
+                              </p>
+                              <p className="flex items-center">
+                                <Truck className="w-3 h-3 mr-2" />
+                                {rider.vehicleType || 'Motorcycle'}
+                                {rider.licensePlate && ` • ${rider.licensePlate}`}
+                              </p>
+                              {rider.rating > 0 && (
+                                <p className="flex items-center">
+                                  <Star className="w-3 h-3 text-yellow-500 mr-1" />
+                                  {rider.rating?.toFixed(1) || '5.0'} • {rider.totalDeliveries || 0} deliveries
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                          <button
+                            onClick={() => handleAssignRider(selectedOrderForRider._id, rider._id)}
+                            className="bg-orange-600 text-white px-4 py-2 rounded-lg hover:bg-orange-700 text-sm whitespace-nowrap"
+                          >
+                            Assign
+                          </button>
+                        </div>
+                      </div>
+                    ))
                 )}
               </div>
 
@@ -1537,6 +1582,13 @@ const fetchAvailableRiders = async () => {
                   className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 text-sm"
                 >
                   Cancel
+                </button>
+                <button 
+                  onClick={fetchAvailableRiders}
+                  className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm flex items-center justify-center space-x-2"
+                >
+                  <RefreshCw className="w-4 h-4" />
+                  <span>Refresh</span>
                 </button>
               </div>
             </div>
