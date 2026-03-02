@@ -1,4 +1,3 @@
-// RestaurantTab.jsx - UPDATED WITH YOUR RAILWAY BACKEND
 import React, { useState, useEffect } from 'react';
 import { 
   Utensils, Plus, Search, Filter, MapPin, Phone, 
@@ -17,7 +16,8 @@ const RestaurantTab = () => {
   const [statusFilter, setStatusFilter] = useState('all');
   const [imagePreview, setImagePreview] = useState(null);
 
-  const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+  const API_URL = 'https://food-ordering-app-83lm.onrender.com/api';
+  
   // New restaurant form state
   const [newRestaurant, setNewRestaurant] = useState({
     name: '',

@@ -12,6 +12,9 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 
+// API Base URL - Updated to Render backend
+const API_BASE_URL = 'https://food-ordering-app-83lm.onrender.com';
+
 // Utility function for auth headers
 const getAuthHeaders = () => {
     const token = localStorage.getItem('token');
@@ -890,7 +893,7 @@ const ReviewForm = ({ restaurant, onSubmit, onCancel, user }) => {
                 userName: user.name
             };
 
-            const response = await fetch('http://localhost:5000/api', {
+            const response = await fetch(`${API_BASE_URL}/api/reviews`, {
                 method: 'POST',
                 headers: getAuthHeaders(),
                 body: JSON.stringify(reviewData)
@@ -1033,7 +1036,7 @@ const RestaurantReviews = ({ restaurant, user, onClose }) => {
         try {
             setLoading(true);
             const response = await fetch(
-                `http://localhost:5000/api/reviews/restaurant/${restaurant._id}`
+                `${API_BASE_URL}/api/reviews/restaurant/${restaurant._id}`
             );
 
             if (response.ok) {
@@ -2044,7 +2047,7 @@ const RestaurantCard = ({ restaurant, onAddToCart, user }) => {
     const fetchRestaurantReviews = async () => {
         try {
             const response = await fetch(
-                `http://localhost:5000/api/reviews/restaurant/${restaurant._id}`
+                `${API_BASE_URL}/api/reviews/restaurant/${restaurant._id}`
             );
 
             if (response.ok) {
@@ -2082,7 +2085,7 @@ const RestaurantCard = ({ restaurant, onAddToCart, user }) => {
                 return;
             }
 
-            const endpoint = `http://localhost:5000/api/products/restaurant/${restaurantId}`;
+            const endpoint = `${API_BASE_URL}/api/products/restaurant/${restaurantId}`;
             
             const response = await fetch(endpoint);
             
@@ -2407,7 +2410,7 @@ const TrackOrder = ({ user }) => {
                 return;
             }
 
-            const response = await fetch('http://localhost:5000/api/orders/user', {
+            const response = await fetch(`${API_BASE_URL}/api/orders/user`, {
                 headers: getAuthHeaders()
             });
 
@@ -2446,7 +2449,7 @@ const TrackOrder = ({ user }) => {
                 return;
             }
 
-            const response = await fetch(`http://localhost:5000/api/orders/track/${trackingId}`, {
+            const response = await fetch(`${API_BASE_URL}/api/orders/track/${trackingId}`, {
                 headers: getAuthHeaders()
             });
 
@@ -2747,7 +2750,7 @@ const UserProfile = ({ user, onUpdate }) => {
                 }
             };
 
-            const response = await fetch('http://localhost:5000/api/users/profile', {
+            const response = await fetch(`${API_BASE_URL}/api/users/profile`, {
                 method: 'PUT',
                 headers: getAuthHeaders(),
                 body: JSON.stringify(updateData)
@@ -2770,7 +2773,7 @@ const UserProfile = ({ user, onUpdate }) => {
         setMessage('');
 
         try {
-            const response = await fetch('http://localhost:5000/api/users/profile', {
+            const response = await fetch(`${API_BASE_URL}/api/users/profile`, {
                 method: 'PUT',
                 headers: getAuthHeaders(),
                 body: JSON.stringify(formData)
@@ -2959,12 +2962,12 @@ const RestaurantDashboard = ({ user }) => {
             }
 
             // Fetch restaurant orders
-            const ordersResponse = await fetch('http://localhost:5000/api/orders/restaurant', {
+            const ordersResponse = await fetch(`${API_BASE_URL}/api/orders/restaurant`, {
                 headers: getAuthHeaders()
             });
 
             // Fetch restaurant products
-            const productsResponse = await fetch('http://localhost:5000/api/products/restaurant', {
+            const productsResponse = await fetch(`${API_BASE_URL}/api/products/restaurant`, {
                 headers: getAuthHeaders()
             });
 
@@ -3025,7 +3028,7 @@ const RestaurantDashboard = ({ user }) => {
                 return;
             }
 
-            const response = await fetch(`http://localhost:5000/api/orders/${orderId}/status`, {
+            const response = await fetch(`${API_BASE_URL}/api/orders/${orderId}/status`, {
                 method: 'PUT',
                 headers: getAuthHeaders(),
                 body: JSON.stringify({ status: newStatus })
@@ -3245,7 +3248,7 @@ const CustomerDashboard = () => {
             setLoadingRestaurants(true);
             setApiError('');
             try {
-                const response = await fetch('http://localhost:5000/api/restaurants');
+                const response = await fetch(`${API_BASE_URL}/api/restaurants`);
                 
                 if (response.ok) {
                     const data = await response.json();
@@ -3332,7 +3335,7 @@ const CustomerDashboard = () => {
 
             console.log('📦 Order data being sent:', orderData);
 
-            const response = await fetch('http://localhost:5000/api/orders/create', {
+            const response = await fetch(`${API_BASE_URL}/api/orders`, {
                 method: 'POST',
                 headers: getAuthHeaders(),
                 body: JSON.stringify(orderData)

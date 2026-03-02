@@ -21,7 +21,7 @@ const OrdersTab = () => {
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [showOrderModal, setShowOrderModal] = useState(false);
 
-  const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+  const API_URL = 'https://food-ordering-app-83lm.onrender.com/api';
 
   const fetchOrders = async () => {
     try {
