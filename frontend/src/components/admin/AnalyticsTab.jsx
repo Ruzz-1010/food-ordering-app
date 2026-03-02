@@ -5,6 +5,9 @@ import {
   Calendar, RefreshCw, Clock, BarChart3, PieChart, AlertCircle 
 } from 'lucide-react';
 
+// API Base URL - Updated to Render backend
+const API_BASE_URL = 'https://food-ordering-app-83lm.onrender.com/api';
+
 const AnalyticsTab = () => {
   const [analytics, setAnalytics] = useState({
     totalRevenue: 0,
@@ -20,13 +23,16 @@ const AnalyticsTab = () => {
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState('');
 
-  const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
   // Enhanced fetch function with better error handling
   const fetchData = async (endpoint) => {
     try {
       const token = localStorage.getItem('token');
       
-      const response = await fetch(`${API_URL}${endpoint}`, {
+      if (!token) {
+        throw new Error('No authentication token found');
+      }
+
+      const response = await fetch(`${API_BASE_URL}${endpoint}`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -34,6 +40,8 @@ const AnalyticsTab = () => {
       });
 
       if (!response.ok) {
+        if (response.status === 401) throw new Error('Unauthorized - Please login again');
+        if (response.status === 404) throw new Error(`Endpoint ${endpoint} not found`);
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
 
@@ -46,6 +54,14 @@ const AnalyticsTab = () => {
       
       if (Array.isArray(data)) {
         return data;
+      }
+      
+      if (data && typeof data === 'object') {
+        // Check if it's a paginated response with data array
+        if (data.orders && Array.isArray(data.orders)) return data.orders;
+        if (data.users && Array.isArray(data.users)) return data.users;
+        if (data.restaurants && Array.isArray(data.restaurants)) return data.restaurants;
+        if (data.data && Array.isArray(data.data)) return data.data;
       }
       
       return data || [];
@@ -75,58 +91,46 @@ const AnalyticsTab = () => {
       let usersData = [];
       let restaurantsData = [];
 
-      try {
-        // Try multiple endpoints for orders
-        const endpoints = ['/orders', '/admin/orders'];
-        for (const endpoint of endpoints) {
-          try {
-            const data = await fetchData(endpoint);
-            if (Array.isArray(data) && data.length > 0) {
-              ordersData = data;
-              break;
-            }
-          } catch (e) {
-            console.log(`❌ ${endpoint} failed:`, e.message);
+      // Try multiple endpoints for orders
+      const orderEndpoints = ['/orders', '/admin/orders', '/all-orders'];
+      for (const endpoint of orderEndpoints) {
+        try {
+          const data = await fetchData(endpoint);
+          if (Array.isArray(data) && data.length > 0) {
+            ordersData = data;
+            break;
           }
+        } catch (e) {
+          console.log(`❌ ${endpoint} failed:`, e.message);
         }
-      } catch (orderError) {
-        console.error('Failed to fetch orders:', orderError);
       }
 
-      try {
-        // Try multiple endpoints for users
-        const endpoints = ['/users', '/admin/users'];
-        for (const endpoint of endpoints) {
-          try {
-            const data = await fetchData(endpoint);
-            if (Array.isArray(data) && data.length > 0) {
-              usersData = data;
-              break;
-            }
-          } catch (e) {
-            console.log(`❌ ${endpoint} failed:`, e.message);
+      // Try multiple endpoints for users
+      const userEndpoints = ['/users', '/admin/users', '/all-users'];
+      for (const endpoint of userEndpoints) {
+        try {
+          const data = await fetchData(endpoint);
+          if (Array.isArray(data) && data.length > 0) {
+            usersData = data;
+            break;
           }
+        } catch (e) {
+          console.log(`❌ ${endpoint} failed:`, e.message);
         }
-      } catch (userError) {
-        console.error('Failed to fetch users:', userError);
       }
 
-      try {
-        // Try multiple endpoints for restaurants
-        const endpoints = ['/restaurants', '/admin/restaurants'];
-        for (const endpoint of endpoints) {
-          try {
-            const data = await fetchData(endpoint);
-            if (Array.isArray(data) && data.length > 0) {
-              restaurantsData = data;
-              break;
-            }
-          } catch (e) {
-            console.log(`❌ ${endpoint} failed:`, e.message);
+      // Try multiple endpoints for restaurants
+      const restaurantEndpoints = ['/restaurants', '/admin/restaurants', '/all-restaurants'];
+      for (const endpoint of restaurantEndpoints) {
+        try {
+          const data = await fetchData(endpoint);
+          if (Array.isArray(data) && data.length > 0) {
+            restaurantsData = data;
+            break;
           }
+        } catch (e) {
+          console.log(`❌ ${endpoint} failed:`, e.message);
         }
-      } catch (restaurantError) {
-        console.error('Failed to fetch restaurants:', restaurantError);
       }
 
       // Process orders data properly
@@ -138,7 +142,7 @@ const AnalyticsTab = () => {
       // Calculate total revenue from delivered/completed orders
       const totalRevenue = deliveredOrders.reduce((total, order) => {
         const orderAmount = parseFloat(order.totalAmount || order.total || order.amount || 0);
-        return total + orderAmount;
+        return total + (isNaN(orderAmount) ? 0 : orderAmount);
       }, 0);
 
       // Calculate order statistics
@@ -172,7 +176,9 @@ const AnalyticsTab = () => {
           
           if (order.status === 'delivered' || order.status === 'completed') {
             const orderAmount = parseFloat(order.totalAmount || order.total || order.amount || 0);
-            restaurantOrderCount[restaurantId].revenue += orderAmount;
+            if (!isNaN(orderAmount)) {
+              restaurantOrderCount[restaurantId].revenue += orderAmount;
+            }
           }
         });
       }
@@ -190,7 +196,7 @@ const AnalyticsTab = () => {
       // Get recent orders
       const recentOrders = Array.isArray(ordersData) 
         ? ordersData
-            .sort((a, b) => new Date(b.createdAt || b.orderDate || b.date) - new Date(a.createdAt || a.orderDate || a.date))
+            .sort((a, b) => new Date(b.createdAt || b.orderDate || b.date || 0) - new Date(a.createdAt || a.orderDate || a.date || 0))
             .slice(0, 5)
         : [];
 
@@ -235,7 +241,7 @@ const AnalyticsTab = () => {
       completed: 'bg-green-100 text-green-800',
       cancelled: 'bg-red-100 text-red-800'
     };
-    return colors[status] || 'bg-gray-100 text-gray-800';
+    return colors[status?.toLowerCase()] || 'bg-gray-100 text-gray-800';
   };
 
   const calculateCompletionRate = () => {
@@ -431,7 +437,7 @@ const AnalyticsTab = () => {
           </h3>
           <div className="space-y-3">
             {analytics.topRestaurants.map((restaurant, index) => (
-              <div key={restaurant.id} className="flex items-center justify-between hover:bg-[#FFF0C4] p-2 rounded transition-colors">
+              <div key={restaurant.id || index} className="flex items-center justify-between hover:bg-[#FFF0C4] p-2 rounded transition-colors">
                 <div className="flex items-center space-x-3 flex-1">
                   <div className="w-8 h-8 bg-gradient-to-r from-[#8C1007] to-[#660B05] rounded-lg flex items-center justify-center">
                     <span className="text-white font-bold text-sm">{index + 1}</span>
@@ -442,7 +448,7 @@ const AnalyticsTab = () => {
                   </div>
                 </div>
                 <span className="text-sm font-bold text-[#8C1007]">
-                  ₱{restaurant.revenue.toLocaleString()}
+                  ₱{(restaurant.revenue || 0).toLocaleString()}
                 </span>
               </div>
             ))}

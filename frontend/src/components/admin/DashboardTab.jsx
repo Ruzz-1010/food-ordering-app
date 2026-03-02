@@ -5,6 +5,9 @@ import {
   TrendingUp, Activity, Eye, BarChart3, Clock, ArrowUpRight, ArrowDownRight
 } from 'lucide-react';
 
+// API Base URL - Updated to Render backend
+const API_BASE_URL = 'https://food-ordering-app-83lm.onrender.com/api';
+
 // ---------- helpers ----------
 const formatPeso = (n) => `₱${Number(n || 0).toLocaleString()}`;
 const formatTime = (d) => new Date(d).toLocaleTimeString();
@@ -24,55 +27,103 @@ const DashboardTab = () => {
   const [error, setError] = useState('');
   const [lastUpdated, setLastUpdated] = useState('');
 
-  const [recentRaw, setRecentRaw] = useState([]);        // 5 latest orders
-  const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+  const [recentRaw, setRecentRaw] = useState([]); // 5 latest orders
+
   const fetchAdminData = useCallback(async (endpoint, name) => {
     const token = localStorage.getItem('token');
-    const res = await fetch(`${API_URL}/admin${endpoint}`, {
-      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }
+    if (!token) throw new Error('No authentication token found');
+    
+    const res = await fetch(`${API_BASE_URL}/admin${endpoint}`, {
+      headers: { 
+        Authorization: `Bearer ${token}`, 
+        'Content-Type': 'application/json' 
+      }
     });
-    if (!res.ok) throw new Error(`${name} API ${res.status}`);
+    
+    if (!res.ok) {
+      if (res.status === 401) throw new Error('Unauthorized - Please login again');
+      if (res.status === 404) throw new Error(`${name} endpoint not found`);
+      throw new Error(`${name} API ${res.status}`);
+    }
+    
     const json = await res.json();
+    
+    // Handle different response structures
+    if (json.success) {
+      return json.data || json[name.toLowerCase()] || json || [];
+    }
+    
     return json.data ?? json[name.toLowerCase()] ?? json ?? [];
-  }, [API_URL]);
+  }, []);
 
   const fetchData = useCallback(async () => {
     setRefreshing(true);
     setError('');
     setLoading(true);
+    
     try {
       const token = localStorage.getItem('token');
-      if (!token) return setError('Please log in');
+      if (!token) {
+        setError('Please log in to view dashboard');
+        setLoading(false);
+        setRefreshing(false);
+        return;
+      }
 
-      // 1.  dashboard summary (single call)
-      const dash = await fetchAdminData('/dashboard/stats', 'Dashboard Stats');
+      // Fetch dashboard stats from multiple possible endpoints
+      let dash = null;
+      try {
+        dash = await fetchAdminData('/dashboard/stats', 'Dashboard Stats');
+      } catch (e) {
+        console.log('Dashboard stats endpoint failed, trying alternative...');
+        // Try alternative endpoint
+        dash = await fetchAdminData('/stats', 'Dashboard Stats');
+      }
+
       setStats({
-        totalUsers: dash.totalUsers || 0,
-        totalRestaurants: dash.totalRestaurants || 0,
-        totalOrders: dash.totalOrders || 0,
-        totalRevenue: dash.totalRevenue || 0,
-        totalProducts: dash.totalProducts || 0,
-        pendingOrders: 0 // computed below
+        totalUsers: dash?.totalUsers || 0,
+        totalRestaurants: dash?.totalRestaurants || 0,
+        totalOrders: dash?.totalOrders || 0,
+        totalRevenue: dash?.totalRevenue || 0,
+        totalProducts: dash?.totalProducts || 0,
+        pendingOrders: 0 // will be updated below
       });
 
-      // 2.  recent orders for activity + pending count
-      const orders = await fetchAdminData('/orders', 'Orders');
-      setRecentRaw(orders.sort((a, b) => new Date(b.createdAt || b.orderDate) - new Date(a.createdAt || a.orderDate)).slice(0, 5));
+      // Fetch orders for recent activity and pending count
+      let orders = [];
+      try {
+        orders = await fetchAdminData('/orders', 'Orders');
+      } catch (e) {
+        console.log('Orders endpoint failed, trying alternative...');
+        orders = await fetchAdminData('/all-orders', 'Orders');
+      }
 
-      const pending = orders.filter(o => ['pending', 'confirmed', 'preparing'].includes(o.status)).length;
+      // Sort and get recent orders
+      const sortedOrders = (orders || []).sort(
+        (a, b) => new Date(b.createdAt || b.orderDate || 0) - new Date(a.createdAt || a.orderDate || 0)
+      );
+      setRecentRaw(sortedOrders.slice(0, 5));
+
+      // Calculate pending orders
+      const pending = (orders || []).filter(o => 
+        ['pending', 'confirmed', 'preparing'].includes(o?.status?.toLowerCase())
+      ).length;
+      
       setStats(s => ({ ...s, pendingOrders: pending }));
 
       setLastUpdated(formatTime(new Date()));
     } catch (e) {
-      console.error(e);
-      setError(e.message);
+      console.error('Dashboard error:', e);
+      setError(e.message || 'Failed to load dashboard data');
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
   }, [fetchAdminData]);
 
-  useEffect(() => { fetchData(); }, [fetchData]);
+  useEffect(() => { 
+    fetchData(); 
+  }, [fetchData]);
 
   // ---------- derived ----------
   const recentActivity = useMemo(() => recentRaw, [recentRaw]);
@@ -115,7 +166,8 @@ const DashboardTab = () => {
       delivered: 'bg-green-100 text-green-800',
       completed: 'bg-green-100 text-green-800',
       cancelled: 'bg-red-100 text-red-800'
-    }[status] || 'bg-gray-100 text-gray-800';
+    }[status?.toLowerCase()] || 'bg-gray-100 text-gray-800';
+    
     return <span className={`px-2 py-1 text-xs font-medium rounded-full ${cfg}`}>{status}</span>;
   };
 
@@ -147,7 +199,9 @@ const DashboardTab = () => {
           <div className="flex-1">
             <p className="text-red-800 font-medium">Data Loading Error</p>
             <p className="text-red-700 text-sm">{error}</p>
-            <button onClick={fetchData} className="mt-2 px-3 py-1 bg-red-600 text-white rounded text-sm hover:bg-red-700">Try Again</button>
+            <button onClick={fetchData} className="mt-2 px-3 py-1 bg-red-600 text-white rounded text-sm hover:bg-red-700">
+              Try Again
+            </button>
           </div>
         </div>
       )}
@@ -224,17 +278,25 @@ const DashboardTab = () => {
           <div className="space-y-3">
             {recentActivity.length ? (
               recentActivity.map((act, i) => (
-                <div key={i} className="border border-[#FFF0C4] rounded-lg p-3 hover:shadow-md transition-all duration-300 hover:-translate-y-1">
+                <div key={act._id || i} className="border border-[#FFF0C4] rounded-lg p-3 hover:shadow-md transition-all duration-300 hover:-translate-y-1">
                   <div className="flex items-center justify-between mb-2">
                     <div className="min-w-0 flex-1">
-                      <p className="font-medium text-gray-900 text-sm truncate">{act.orderNumber || `Order #${act._id?.slice(0, 8) || i + 1}`}</p>
-                      <p className="text-xs text-gray-500 truncate">{act.customer?.name || act.user?.name || 'Customer'}</p>
+                      <p className="font-medium text-gray-900 text-sm truncate">
+                        {act.orderNumber || `Order #${act._id?.slice(0, 8) || i + 1}`}
+                      </p>
+                      <p className="text-xs text-gray-500 truncate">
+                        {act.customer?.name || act.user?.name || 'Customer'}
+                      </p>
                     </div>
                     <StatusBadge status={act.status} />
                   </div>
                   <div className="flex items-center justify-between">
-                    <p className="text-sm font-bold text-[#8C1007]">{formatPeso(act.totalAmount || act.total)}</p>
-                    <p className="text-xs text-gray-600">{act.createdAt ? new Date(act.createdAt).toLocaleDateString() : 'N/A'}</p>
+                    <p className="text-sm font-bold text-[#8C1007]">
+                      {formatPeso(act.totalAmount || act.total || 0)}
+                    </p>
+                    <p className="text-xs text-gray-600">
+                      {act.createdAt ? new Date(act.createdAt).toLocaleDateString() : 'N/A'}
+                    </p>
                   </div>
                 </div>
               ))
@@ -293,7 +355,7 @@ const DashboardTab = () => {
           <div className="text-center p-4 bg-green-50 rounded-lg border border-green-200 hover:shadow-md transition-all">
             <div className="text-2xl font-bold text-green-600">🟢</div>
             <div className="text-sm font-medium text-green-800 mt-1">Backend Online</div>
-            <div className="text-xs text-green-600">Railway</div>
+            <div className="text-xs text-green-600">Render</div>
           </div>
           <div className="text-center p-4 bg-blue-50 rounded-lg border border-blue-200 hover:shadow-md transition-all">
             <div className="text-2xl font-bold text-blue-600">{stats.totalUsers + stats.totalRestaurants + stats.totalOrders}</div>
