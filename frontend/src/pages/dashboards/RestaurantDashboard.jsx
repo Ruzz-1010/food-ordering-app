@@ -9,7 +9,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 
-const API_URL = 'https://food-ordering-app-production-35eb.up.railway.app/api';
+const API_URL = 'http://localhost:5000/api';
 
 const RestaurantDashboard = () => {
   const { user, logout, getRestaurantId, getRestaurantData, refreshRestaurantData, updateUser } = useAuth();

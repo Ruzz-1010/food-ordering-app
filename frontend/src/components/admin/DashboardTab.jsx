@@ -25,8 +25,7 @@ const DashboardTab = () => {
   const [lastUpdated, setLastUpdated] = useState('');
 
   const [recentRaw, setRecentRaw] = useState([]);        // 5 latest orders
-  const RAILWAY_BACKEND_URL = 'https://food-ordering-app-production-35eb.up.railway.app/api';
-
+  const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
   // ---------- data fetching ----------
   const fetchAdminData = useCallback(async (endpoint, name) => {
     const token = localStorage.getItem('token');

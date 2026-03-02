@@ -17,9 +17,7 @@ const RestaurantTab = () => {
   const [statusFilter, setStatusFilter] = useState('all');
   const [imagePreview, setImagePreview] = useState(null);
 
-  // ✅ USE YOUR RAILWAY BACKEND URL
-  const API_URL = 'https://food-ordering-app-production-35eb.up.railway.app/api';
-
+  const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
   // New restaurant form state
   const [newRestaurant, setNewRestaurant] = useState({
     name: '',

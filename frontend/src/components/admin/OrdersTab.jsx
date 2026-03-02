@@ -21,7 +21,7 @@ const OrdersTab = () => {
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [showOrderModal, setShowOrderModal] = useState(false);
 
-  const RAILWAY_BACKEND_URL = 'https://food-ordering-app-production-35eb.up.railway.app/api';
+  const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
 
   const fetchOrders = async () => {
     try {

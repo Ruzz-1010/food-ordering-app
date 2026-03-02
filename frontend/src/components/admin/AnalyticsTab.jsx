@@ -20,7 +20,7 @@ const AnalyticsTab = () => {
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState('');
 
-  const RAILWAY_BACKEND_URL = 'https://food-ordering-app-production-35eb.up.railway.app/api';
+  const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
 
   // Enhanced fetch function with better error handling
   const fetchData = async (endpoint) => {
