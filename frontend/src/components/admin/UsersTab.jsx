@@ -1,7 +1,9 @@
-// UsersTab.jsx - MODERN REDESIGN
+// UsersTab.jsx - MODERN REDESIGN (FIXED API CALLS)
 import React, { useState, useEffect } from 'react';
 import { Users, RefreshCw, CheckCircle, XCircle, Edit, Trash2, Mail, Phone, AlertCircle, ChevronDown, ChevronUp, Save, X, Search, Filter } from 'lucide-react';
-import { apiService } from '../../services/api';
+
+// ✅ FIXED: Direct API URL to Render backend
+const API_URL = 'https://food-ordering-app-83lm.onrender.com/api';
 
 const UsersTab = () => {
   const [users, setUsers] = useState([]);
@@ -17,12 +19,28 @@ const UsersTab = () => {
   const [roleFilter, setRoleFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
 
+  // ✅ FIXED: Direct fetch with proper headers
   const fetchUsers = async () => {
     try {
       setRefreshing(true);
       setError('');
       
-      const data = await apiService.getUsers();
+      const token = localStorage.getItem('token');
+      
+      const response = await fetch(`${API_URL}/users`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      console.log('✅ Users API response:', data);
       
       // Handle different response formats
       let usersArray = [];
@@ -67,9 +85,23 @@ const UsersTab = () => {
     return matchesSearch && matchesRole && matchesStatus;
   });
 
+  // ✅ FIXED: Direct approve user API call
   const handleApproveUser = async (userId, userName) => {
     try {
-      await apiService.approveUser(userId);
+      const token = localStorage.getItem('token');
+      
+      const response = await fetch(`${API_URL}/users/${userId}/approve`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
       await fetchUsers();
       alert(`✅ User ${userName} approved successfully!`);
     } catch (error) {
@@ -78,13 +110,27 @@ const UsersTab = () => {
     }
   };
 
+  // ✅ FIXED: Direct delete user API call
   const handleDeleteUser = async (userId, userName) => {
     if (!window.confirm(`Are you sure you want to delete ${userName}? This action cannot be undone.`)) {
       return;
     }
 
     try {
-      await apiService.deleteUser(userId);
+      const token = localStorage.getItem('token');
+      
+      const response = await fetch(`${API_URL}/users/${userId}`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
       await fetchUsers();
       alert(`✅ User ${userName} deleted successfully!`);
     } catch (error) {
@@ -104,11 +150,12 @@ const UsersTab = () => {
     });
   };
 
-  // Save edited user
+  // ✅ FIXED: Direct save edit API call
   const handleSaveEdit = async (userId) => {
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch(`${apiService.baseURL}/auth/users/${userId}`, {
+      
+      const response = await fetch(`${API_URL}/users/${userId}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -117,13 +164,13 @@ const UsersTab = () => {
         body: JSON.stringify(editForm)
       });
 
-      if (response.ok) {
-        await fetchUsers();
-        setEditingUser(null);
-        alert('✅ User updated successfully!');
-      } else {
-        throw new Error('Failed to update user');
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
       }
+
+      await fetchUsers();
+      setEditingUser(null);
+      alert('✅ User updated successfully!');
     } catch (error) {
       console.error('Error updating user:', error);
       alert('❌ Failed to update user');
@@ -212,7 +259,7 @@ const UsersTab = () => {
   return (
     <div className="bg-white rounded-xl shadow-sm border border-[#FFF0C4] p-4 sm:p-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
-        <h2 className="text-xl sm:text-2xl font-bold text-[#3E0703]"> User Management</h2>
+        <h2 className="text-xl sm:text-2xl font-bold text-[#3E0703]">User Management</h2>
         <button
           onClick={handleRefresh}
           disabled={refreshing}
