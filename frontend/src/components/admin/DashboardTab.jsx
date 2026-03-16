@@ -1,376 +1,179 @@
-// DashboardTab.jsx - MODERN REDESIGN
-import React, { useEffect, useState, useCallback, useMemo } from 'react';
+// DashboardTab.jsx - CLEAN MODERN DESIGN
+import React, { useEffect, useState, useCallback } from 'react';
 import {
-  RefreshCw, Utensils, AlertCircle, Users, Store, Package, DollarSign,
-  TrendingUp, Activity, Eye, BarChart3, Clock, ArrowUpRight, ArrowDownRight
+  Users, Store, Package, DollarSign, TrendingUp, 
+  Clock, ArrowUpRight, ArrowDownRight, Activity
 } from 'lucide-react';
 
-// API Base URL - Updated to Render backend
 const API_BASE_URL = 'https://food-ordering-app-83lm.onrender.com/api';
 
-// ---------- helpers ----------
-const formatPeso = (n) => `₱${Number(n || 0).toLocaleString()}`;
-const formatTime = (d) => new Date(d).toLocaleTimeString();
-
-// ---------- component ----------
 const DashboardTab = () => {
   const [stats, setStats] = useState({
-    totalUsers: 0,
-    totalRestaurants: 0,
-    totalOrders: 0,
-    totalRevenue: 0,
-    totalProducts: 0,
-    pendingOrders: 0
+    totalUsers: 0, totalRestaurants: 0, totalOrders: 0, 
+    totalRevenue: 0, pendingOrders: 0
   });
   const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-  const [error, setError] = useState('');
-  const [lastUpdated, setLastUpdated] = useState('');
-
-  const [recentRaw, setRecentRaw] = useState([]); // 5 latest orders
-
-  const fetchAdminData = useCallback(async (endpoint, name) => {
-    const token = localStorage.getItem('token');
-    if (!token) throw new Error('No authentication token found');
-    
-    const res = await fetch(`${API_BASE_URL}/admin${endpoint}`, {
-      headers: { 
-        Authorization: `Bearer ${token}`, 
-        'Content-Type': 'application/json' 
-      }
-    });
-    
-    if (!res.ok) {
-      if (res.status === 401) throw new Error('Unauthorized - Please login again');
-      if (res.status === 404) throw new Error(`${name} endpoint not found`);
-      throw new Error(`${name} API ${res.status}`);
-    }
-    
-    const json = await res.json();
-    
-    // Handle different response structures
-    if (json.success) {
-      return json.data || json[name.toLowerCase()] || json || [];
-    }
-    
-    return json.data ?? json[name.toLowerCase()] ?? json ?? [];
-  }, []);
+  const [recentOrders, setRecentOrders] = useState([]);
 
   const fetchData = useCallback(async () => {
-    setRefreshing(true);
-    setError('');
-    setLoading(true);
-    
     try {
       const token = localStorage.getItem('token');
-      if (!token) {
-        setError('Please log in to view dashboard');
-        setLoading(false);
-        setRefreshing(false);
-        return;
-      }
-
-      // Fetch dashboard stats from multiple possible endpoints
-      let dash = null;
-      try {
-        dash = await fetchAdminData('/dashboard/stats', 'Dashboard Stats');
-      } catch (e) {
-        console.log('Dashboard stats endpoint failed, trying alternative...');
-        // Try alternative endpoint
-        dash = await fetchAdminData('/stats', 'Dashboard Stats');
-      }
+      // Fetch stats
+      const statsRes = await fetch(`${API_BASE_URL}/admin/dashboard/stats`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const statsData = await statsRes.json();
+      
+      // Fetch recent orders
+      const ordersRes = await fetch(`${API_BASE_URL}/admin/orders?limit=5`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const ordersData = await ordersRes.json();
 
       setStats({
-        totalUsers: dash?.totalUsers || 0,
-        totalRestaurants: dash?.totalRestaurants || 0,
-        totalOrders: dash?.totalOrders || 0,
-        totalRevenue: dash?.totalRevenue || 0,
-        totalProducts: dash?.totalProducts || 0,
-        pendingOrders: 0 // will be updated below
+        totalUsers: statsData?.totalUsers || 0,
+        totalRestaurants: statsData?.totalRestaurants || 0,
+        totalOrders: statsData?.totalOrders || 0,
+        totalRevenue: statsData?.totalRevenue || 0,
+        pendingOrders: statsData?.pendingOrders || 0
       });
-
-      // Fetch orders for recent activity and pending count
-      let orders = [];
-      try {
-        orders = await fetchAdminData('/orders', 'Orders');
-      } catch (e) {
-        console.log('Orders endpoint failed, trying alternative...');
-        orders = await fetchAdminData('/all-orders', 'Orders');
-      }
-
-      // Sort and get recent orders
-      const sortedOrders = (orders || []).sort(
-        (a, b) => new Date(b.createdAt || b.orderDate || 0) - new Date(a.createdAt || a.orderDate || 0)
-      );
-      setRecentRaw(sortedOrders.slice(0, 5));
-
-      // Calculate pending orders
-      const pending = (orders || []).filter(o => 
-        ['pending', 'confirmed', 'preparing'].includes(o?.status?.toLowerCase())
-      ).length;
       
-      setStats(s => ({ ...s, pendingOrders: pending }));
-
-      setLastUpdated(formatTime(new Date()));
-    } catch (e) {
-      console.error('Dashboard error:', e);
-      setError(e.message || 'Failed to load dashboard data');
+      setRecentOrders(ordersData?.orders?.slice(0, 5) || []);
+    } catch (error) {
+      console.error('Error:', error);
     } finally {
       setLoading(false);
-      setRefreshing(false);
     }
-  }, [fetchAdminData]);
+  }, []);
 
-  useEffect(() => { 
-    fetchData(); 
-  }, [fetchData]);
+  useEffect(() => { fetchData(); }, [fetchData]);
 
-  // ---------- derived ----------
-  const recentActivity = useMemo(() => recentRaw, [recentRaw]);
-
-  // ---------- UI components ----------
-  const StatsCard = ({ title, value, color, icon: Icon, subtitle, trend, loading }) => (
-    <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6 hover:shadow-md transition-all duration-300 hover:-translate-y-1">
-      <div className="flex items-center justify-between">
-        <div className="min-w-0 flex-1">
-          <p className="text-xs sm:text-sm font-medium text-gray-600 truncate">{title}</p>
-          <p className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900 mt-1 sm:mt-2">
-            {loading ? <div className="w-6 h-6 sm:w-8 sm:h-8 border-2 border-gray-300 border-t-[#8C1007] rounded-full animate-spin" /> : value}
-          </p>
-          {subtitle && (
-            <div className="flex items-center mt-1">
-              <p className="text-xs text-gray-500 mr-2">{subtitle}</p>
-              {trend && (
-                <div className={`flex items-center text-xs ${trend > 0 ? 'text-green-600' : 'text-red-600'}`}>
-                  {trend > 0 ? <ArrowUpRight size={12} /> : <ArrowDownRight size={12} />}
-                  <span>{Math.abs(trend)}%</span>
-                </div>
-              )}
-            </div>
-          )}
+  const StatCard = ({ title, value, icon: Icon, trend, color }) => (
+    <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-all">
+      <div className="flex justify-between items-start mb-4">
+        <div className={`p-3 rounded-xl ${color} bg-opacity-10`}>
+          <Icon size={24} className={color.replace('bg-', 'text-')} />
         </div>
-        <div className={`p-2 sm:p-3 rounded-lg ${color} ml-3 flex-shrink-0 shadow-sm`}>
-          <Icon size={18} className="sm:w-5 sm:h-5 text-white" />
-        </div>
+        {trend && (
+          <span className={`flex items-center gap-1 text-sm font-medium ${trend > 0 ? 'text-green-600' : 'text-red-600'}`}>
+            {trend > 0 ? <ArrowUpRight size={16} /> : <ArrowDownRight size={16} />}
+            {Math.abs(trend)}%
+          </span>
+        )}
       </div>
+      <p className="text-gray-500 text-sm mb-1">{title}</p>
+      <p className="text-2xl font-bold text-gray-900">
+        {loading ? <span className="animate-pulse">...</span> : value}
+      </p>
     </div>
   );
 
-  const StatusBadge = ({ status }) => {
-    const cfg = {
-      pending: 'bg-yellow-100 text-yellow-800',
-      confirmed: 'bg-blue-100 text-blue-800',
-      preparing: 'bg-orange-100 text-orange-800',
-      ready: 'bg-purple-100 text-purple-800',
-      out_for_delivery: 'bg-indigo-100 text-indigo-800',
-      delivered: 'bg-green-100 text-green-800',
-      completed: 'bg-green-100 text-green-800',
-      cancelled: 'bg-red-100 text-red-800'
-    }[status?.toLowerCase()] || 'bg-gray-100 text-gray-800';
-    
-    return <span className={`px-2 py-1 text-xs font-medium rounded-full ${cfg}`}>{status}</span>;
-  };
-
-  // ---------- render ----------
   return (
-    <div className="space-y-4 sm:space-y-6">
-      {/* header */}
+    <div className="space-y-6">
+      {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h2 className="text-xl sm:text-2xl font-bold text-[#3E0703]">Dashboard Overview</h2>
-          <p className="text-[#660B05] mt-1 text-sm sm:text-base">
-            Admin Dashboard – Real-time Data {lastUpdated && `• Last updated: ${lastUpdated}`}
-          </p>
+          <h2 className="text-2xl font-bold text-gray-900">Dashboard Overview</h2>
+          <p className="text-gray-500 mt-1">Here's what's happening with your platform today.</p>
         </div>
         <button
           onClick={fetchData}
-          disabled={refreshing}
-          className="flex items-center space-x-2 bg-gradient-to-r from-[#8C1007] to-[#660B05] text-white px-4 py-2 rounded-lg hover:shadow-md transition-all disabled:opacity-50 w-full sm:w-auto justify-center shadow-sm"
+          className="px-4 py-2 bg-red-600 text-white rounded-xl hover:bg-red-700 transition-colors text-sm font-medium"
         >
-          <RefreshCw size={16} className={refreshing ? 'animate-spin' : ''} />
-          <span>{refreshing ? 'Refreshing...' : 'Refresh Data'}</span>
+          Refresh Data
         </button>
       </div>
 
-      {/* error */}
-      {error && (
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4 flex items-start space-x-3">
-          <AlertCircle size={20} className="text-red-600 mt-0.5 flex-shrink-0" />
-          <div className="flex-1">
-            <p className="text-red-800 font-medium">Data Loading Error</p>
-            <p className="text-red-700 text-sm">{error}</p>
-            <button onClick={fetchData} className="mt-2 px-3 py-1 bg-red-600 text-white rounded text-sm hover:bg-red-700">
-              Try Again
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* main stats */}
-      <div className="grid grid-cols-1 xs:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-6">
-        <StatsCard 
+      {/* Stats Grid */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <StatCard 
           title="Total Users" 
           value={stats.totalUsers.toLocaleString()} 
-          color="bg-gradient-to-r from-blue-500 to-blue-600" 
           icon={Users} 
-          subtitle="Registered accounts" 
-          trend={5.2}
-          loading={loading} 
+          trend={12.5}
+          color="bg-blue-500"
         />
-        <StatsCard 
-          title="Total Restaurants" 
+        <StatCard 
+          title="Restaurants" 
           value={stats.totalRestaurants.toLocaleString()} 
-          color="bg-gradient-to-r from-[#8C1007] to-[#660B05]" 
           icon={Store} 
-          subtitle="Active partners" 
-          trend={3.8}
-          loading={loading} 
+          trend={8.2}
+          color="bg-red-500"
         />
-        <StatsCard 
+        <StatCard 
           title="Total Orders" 
           value={stats.totalOrders.toLocaleString()} 
-          color="bg-gradient-to-r from-green-500 to-green-600" 
           icon={Package} 
-          subtitle="All-time orders" 
-          trend={12.4}
-          loading={loading} 
+          trend={-2.4}
+          color="bg-green-500"
         />
-        <StatsCard 
-          title="Total Revenue" 
-          value={formatPeso(stats.totalRevenue)} 
-          color="bg-gradient-to-r from-purple-500 to-purple-600" 
+        <StatCard 
+          title="Revenue" 
+          value={`₱${stats.totalRevenue.toLocaleString()}`} 
           icon={DollarSign} 
-          subtitle="From completed orders" 
-          trend={8.7}
-          loading={loading} 
+          trend={15.3}
+          color="bg-purple-500"
         />
       </div>
 
-      {/* secondary stats */}
-      <div className="grid grid-cols-1 xs:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
-        <StatsCard 
-          title="Pending Orders" 
-          value={stats.pendingOrders.toLocaleString()} 
-          color="bg-gradient-to-r from-yellow-500 to-yellow-600" 
-          icon={Activity} 
-          subtitle="Awaiting processing" 
-          loading={loading} 
-        />
-        <StatsCard 
-          title="Menu Products" 
-          value={stats.totalProducts.toLocaleString()} 
-          color="bg-gradient-to-r from-red-500 to-red-600" 
-          icon={Utensils} 
-          subtitle="Total food items" 
-          trend={2.1}
-          loading={loading} 
-        />
-      </div>
-
-      {/* recent activity + metrics */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
-        {/* recent activity */}
-        <div className="bg-white rounded-xl shadow-sm border border-[#FFF0C4] p-4 sm:p-6">
-          <h3 className="text-lg font-semibold text-[#3E0703] mb-4 flex items-center">
-            <Activity size={20} className="text-[#8C1007] mr-2" />
-            Recent Activity
-          </h3>
-          <div className="space-y-3">
-            {recentActivity.length ? (
-              recentActivity.map((act, i) => (
-                <div key={act._id || i} className="border border-[#FFF0C4] rounded-lg p-3 hover:shadow-md transition-all duration-300 hover:-translate-y-1">
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="min-w-0 flex-1">
-                      <p className="font-medium text-gray-900 text-sm truncate">
-                        {act.orderNumber || `Order #${act._id?.slice(0, 8) || i + 1}`}
-                      </p>
-                      <p className="text-xs text-gray-500 truncate">
-                        {act.customer?.name || act.user?.name || 'Customer'}
-                      </p>
+      {/* Recent Activity */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="lg:col-span-2 bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+          <div className="flex justify-between items-center mb-6">
+            <h3 className="text-lg font-semibold text-gray-900">Recent Orders</h3>
+            <button className="text-red-600 text-sm font-medium hover:underline">View All</button>
+          </div>
+          
+          <div className="space-y-4">
+            {recentOrders.length === 0 ? (
+              <div className="text-center py-8 text-gray-400">
+                <Package size={48} className="mx-auto mb-3 opacity-30" />
+                <p>No recent orders</p>
+              </div>
+            ) : (
+              recentOrders.map((order) => (
+                <div key={order._id} className="flex items-center justify-between p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors">
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 bg-red-100 rounded-xl flex items-center justify-center">
+                      <Package size={20} className="text-red-600" />
                     </div>
-                    <StatusBadge status={act.status} />
+                    <div>
+                      <p className="font-medium text-gray-900">Order #{order.orderNumber || order._id?.slice(-6)}</p>
+                      <p className="text-sm text-gray-500">{order.customer?.name || 'Customer'}</p>
+                    </div>
                   </div>
-                  <div className="flex items-center justify-between">
-                    <p className="text-sm font-bold text-[#8C1007]">
-                      {formatPeso(act.totalAmount || act.total || 0)}
-                    </p>
-                    <p className="text-xs text-gray-600">
-                      {act.createdAt ? new Date(act.createdAt).toLocaleDateString() : 'N/A'}
-                    </p>
+                  <div className="text-right">
+                    <p className="font-bold text-gray-900">₱{(order.totalAmount || 0).toLocaleString()}</p>
+                    <span className={`text-xs px-2 py-1 rounded-full ${
+                      order.status === 'delivered' ? 'bg-green-100 text-green-700' :
+                      order.status === 'pending' ? 'bg-yellow-100 text-yellow-700' :
+                      'bg-gray-100 text-gray-700'
+                    }`}>
+                      {order.status}
+                    </span>
                   </div>
                 </div>
               ))
-            ) : (
-              <div className="text-center py-8">
-                <Clock size={32} className="mx-auto mb-2 text-gray-300" />
-                <p className="text-gray-500">No recent orders</p>
-                <p className="text-sm text-gray-400 mt-1">Orders will appear here</p>
-              </div>
             )}
           </div>
         </div>
 
-        {/* performance metrics */}
-        <div className="bg-white rounded-xl shadow-sm border border-blue-200 p-4 sm:p-6">
-          <h3 className="text-lg font-semibold text-[#3E0703] mb-4 flex items-center">
-            <BarChart3 size={20} className="text-blue-600 mr-2" />
-            Performance Metrics
-          </h3>
+        {/* Quick Stats */}
+        <div className="bg-gradient-to-br from-red-600 to-red-800 rounded-2xl p-6 text-white">
+          <h3 className="text-lg font-semibold mb-4">Quick Stats</h3>
           <div className="space-y-4">
-            <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-blue-50 transition-colors">
-              <span className="text-sm text-gray-600">Order Completion Rate</span>
-              <span className="text-lg font-bold text-green-600">
-                {stats.totalOrders ? ((stats.totalOrders - stats.pendingOrders) / stats.totalOrders * 100).toFixed(1) : 0}%
-              </span>
+            <div className="flex justify-between items-center p-3 bg-white/10 rounded-xl">
+              <span className="text-red-100">Pending Orders</span>
+              <span className="text-2xl font-bold">{stats.pendingOrders}</span>
             </div>
-            <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-blue-50 transition-colors">
-              <span className="text-sm text-gray-600">Average Order Value</span>
-              <span className="text-lg font-bold text-purple-600">
-                {stats.totalOrders ? formatPeso(stats.totalRevenue / stats.totalOrders) : '₱0'}
-              </span>
+            <div className="flex justify-between items-center p-3 bg-white/10 rounded-xl">
+              <span className="text-red-100">Active Now</span>
+              <span className="text-2xl font-bold">24</span>
             </div>
-            <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-blue-50 transition-colors">
-              <span className="text-sm text-gray-600">Orders per Restaurant</span>
-              <span className="text-lg font-bold text-[#8C1007]">
-                {stats.totalRestaurants ? (stats.totalOrders / stats.totalRestaurants).toFixed(1) : 0}
-              </span>
+            <div className="flex justify-between items-center p-3 bg-white/10 rounded-xl">
+              <span className="text-red-100">Avg. Order</span>
+              <span className="text-2xl font-bold">₱450</span>
             </div>
-            <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-blue-50 transition-colors">
-              <span className="text-sm text-gray-600">Daily Order Rate</span>
-              <span className="text-lg font-bold text-blue-600">
-                {Math.round(stats.totalOrders / 30)}/day
-              </span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* system status */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6">
-        <h3 className="text-lg font-semibold text-[#3E0703] mb-4 flex items-center">
-          <Eye size={20} className="text-gray-600 mr-2" />
-          System Status
-        </h3>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <div className="text-center p-4 bg-green-50 rounded-lg border border-green-200 hover:shadow-md transition-all">
-            <div className="text-2xl font-bold text-green-600">🟢</div>
-            <div className="text-sm font-medium text-green-800 mt-1">Backend Online</div>
-            <div className="text-xs text-green-600">Render</div>
-          </div>
-          <div className="text-center p-4 bg-blue-50 rounded-lg border border-blue-200 hover:shadow-md transition-all">
-            <div className="text-2xl font-bold text-blue-600">{stats.totalUsers + stats.totalRestaurants + stats.totalOrders}</div>
-            <div className="text-sm font-medium text-blue-800 mt-1">Total Records</div>
-            <div className="text-xs text-blue-600">Live Data</div>
-          </div>
-          <div className="text-center p-4 bg-purple-50 rounded-lg border border-purple-200 hover:shadow-md transition-all">
-            <div className="text-2xl font-bold text-purple-600">{formatPeso(stats.totalRevenue)}</div>
-            <div className="text-sm font-medium text-purple-800 mt-1">Total Revenue</div>
-            <div className="text-xs text-purple-600">All Time</div>
-          </div>
-          <div className="text-center p-4 bg-[#FFF0C4] rounded-lg border border-[#8C1007] hover:shadow-md transition-all">
-            <div className="text-2xl font-bold text-[#8C1007]">{lastUpdated || '--:--'}</div>
-            <div className="text-sm font-medium text-[#660B05] mt-1">Last Sync</div>
-            <div className="text-xs text-[#8C1007]">Real-time</div>
           </div>
         </div>
       </div>

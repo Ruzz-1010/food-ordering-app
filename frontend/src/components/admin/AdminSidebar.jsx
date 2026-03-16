@@ -1,19 +1,11 @@
-// AdminSidebar.jsx - MODERN REDESIGN
+// AdminSidebar.jsx - CLEAN MODERN DESIGN
 import React from 'react';
 import { 
-  LayoutDashboard, 
-  Users, 
-  Utensils, 
-  Package, 
-  BarChart3, 
-  Settings, 
-  LogOut,
-  Bike,
-  X,
-  ChevronRight
+  LayoutDashboard, Users, Utensils, Package, 
+  BarChart3, Settings, Bike, X
 } from 'lucide-react';
 
-const AdminSidebar = ({ activeTab, setActiveTab, isOpen, setIsOpen, onLogout }) => {
+const AdminSidebar = ({ activeTab, setActiveTab, onLogout, onClose }) => {
   const menuItems = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { id: 'users', label: 'Users', icon: Users },
@@ -24,38 +16,26 @@ const AdminSidebar = ({ activeTab, setActiveTab, isOpen, setIsOpen, onLogout }) 
     { id: 'settings', label: 'Settings', icon: Settings },
   ];
 
-  const handleTabClick = (tabId) => {
-    setActiveTab(tabId);
-    if (window.innerWidth < 1024) {
-      setIsOpen(false);
-    }
-  };
-
   return (
-    <div className="h-full bg-white border-r border-gray-200 flex flex-col shadow-xl">
-      {/* Sidebar Header with Logo */}
-      <div className="flex items-center justify-between p-6 border-b border-gray-200 bg-gradient-to-r from-[#FFF0C4] to-white">
-        <div className="flex items-center space-x-3">
-          <div className="w-12 h-12 bg-gradient-to-r from-[#8C1007] to-[#660B05] rounded-xl flex items-center justify-center shadow-lg">
-            <Utensils size={24} className="text-white" />
+    <div className="h-full flex flex-col bg-white">
+      {/* Logo */}
+      <div className="p-6 border-b border-gray-100">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 bg-gradient-to-br from-red-600 to-red-800 rounded-xl flex items-center justify-center shadow-lg shadow-red-200">
+            <Utensils size={20} className="text-white" />
           </div>
           <div>
-            <h2 className="text-xl font-bold text-[#3E0703]">FoodExpress</h2>
-            <p className="text-xs text-[#660B05] font-medium">Admin Panel</p>
+            <h2 className="text-lg font-bold text-gray-900">FoodExpress</h2>
+            <p className="text-xs text-gray-500">Admin Panel</p>
           </div>
+          <button onClick={onClose} className="lg:hidden ml-auto p-2 hover:bg-gray-100 rounded-lg">
+            <X size={20} className="text-gray-600" />
+          </button>
         </div>
-        
-        {/* Close button for mobile */}
-        <button
-          onClick={() => setIsOpen(false)}
-          className="lg:hidden p-2 hover:bg-[#FFF0C4] rounded-lg transition-colors"
-        >
-          <X size={20} className="text-[#8C1007]" />
-        </button>
       </div>
 
-      {/* Navigation Menu */}
-      <nav className="flex-1 px-4 py-6 space-y-2 overflow-y-auto">
+      {/* Navigation */}
+      <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
         {menuItems.map((item) => {
           const Icon = item.icon;
           const isActive = activeTab === item.id;
@@ -63,53 +43,41 @@ const AdminSidebar = ({ activeTab, setActiveTab, isOpen, setIsOpen, onLogout }) 
           return (
             <button
               key={item.id}
-              onClick={() => handleTabClick(item.id)}
+              onClick={() => setActiveTab(item.id)}
               className={`
-                w-full flex items-center justify-between space-x-3 px-4 py-3 rounded-xl transition-all duration-200 group
+                w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 group
                 ${isActive 
-                  ? 'bg-gradient-to-r from-[#8C1007] to-[#660B05] text-white shadow-lg transform scale-[1.02]' 
-                  : 'text-[#3E0703] hover:bg-[#FFF0C4] hover:text-[#660B05] border border-transparent'
+                  ? 'bg-red-600 text-white shadow-lg shadow-red-200' 
+                  : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
                 }
               `}
             >
-              <div className="flex items-center space-x-3">
-                <Icon size={20} className={`${isActive ? 'text-white' : 'text-[#8C1007]'}`} />
-                <span className="font-medium text-sm">{item.label}</span>
-              </div>
-              
-              {/* Active indicator */}
-              {isActive ? (
-                <div className="w-2 h-2 bg-white rounded-full"></div>
-              ) : (
-                <ChevronRight size={16} className="text-[#8C1007] opacity-0 group-hover:opacity-100 transition-opacity" />
-              )}
+              <Icon size={20} className={isActive ? 'text-white' : 'text-gray-400 group-hover:text-gray-600'} />
+              <span className="font-medium text-sm">{item.label}</span>
+              {isActive && <div className="ml-auto w-1.5 h-1.5 bg-white rounded-full" />}
             </button>
           );
         })}
       </nav>
 
-      {/* Sidebar Footer */}
-      <div className="p-4 border-t border-gray-200 bg-gray-50">
+      {/* Footer */}
+      <div className="p-4 border-t border-gray-100">
         <button
           onClick={onLogout}
-          className="w-full flex items-center space-x-3 px-4 py-3 text-[#3E0703] hover:bg-red-50 hover:text-red-700 rounded-xl transition-all duration-200 border border-transparent hover:border-red-200 mb-3"
+          className="w-full flex items-center gap-3 px-4 py-3 text-gray-600 hover:bg-red-50 hover:text-red-600 rounded-xl transition-all"
         >
-          <LogOut size={20} className="text-[#8C1007]" />
+          <div className="p-2 bg-red-100 rounded-lg">
+            <span className="text-red-600 text-xs font-bold">OUT</span>
+          </div>
           <span className="font-medium text-sm">Logout</span>
         </button>
         
-        {/* Version Info */}
-        <div className="px-4 py-3 bg-white rounded-lg border border-gray-200 shadow-sm">
-          <div className="flex items-center justify-between mb-2">
-            <p className="text-xs font-medium text-[#3E0703]">System Status</p>
-            <div className="flex items-center space-x-1">
-              <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-              <span className="text-xs text-green-600 font-medium">Live</span>
-            </div>
+        <div className="mt-4 px-4 py-3 bg-gray-50 rounded-xl">
+          <div className="flex items-center gap-2 mb-1">
+            <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
+            <span className="text-xs font-medium text-gray-600">System Online</span>
           </div>
-          <p className="text-xs text-[#660B05] text-center">
-            v2.0.0 • FoodExpress System
-          </p>
+          <p className="text-xs text-gray-400">v2.0.0</p>
         </div>
       </div>
     </div>
