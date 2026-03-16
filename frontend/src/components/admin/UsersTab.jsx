@@ -2,8 +2,9 @@
 import React, { useState, useEffect } from 'react';
 import { Users, RefreshCw, CheckCircle, XCircle, Edit, Trash2, Mail, Phone, AlertCircle, ChevronDown, ChevronUp, Save, X, Search, Filter } from 'lucide-react';
 
-// ✅ FIXED: Direct API URL to Render backend
-const API_URL = 'https://food-ordering-app-83lm.onrender.com/api/admin';
+// ✅ FIXED: Separate API URLs for different endpoints
+const ADMIN_API_URL = 'https://food-ordering-app-83lm.onrender.com/api/admin';
+const AUTH_API_URL = 'https://food-ordering-app-83lm.onrender.com/api/auth';
 
 const UsersTab = () => {
   const [users, setUsers] = useState([]);
@@ -19,7 +20,7 @@ const UsersTab = () => {
   const [roleFilter, setRoleFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
 
-  // ✅ FIXED: Direct fetch with proper headers
+  // ✅ FIXED: GET users from /api/admin/users
   const fetchUsers = async () => {
     try {
       setRefreshing(true);
@@ -27,7 +28,7 @@ const UsersTab = () => {
       
       const token = localStorage.getItem('token');
       
-      const response = await fetch(`${API_URL}/users`, {
+      const response = await fetch(`${ADMIN_API_URL}/users`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -85,12 +86,12 @@ const UsersTab = () => {
     return matchesSearch && matchesRole && matchesStatus;
   });
 
-  // ✅ FIXED: Direct approve user API call
+  // ✅ FIXED: APPROVE user from /api/auth/users/:id/approve
   const handleApproveUser = async (userId, userName) => {
     try {
       const token = localStorage.getItem('token');
       
-      const response = await fetch(`${API_URL}/users/${userId}/approve`, {
+      const response = await fetch(`${AUTH_API_URL}/users/${userId}/approve`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -110,7 +111,7 @@ const UsersTab = () => {
     }
   };
 
-  // ✅ FIXED: Direct delete user API call
+  // ✅ FIXED: DELETE user from /api/auth/users/:id
   const handleDeleteUser = async (userId, userName) => {
     if (!window.confirm(`Are you sure you want to delete ${userName}? This action cannot be undone.`)) {
       return;
@@ -119,7 +120,7 @@ const UsersTab = () => {
     try {
       const token = localStorage.getItem('token');
       
-      const response = await fetch(`${API_URL}/users/${userId}`, {
+      const response = await fetch(`${AUTH_API_URL}/users/${userId}`, {
         method: 'DELETE',
         headers: {
           'Content-Type': 'application/json',
@@ -150,12 +151,12 @@ const UsersTab = () => {
     });
   };
 
-  // ✅ FIXED: Direct save edit API call
+  // ✅ FIXED: EDIT user from /api/auth/users/:id
   const handleSaveEdit = async (userId) => {
     try {
       const token = localStorage.getItem('token');
       
-      const response = await fetch(`${API_URL}/users/${userId}`, {
+      const response = await fetch(`${AUTH_API_URL}/users/${userId}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -643,4 +644,4 @@ const UsersTab = () => {
   );
 };
 
-export default UsersTab;  
+export default UsersTab;
