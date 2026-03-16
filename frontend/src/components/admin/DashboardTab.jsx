@@ -4,7 +4,7 @@ import {
   Users, Store, Package, DollarSign, TrendingUp, 
   Clock, Activity, ArrowUpRight, ArrowDownRight,
   MoreHorizontal, Calendar, CreditCard, ShoppingBag,
-  Zap, ChevronRight, Bell
+  Zap, ChevronRight, Bell,  RefreshCw
 } from 'lucide-react';
 
 // Load ApexCharts from CDN
