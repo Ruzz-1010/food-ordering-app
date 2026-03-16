@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { Users, RefreshCw, CheckCircle, XCircle, Edit, Trash2, Mail, Phone, AlertCircle, ChevronDown, ChevronUp, Save, X, Search, Filter } from 'lucide-react';
 
 // ✅ FIXED: Direct API URL to Render backend
-const API_URL = 'https://food-ordering-app-83lm.onrender.com/api';
+const API_URL = 'https://food-ordering-app-83lm.onrender.com/api/admin';
 
 const UsersTab = () => {
   const [users, setUsers] = useState([]);
