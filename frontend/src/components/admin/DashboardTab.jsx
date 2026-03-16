@@ -1,10 +1,25 @@
-// DashboardTab.jsx - APEXCHARTS SPARKLINES
-import React, { useEffect, useState, useCallback } from 'react';
+// DashboardTab.jsx - CDN VERSION WITH SPARKLINES
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import {
   Users, Store, Package, DollarSign, TrendingUp, 
   Clock, Activity, ArrowUpRight
 } from 'lucide-react';
-import Chart from 'react-apexcharts';
+
+// Load ApexCharts from CDN
+const loadApexCharts = () => {
+  return new Promise((resolve, reject) => {
+    if (window.ApexCharts) {
+      resolve(window.ApexCharts);
+      return;
+    }
+    
+    const script = document.createElement('script');
+    script.src = 'https://cdn.jsdelivr.net/npm/apexcharts@3.45.0/dist/apexcharts.min.js';
+    script.onload = () => resolve(window.ApexCharts);
+    script.onerror = reject;
+    document.head.appendChild(script);
+  });
+};
 
 const API_BASE_URL = 'https://food-ordering-app-83lm.onrender.com/api';
 
@@ -15,37 +30,8 @@ const DashboardTab = () => {
   });
   const [loading, setLoading] = useState(true);
   const [recentOrders, setRecentOrders] = useState([]);
-  const [sparklineData, setSparklineData] = useState([]);
-
-  const sparklineOptions = {
-    chart: {
-      type: 'area',
-      height: 60,
-      sparkline: { enabled: true }
-    },
-    stroke: {
-      curve: 'smooth',
-      width: 2
-    },
-    fill: {
-      type: 'gradient',
-      gradient: {
-        shadeIntensity: 1,
-        opacityFrom: 0.3,
-        opacityTo: 0.05
-      }
-    },
-    colors: ['#DC2626'],
-    tooltip: {
-      fixed: { enabled: false },
-      x: { show: false },
-      y: { 
-        title: { formatter: () => '' },
-        formatter: (val) => `₱${val.toLocaleString()}`
-      },
-      marker: { show: false }
-    }
-  };
+  
+  const sparklineRef = useRef(null);
 
   const fetchData = useCallback(async () => {
     try {
@@ -82,7 +68,7 @@ const DashboardTab = () => {
         todayRevenue
       });
 
-      // 7-day sparkline
+      // Generate 7-day sparkline data
       const weekData = [];
       for (let i = 6; i >= 0; i--) {
         const date = new Date();
@@ -92,7 +78,42 @@ const DashboardTab = () => {
           .reduce((sum, o) => sum + (o.totalAmount || 0), 0);
         weekData.push(revenue);
       }
-      setSparklineData([{ data: weekData }]);
+
+      // Init sparkline chart
+      try {
+        const ApexCharts = await loadApexCharts();
+        if (sparklineRef.current) {
+          new ApexCharts(sparklineRef.current, {
+            series: [{ data: weekData }],
+            chart: {
+              type: 'area',
+              height: 100,
+              sparkline: { enabled: true }
+            },
+            stroke: { curve: 'smooth', width: 2 },
+            fill: {
+              type: 'gradient',
+              gradient: {
+                shadeIntensity: 1,
+                opacityFrom: 0.3,
+                opacityTo: 0.05
+              }
+            },
+            colors: ['#DC2626'],
+            tooltip: {
+              fixed: { enabled: false },
+              x: { show: false },
+              y: { 
+                title: { formatter: () => '' },
+                formatter: (val) => `₱${val.toLocaleString()}`
+              },
+              marker: { show: false }
+            }
+          }).render();
+        }
+      } catch (e) {
+        console.error('Sparkline error:', e);
+      }
 
       setRecentOrders(orders
         .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
@@ -128,16 +149,7 @@ const DashboardTab = () => {
       <p className="text-gray-500 text-sm">{title}</p>
       <p className="text-xl font-bold text-gray-900 mt-1">{loading ? '...' : value}</p>
       {subtitle && <p className="text-xs text-gray-400 mt-1">{subtitle}</p>}
-      {hasChart && sparklineData.length > 0 && (
-        <div className="mt-3 h-16">
-          <Chart
-            options={sparklineOptions}
-            series={sparklineData}
-            type="area"
-            height={60}
-          />
-        </div>
-      )}
+      {hasChart && <div ref={sparklineRef} className="mt-3 h-16" />}
     </div>
   );
 
@@ -167,7 +179,7 @@ const DashboardTab = () => {
         </button>
       </div>
 
-      {/* Stats with Sparklines */}
+      {/* Stats */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard 
           title="Total Revenue" 
@@ -181,7 +193,7 @@ const DashboardTab = () => {
           value={formatPeso(stats.todayRevenue)} 
           change={8.2}
           icon={TrendingUp}
-          subtitle={`${stats.todayOrders || 0} orders`}
+          subtitle={`${stats.todayOrders || 0} orders today`}
         />
         <StatCard 
           title="Total Orders" 

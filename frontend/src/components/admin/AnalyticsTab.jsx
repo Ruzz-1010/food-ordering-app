@@ -1,10 +1,25 @@
-// AnalyticsTab.jsx - PROFESSIONAL APEXCHARTS (STABLE)
-import React, { useState, useEffect, useCallback } from 'react';
+// AnalyticsTab.jsx - CDN VERSION (NO NPM INSTALL NEEDED)
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { 
   TrendingUp, Users, Store, Package, DollarSign, 
   Download, RefreshCw, ArrowUpRight, ArrowDownRight
 } from 'lucide-react';
-import Chart from 'react-apexcharts';
+
+// Load ApexCharts from CDN
+const loadApexCharts = () => {
+  return new Promise((resolve, reject) => {
+    if (window.ApexCharts) {
+      resolve(window.ApexCharts);
+      return;
+    }
+    
+    const script = document.createElement('script');
+    script.src = 'https://cdn.jsdelivr.net/npm/apexcharts@3.45.0/dist/apexcharts.min.js';
+    script.onload = () => resolve(window.ApexCharts);
+    script.onerror = reject;
+    document.head.appendChild(script);
+  });
+};
 
 const API_BASE_URL = 'https://food-ordering-app-83lm.onrender.com/api';
 
@@ -15,137 +30,141 @@ const AnalyticsTab = () => {
     totalRevenue: 0, totalOrders: 0, totalUsers: 0, totalRestaurants: 0,
     todayRevenue: 0, todayOrders: 0, growth: 12.5
   });
-  const [revenueSeries, setRevenueSeries] = useState([{ name: 'Revenue', data: [] }]);
-  const [revenueCategories, setRevenueCategories] = useState([]);
-  const [orderStatusSeries, setOrderStatusSeries] = useState([]);
+  
+  const revenueChartRef = useRef(null);
+  const barChartRef = useRef(null);
+  const donutChartRef = useRef(null);
   const [topRestaurants, setTopRestaurants] = useState([]);
 
-  // ApexCharts Options - Modern Professional
-  const areaChartOptions = {
-    chart: {
-      type: 'area',
-      height: 350,
-      toolbar: { show: false },
-      fontFamily: 'Inter, sans-serif',
-      background: 'transparent'
-    },
-    colors: ['#DC2626'],
-    fill: {
-      type: 'gradient',
-      gradient: {
-        shadeIntensity: 1,
-        opacityFrom: 0.4,
-        opacityTo: 0.05,
-        stops: [0, 100]
-      }
-    },
-    dataLabels: { enabled: false },
-    stroke: {
-      curve: 'smooth',
-      width: 3
-    },
-    xaxis: {
-      categories: revenueCategories,
-      axisBorder: { show: false },
-      axisTicks: { show: false },
-      labels: {
-        style: { colors: '#9CA3AF', fontSize: '12px' }
-      }
-    },
-    yaxis: {
-      labels: {
-        style: { colors: '#9CA3AF', fontSize: '12px' },
-        formatter: (value) => `₱${(value / 1000).toFixed(0)}k`
-      }
-    },
-    grid: {
-      borderColor: '#F3F4F6',
-      strokeDashArray: 4,
-      yaxis: { lines: { show: true } }
-    },
-    tooltip: {
-      theme: 'light',
-      y: {
-        formatter: (value) => `₱${value.toLocaleString()}`
-      }
-    }
-  };
-
-  const barChartOptions = {
-    chart: {
-      type: 'bar',
-      height: 250,
-      toolbar: { show: false },
-      fontFamily: 'Inter, sans-serif'
-    },
-    colors: ['#3B82F6'],
-    plotOptions: {
-      bar: {
-        borderRadius: 6,
-        columnWidth: '60%'
-      }
-    },
-    dataLabels: { enabled: false },
-    xaxis: {
-      categories: revenueCategories,
-      axisBorder: { show: false },
-      axisTicks: { show: false },
-      labels: {
-        style: { colors: '#9CA3AF', fontSize: '11px' }
-      }
-    },
-    yaxis: {
-      labels: {
-        style: { colors: '#9CA3AF', fontSize: '12px' }
-      }
-    },
-    grid: {
-      borderColor: '#F3F4F6',
-      strokeDashArray: 4
-    }
-  };
-
-  const donutOptions = {
-    chart: {
-      type: 'donut',
-      fontFamily: 'Inter, sans-serif'
-    },
-    colors: ['#10B981', '#F59E0B', '#3B82F6', '#EF4444'],
-    labels: ['Delivered', 'Preparing', 'Pending', 'Cancelled'],
-    plotOptions: {
-      pie: {
-        donut: {
-          size: '75%',
-          labels: {
-            show: true,
-            name: { show: false },
-            value: {
-              show: true,
-              fontSize: '24px',
-              fontWeight: 600,
-              color: '#111827',
-              formatter: (val) => val
-            },
-            total: {
-              show: true,
-              showAlways: true,
-              label: 'Total',
-              fontSize: '14px',
-              color: '#6B7280',
-              formatter: (w) => w.globals.seriesTotals.reduce((a, b) => a + b, 0)
+  const initCharts = useCallback(async (data) => {
+    try {
+      const ApexCharts = await loadApexCharts();
+      
+      // Revenue Area Chart
+      if (revenueChartRef.current) {
+        const revenueChart = new ApexCharts(revenueChartRef.current, {
+          series: [{ name: 'Revenue', data: data.revenue }],
+          chart: {
+            type: 'area',
+            height: 350,
+            toolbar: { show: false },
+            fontFamily: 'Inter, sans-serif'
+          },
+          colors: ['#DC2626'],
+          fill: {
+            type: 'gradient',
+            gradient: {
+              shadeIntensity: 1,
+              opacityFrom: 0.4,
+              opacityTo: 0.05,
+              stops: [0, 100]
             }
+          },
+          dataLabels: { enabled: false },
+          stroke: { curve: 'smooth', width: 3 },
+          xaxis: {
+            categories: data.categories,
+            axisBorder: { show: false },
+            axisTicks: { show: false },
+            labels: { style: { colors: '#9CA3AF', fontSize: '12px' } }
+          },
+          yaxis: {
+            labels: {
+              style: { colors: '#9CA3AF', fontSize: '12px' },
+              formatter: (value) => `₱${(value / 1000).toFixed(0)}k`
+            }
+          },
+          grid: {
+            borderColor: '#F3F4F6',
+            strokeDashArray: 4
+          },
+          tooltip: {
+            theme: 'light',
+            y: { formatter: (value) => `₱${value.toLocaleString()}` }
           }
-        }
+        });
+        revenueChart.render();
       }
-    },
-    dataLabels: { enabled: false },
-    legend: {
-      show: true,
-      position: 'bottom',
-      fontSize: '12px',
-      markers: { radius: 12 }
+
+      // Bar Chart
+      if (barChartRef.current) {
+        const barChart = new ApexCharts(barChartRef.current, {
+          series: [{ name: 'Orders', data: data.orderCounts }],
+          chart: {
+            type: 'bar',
+            height: 250,
+            toolbar: { show: false },
+            fontFamily: 'Inter, sans-serif'
+          },
+          colors: ['#3B82F6'],
+          plotOptions: {
+            bar: { borderRadius: 6, columnWidth: '60%' }
+          },
+          dataLabels: { enabled: false },
+          xaxis: {
+            categories: data.categories,
+            axisBorder: { show: false },
+            axisTicks: { show: false },
+            labels: { style: { colors: '#9CA3AF', fontSize: '11px' } }
+          },
+          yaxis: {
+            labels: { style: { colors: '#9CA3AF', fontSize: '12px' } }
+          },
+          grid: { borderColor: '#F3F4F6', strokeDashArray: 4 }
+        });
+        barChart.render();
+      }
+
+      // Donut Chart
+      if (donutChartRef.current) {
+        const donutChart = new ApexCharts(donutChartRef.current, {
+          series: data.statusCounts,
+          chart: {
+            type: 'donut',
+            fontFamily: 'Inter, sans-serif'
+          },
+          colors: ['#10B981', '#F59E0B', '#3B82F6', '#EF4444'],
+          labels: ['Delivered', 'Preparing', 'Pending', 'Cancelled'],
+          plotOptions: {
+            pie: {
+              donut: {
+                size: '75%',
+                labels: {
+                  show: true,
+                  name: { show: false },
+                  value: {
+                    show: true,
+                    fontSize: '24px',
+                    fontWeight: 600,
+                    color: '#111827',
+                    formatter: (val) => val
+                  },
+                  total: {
+                    show: true,
+                    showAlways: true,
+                    label: 'Total',
+                    fontSize: '14px',
+                    color: '#6B7280',
+                    formatter: (w) => w.globals.seriesTotals.reduce((a, b) => a + b, 0)
+                  }
+                }
+              }
+            }
+          },
+          dataLabels: { enabled: false },
+          legend: {
+            show: true,
+            position: 'bottom',
+            fontSize: '12px'
+          }
+        });
+        donutChart.render();
+      }
+      
+    } catch (err) {
+      console.error('Chart init error:', err);
     }
-  };
+  }, []);
 
   const fetchData = useCallback(async () => {
     try {
@@ -176,30 +195,21 @@ const AnalyticsTab = () => {
         growth: statsData.weekGrowth || 12.5
       });
 
-      // Generate chart data
-      const { categories, revenue, orderCounts, statusCounts } = generateChartData(orders, timeRange);
-      
-      setRevenueCategories(categories);
-      setRevenueSeries([{ name: 'Revenue', data: revenue }]);
-      setOrderStatusSeries([
-        statusCounts.delivered,
-        statusCounts.preparing,
-        statusCounts.pending,
-        statusCounts.cancelled
-      ]);
-      
+      const chartData = generateChartData(orders, timeRange);
       setTopRestaurants(calculateTopRestaurants(orders).slice(0, 5));
+      
+      // Initialize charts after data is set
+      setTimeout(() => initCharts(chartData), 100);
+      
       setLoading(false);
     } catch (err) {
       console.error('Error:', err);
       setLoading(false);
     }
-  }, [timeRange]);
+  }, [timeRange, initCharts]);
 
   useEffect(() => {
     fetchData();
-    const interval = setInterval(fetchData, 30000);
-    return () => clearInterval(interval);
   }, [fetchData]);
 
   const calculateTodayRevenue = (orders) => {
@@ -218,7 +228,7 @@ const AnalyticsTab = () => {
     const categories = [];
     const revenue = [];
     const orderCounts = [];
-    const statusCounts = { delivered: 0, preparing: 0, pending: 0, cancelled: 0 };
+    const statusCounts = [0, 0, 0, 0]; // delivered, preparing, pending, cancelled
     const days = range === '24h' ? 1 : range === '7d' ? 7 : 30;
     const now = new Date();
 
@@ -235,10 +245,12 @@ const AnalyticsTab = () => {
       orderCounts.push(dayOrders.length);
     }
 
-    // Count statuses
     orders.forEach(o => {
       const status = (o.status || '').toLowerCase();
-      if (statusCounts.hasOwnProperty(status)) statusCounts[status]++;
+      if (status === 'delivered') statusCounts[0]++;
+      else if (status === 'preparing') statusCounts[1]++;
+      else if (status === 'pending') statusCounts[2]++;
+      else if (status === 'cancelled') statusCounts[3]++;
     });
 
     return { categories, revenue, orderCounts, statusCounts };
@@ -353,44 +365,23 @@ const AnalyticsTab = () => {
 
       {/* Main Revenue Chart */}
       <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
-        <div className="flex justify-between items-center mb-4">
-          <div>
-            <h3 className="text-lg font-semibold text-gray-900">Revenue Trend</h3>
-            <p className="text-sm text-gray-500">Revenue over time</p>
-          </div>
+        <div className="mb-4">
+          <h3 className="text-lg font-semibold text-gray-900">Revenue Trend</h3>
+          <p className="text-sm text-gray-500">Revenue over time</p>
         </div>
-        <Chart
-          options={areaChartOptions}
-          series={revenueSeries}
-          type="area"
-          height={350}
-        />
+        <div ref={revenueChartRef} className="h-80" />
       </div>
 
       {/* Secondary Charts */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Order Volume */}
         <div className="lg:col-span-2 bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
           <h3 className="text-lg font-semibold text-gray-900 mb-4">Order Volume</h3>
-          <Chart
-            options={barChartOptions}
-            series={[{ name: 'Orders', data: revenueSeries[0].data.map((_, i) => 
-              Math.floor(revenueSeries[0].data[i] / 300) || Math.floor(Math.random() * 50)
-            ) }]}
-            type="bar"
-            height={250}
-          />
+          <div ref={barChartRef} className="h-64" />
         </div>
 
-        {/* Order Status */}
         <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
           <h3 className="text-lg font-semibold text-gray-900 mb-4">Order Status</h3>
-          <Chart
-            options={donutOptions}
-            series={orderStatusSeries}
-            type="donut"
-            height={300}
-          />
+          <div ref={donutChartRef} className="h-64" />
         </div>
       </div>
 
