@@ -5,15 +5,21 @@ require('dotenv').config();
 
 const app = express();
 
-// FIXED CORS
+const cors = require("cors");
+
+const allowedOrigins = [
+  "http://localhost:3000",
+  "https://food-ordering-3g8zelfsw-jhon-ruzzels-projects.vercel.app"
+];
+
 app.use(cors({
-  origin: [
-    "http://localhost:3000",
-    "https://food-ordering-app-beta-jade.vercel.app"
-  ],
-  methods: ["GET","POST","PUT","DELETE"],
+  origin: allowedOrigins,
+  methods: ["GET","POST","PUT","DELETE","OPTIONS"],
+  allowedHeaders: ["Content-Type","Authorization"],
   credentials: true
 }));
+
+app.options('*', cors());
 
 app.use(express.json());
 
