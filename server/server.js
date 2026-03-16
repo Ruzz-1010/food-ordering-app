@@ -1,4 +1,3 @@
-// server.js - UPDATED VERSION
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
@@ -6,21 +5,24 @@ require('dotenv').config();
 
 const app = express();
 
-// CORS - LAHAT PWEDE!
+// FIXED CORS
 app.use(cors({
-  origin: "*",
-  methods: ["GET", "POST", "PUT", "DELETE"],
+  origin: [
+    "http://localhost:3000",
+    "https://food-ordering-app-beta-jade.vercel.app"
+  ],
+  methods: ["GET","POST","PUT","DELETE"],
   credentials: true
 }));
 
 app.use(express.json());
 
-// MongoDB - CONNECT FIRST
+// MongoDB
 mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/foodordering')
   .then(() => console.log('✅ MongoDB Connected'))
   .catch(err => console.log('❌ MongoDB Error:', err));
 
-// ROUTES - IMPORT AFTER APP INITIALIZATION
+// Routes
 const healthRoutes = require('./routes/health');
 const authRoutes = require('./routes/auth');
 const userRoutes = require('./routes/users');
@@ -29,9 +31,9 @@ const orderRoutes = require('./routes/orders');
 const productRoutes = require('./routes/products');
 const cartRoutes = require('./routes/cart');
 const adminRoutes = require('./routes/admin');
-const riderRoutes = require('./routes/riders'); // ADD THIS LINE
+const riderRoutes = require('./routes/riders');
 const reviewRoutes = require('./routes/reviews');
-// USE ROUTES
+
 app.use('/api', healthRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
@@ -40,15 +42,15 @@ app.use('/api/orders', orderRoutes);
 app.use('/api/products', productRoutes);
 app.use('/api/cart', cartRoutes);
 app.use('/api/admin', adminRoutes);
-app.use('/api/riders', riderRoutes); // ADD THIS LINE
+app.use('/api/riders', riderRoutes);
 app.use('/api/reviews', reviewRoutes);
 
-// Basic route
 app.get('/', (req, res) => {
   res.json({ message: '🍕 Food Ordering API is RUNNING!' });
 });
 
 const PORT = process.env.PORT || 5000;
+
 app.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
-});
+}); 
