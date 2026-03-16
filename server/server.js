@@ -5,14 +5,13 @@ require('dotenv').config();
 
 const app = express();
 
-// ✅ FIXED: Correct Vercel domains (no trailing spaces, includes your actual domain)
+// ✅ FIXED: Correct origins for Vercel frontend
 const allowedOrigins = [
   "http://localhost:3000",
-  "https://food-ordering-app-beta-jade.vercel.app",           // Your actual frontend domain
-  "https://food-ordering-3g8zelfsw-jhon-ruzzels-projects.vercel.app"  // Alternative/preview domain
+  "https://food-ordering-app-beta-jade.vercel.app",  // Your main Vercel domain
+  "https://food-ordering-3g8zelfsw-jhon-ruzzels-projects.vercel.app"  // Alternative domain
 ];
 
-// ✅ IMPROVED: Dynamic origin checking with better debugging
 app.use(cors({
   origin: function (origin, callback) {
     // Allow requests with no origin (mobile apps, curl, Postman)
@@ -21,27 +20,26 @@ app.use(cors({
     if (allowedOrigins.includes(origin)) {
       return callback(null, true);
     } else {
-      console.log('❌ CORS blocked request from:', origin);
+      console.log('❌ CORS blocked from:', origin);
       return callback(new Error('Not allowed by CORS'));
     }
   },
   methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
   allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"],
   credentials: true,
-  maxAge: 86400 // Cache preflight for 24 hours
+  maxAge: 86400
 }));
 
-// ✅ Keep this for explicit preflight handling
 app.options('*', cors());
 
 app.use(express.json());
 
-// ✅ IMPROVED: MongoDB connection with better error handling
+// MongoDB connection
 mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/foodordering')
   .then(() => console.log('✅ MongoDB Connected'))
   .catch(err => {
-    console.error('❌ MongoDB Connection Error:', err.message);
-    process.exit(1); // Exit if DB fails to connect
+    console.error('❌ MongoDB Error:', err);
+    process.exit(1);
   });
 
 // Routes
@@ -67,7 +65,7 @@ app.use('/api/admin', adminRoutes);
 app.use('/api/riders', riderRoutes);
 app.use('/api/reviews', reviewRoutes);
 
-// ✅ ADDED: Health check endpoint for Railway
+// Health check
 app.get('/health', (req, res) => {
   res.json({ 
     status: 'OK', 
@@ -77,16 +75,15 @@ app.get('/health', (req, res) => {
 });
 
 app.get('/', (req, res) => {
-  res.json({ message: '🍕 Food Ordering API is RUNNING!' });
+  res.json({ message: '🍕 Food Ordering API is RUNNING on Render!' });
 });
 
-// ✅ ADDED: Global error handler
+// Error handler
 app.use((err, req, res, next) => {
   console.error('🔥 Error:', err.message);
   res.status(err.status || 500).json({
     success: false,
-    message: err.message || 'Internal Server Error',
-    ...(process.env.NODE_ENV === 'development' && { stack: err.stack })
+    message: err.message || 'Internal Server Error'
   });
 });
 
@@ -94,5 +91,5 @@ const PORT = process.env.PORT || 5000;
 
 app.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
-  console.log(`🌐 CORS allowed origins:`, allowedOrigins);
+  console.log(`🌐 Allowed origins:`, allowedOrigins);
 });

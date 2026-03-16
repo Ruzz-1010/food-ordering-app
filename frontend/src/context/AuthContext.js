@@ -8,7 +8,7 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
   const [authChecked, setAuthChecked] = useState(false);
 
-  const API_URL = 'https://food-ordering-app-production-35eb.up.railway.app/api';
+  const API_URL = 'https://food-ordering-app-83lm.onrender.com/api';
 
   // Function to fetch restaurant data
   const fetchRestaurantData = async (userId, userEmail) => {
