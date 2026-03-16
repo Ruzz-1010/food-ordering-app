@@ -1,4 +1,4 @@
-// UsersTab.jsx - CLEAN MODERN DESIGN
+// UsersTab.jsx - CLEAN MODERN DESIGN (FIXED)
 import React, { useState, useEffect } from 'react';
 import { Users, Search, Filter, MoreHorizontal, CheckCircle, XCircle, Shield } from 'lucide-react';
 
@@ -57,8 +57,9 @@ const UsersTab = () => {
     }
   };
 
+  // FIXED: Use window.confirm instead of global confirm
   const deleteUser = async (userId) => {
-    if (!confirm('Are you sure?')) return;
+    if (!window.confirm('Are you sure you want to delete this user?')) return; // LINE 61 FIXED
     try {
       const token = localStorage.getItem('token');
       await fetch(`${API_URL}/auth/users/${userId}`, {

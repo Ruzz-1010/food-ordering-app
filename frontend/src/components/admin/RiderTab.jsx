@@ -1,15 +1,12 @@
-// RiderTab.jsx - FIXED API CALLS
+// RiderTab.jsx - DEBUG VERSION
 import React, { useState, useEffect } from 'react';
 import { 
   Bike, RefreshCw, CheckCircle, XCircle, Edit, Trash2, 
   Phone, Mail, MapPin, AlertCircle, ChevronDown, ChevronUp, 
-  Save, X, Search, Filter, User, Clock, Star
+  Save, X, Search, Filter, User, Clock, Star, Bug
 } from 'lucide-react';
 
-// ✅ FIXED: Separate API URLs for different endpoints
-const ADMIN_API_URL = 'https://food-ordering-app-83lm.onrender.com/api/admin';
-const AUTH_API_URL = 'https://food-ordering-app-83lm.onrender.com/api/auth';
-const RIDER_API_URL = 'https://food-ordering-app-83lm.onrender.com/api/riders';
+const API_URL = 'https://food-ordering-app-83lm.onrender.com/api';
 
 const RiderTab = () => {
   const [riders, setRiders] = useState([]);
@@ -18,22 +15,23 @@ const RiderTab = () => {
   const [selectedRider, setSelectedRider] = useState(null);
   const [showRiderModal, setShowRiderModal] = useState(false);
   const [error, setError] = useState('');
+  const [debugInfo, setDebugInfo] = useState('');
   const [expandedRider, setExpandedRider] = useState(null);
   const [editingRider, setEditingRider] = useState(null);
   const [editForm, setEditForm] = useState({});
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
 
-  // ✅ FIXED: Fetch riders from users endpoint and filter by role
+  // Fetch riders from admin users endpoint
   const fetchRiders = async () => {
     try {
       setRefreshing(true);
       setError('');
+      setDebugInfo('Fetching from: ' + `${API_URL}/admin/users`);
       
       const token = localStorage.getItem('token');
       
-      // Try /api/admin/users first, then filter by role='rider'
-      const response = await fetch(`${ADMIN_API_URL}/users`, {
+      const response = await fetch(`${API_URL}/admin/users`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -60,10 +58,12 @@ const RiderTab = () => {
       
       console.log('🚴 Filtered riders:', ridersArray.length);
       setRiders(ridersArray);
+      setDebugInfo(prev => prev + `\nFound ${ridersArray.length} riders`);
       
     } catch (error) {
       console.error('❌ Error fetching riders:', error);
       setError(`Failed to load riders: ${error.message}`);
+      setDebugInfo(prev => prev + `\nError: ${error.message}`);
       setRiders([]);
     } finally {
       setLoading(false);
@@ -75,29 +75,56 @@ const RiderTab = () => {
     fetchRiders();
   }, []);
 
-  // Filter riders based on search and filters
-  const filteredRiders = riders.filter(rider => {
-    const matchesSearch = 
-      rider.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      rider.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      rider.phone?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      rider.vehicleType?.toLowerCase().includes(searchTerm.toLowerCase());
-
-    const matchesStatus = statusFilter === 'all' || 
-      (statusFilter === 'approved' && rider.isApproved) ||
-      (statusFilter === 'pending' && !rider.isApproved) ||
-      (statusFilter === 'active' && rider.isActive) ||
-      (statusFilter === 'inactive' && !rider.isActive);
-
-    return matchesSearch && matchesStatus;
-  });
-
-  // ✅ FIXED: Approve rider using auth endpoint
-  const handleApproveRider = async (riderId, riderName) => {
+  // TEST FUNCTION - Try different endpoints
+  const testEndpoints = async (riderId) => {
+    const token = localStorage.getItem('token');
+    const results = [];
+    
+    // Test 1: /api/auth/users/:id/approve
     try {
-      const token = localStorage.getItem('token');
-      
-      const response = await fetch(`${AUTH_API_URL}/users/${riderId}/approve`, {
+      const r1 = await fetch(`${API_URL}/auth/users/${riderId}/approve`, {
+        method: 'PUT',
+        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }
+      });
+      results.push(`✅ /auth/users/${riderId}/approve: ${r1.status}`);
+    } catch (e) {
+      results.push(`❌ /auth/users/${riderId}/approve: ${e.message}`);
+    }
+    
+    // Test 2: /api/admin/users/:id/approve
+    try {
+      const r2 = await fetch(`${API_URL}/admin/users/${riderId}/approve`, {
+        method: 'PUT',
+        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }
+      });
+      results.push(`✅ /admin/users/${riderId}/approve: ${r2.status}`);
+    } catch (e) {
+      results.push(`❌ /admin/users/${riderId}/approve: ${e.message}`);
+    }
+    
+    // Test 3: /api/users/:id/approve
+    try {
+      const r3 = await fetch(`${API_URL}/users/${riderId}/approve`, {
+        method: 'PUT',
+        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }
+      });
+      results.push(`✅ /users/${riderId}/approve: ${r3.status}`);
+    } catch (e) {
+      results.push(`❌ /users/${riderId}/approve: ${e.message}`);
+    }
+    
+    setDebugInfo(results.join('\n'));
+  };
+
+  // Approve rider - try multiple endpoints
+  const handleApproveRider = async (riderId, riderName) => {
+    const token = localStorage.getItem('token');
+    let lastError = null;
+    
+    // Try endpoint 1: /api/auth/users/:id/approve
+    try {
+      setDebugInfo(`Trying: ${API_URL}/auth/users/${riderId}/approve`);
+      const response = await fetch(`${API_URL}/auth/users/${riderId}/approve`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -105,28 +132,81 @@ const RiderTab = () => {
         }
       });
       
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+      if (response.ok) {
+        await fetchRiders();
+        alert(`✅ Rider ${riderName} approved successfully!`);
+        setDebugInfo(`✅ Success with /auth/users/${riderId}/approve`);
+        return;
+      } else {
+        lastError = `Auth endpoint: ${response.status}`;
       }
-      
-      await fetchRiders();
-      alert(`✅ Rider ${riderName} approved successfully!`);
     } catch (error) {
-      console.error('Error approving rider:', error);
-      alert(`❌ Failed to approve rider: ${error.message}`);
+      lastError = `Auth endpoint: ${error.message}`;
     }
+    
+    // Try endpoint 2: /api/admin/users/:id/approve
+    try {
+      setDebugInfo(`Trying: ${API_URL}/admin/users/${riderId}/approve`);
+      const response = await fetch(`${API_URL}/admin/users/${riderId}/approve`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      
+      if (response.ok) {
+        await fetchRiders();
+        alert(`✅ Rider ${riderName} approved successfully!`);
+        setDebugInfo(`✅ Success with /admin/users/${riderId}/approve`);
+        return;
+      } else {
+        lastError += ` | Admin endpoint: ${response.status}`;
+      }
+    } catch (error) {
+      lastError += ` | Admin endpoint: ${error.message}`;
+    }
+    
+    // Try endpoint 3: /api/users/:id/approve (no prefix)
+    try {
+      setDebugInfo(`Trying: ${API_URL}/users/${riderId}/approve`);
+      const response = await fetch(`${API_URL}/users/${riderId}/approve`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      
+      if (response.ok) {
+        await fetchRiders();
+        alert(`✅ Rider ${riderName} approved successfully!`);
+        setDebugInfo(`✅ Success with /users/${riderId}/approve`);
+        return;
+      } else {
+        lastError += ` | Users endpoint: ${response.status}`;
+      }
+    } catch (error) {
+      lastError += ` | Users endpoint: ${error.message}`;
+    }
+    
+    alert(`❌ Failed to approve rider. Errors: ${lastError}`);
+    setDebugInfo(`❌ All endpoints failed:\n${lastError}`);
   };
 
-  // ✅ FIXED: Delete rider using auth endpoint
+  // Delete rider - try multiple endpoints
   const handleDeleteRider = async (riderId, riderName) => {
-    if (!window.confirm(`Are you sure you want to delete rider ${riderName}? This action cannot be undone.`)) {
+    if (!window.confirm(`Are you sure you want to delete rider ${riderName}?`)) {
       return;
     }
 
+    const token = localStorage.getItem('token');
+    let lastError = null;
+    
+    // Try endpoint 1: /api/auth/users/:id
     try {
-      const token = localStorage.getItem('token');
-      
-      const response = await fetch(`${AUTH_API_URL}/users/${riderId}`, {
+      setDebugInfo(`Trying DELETE: ${API_URL}/auth/users/${riderId}`);
+      const response = await fetch(`${API_URL}/auth/users/${riderId}`, {
         method: 'DELETE',
         headers: {
           'Content-Type': 'application/json',
@@ -134,19 +214,69 @@ const RiderTab = () => {
         }
       });
       
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+      if (response.ok) {
+        await fetchRiders();
+        alert(`✅ Rider ${riderName} deleted successfully!`);
+        setDebugInfo(`✅ DELETE Success with /auth/users/${riderId}`);
+        return;
+      } else {
+        lastError = `Auth endpoint: ${response.status}`;
       }
-      
-      await fetchRiders();
-      alert(`✅ Rider ${riderName} deleted successfully!`);
     } catch (error) {
-      console.error('Error deleting rider:', error);
-      alert(`❌ Failed to delete rider: ${error.message}`);
+      lastError = `Auth endpoint: ${error.message}`;
     }
+    
+    // Try endpoint 2: /api/admin/users/:id
+    try {
+      setDebugInfo(`Trying DELETE: ${API_URL}/admin/users/${riderId}`);
+      const response = await fetch(`${API_URL}/admin/users/${riderId}`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      
+      if (response.ok) {
+        await fetchRiders();
+        alert(`✅ Rider ${riderName} deleted successfully!`);
+        setDebugInfo(`✅ DELETE Success with /admin/users/${riderId}`);
+        return;
+      } else {
+        lastError += ` | Admin endpoint: ${response.status}`;
+      }
+    } catch (error) {
+      lastError += ` | Admin endpoint: ${error.message}`;
+    }
+    
+    // Try endpoint 3: /api/users/:id
+    try {
+      setDebugInfo(`Trying DELETE: ${API_URL}/users/${riderId}`);
+      const response = await fetch(`${API_URL}/users/${riderId}`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      
+      if (response.ok) {
+        await fetchRiders();
+        alert(`✅ Rider ${riderName} deleted successfully!`);
+        setDebugInfo(`✅ DELETE Success with /users/${riderId}`);
+        return;
+      } else {
+        lastError += ` | Users endpoint: ${response.status}`;
+      }
+    } catch (error) {
+      lastError += ` | Users endpoint: ${error.message}`;
+    }
+    
+    alert(`❌ Failed to delete rider. Errors: ${lastError}`);
+    setDebugInfo(`❌ All DELETE endpoints failed:\n${lastError}`);
   };
 
-  // Edit rider function
+  // Edit rider
   const handleEditRider = (rider) => {
     setEditingRider(rider._id || rider.id);
     setEditForm({
@@ -158,12 +288,14 @@ const RiderTab = () => {
     });
   };
 
-  // ✅ FIXED: Save edit using auth endpoint
+  // Save edit - try multiple endpoints
   const handleSaveEdit = async (riderId) => {
+    const token = localStorage.getItem('token');
+    let lastError = null;
+    
+    // Try endpoint 1: /api/auth/users/:id
     try {
-      const token = localStorage.getItem('token');
-      
-      const response = await fetch(`${AUTH_API_URL}/users/${riderId}`, {
+      const response = await fetch(`${API_URL}/auth/users/${riderId}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -172,20 +304,44 @@ const RiderTab = () => {
         body: JSON.stringify(editForm)
       });
 
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+      if (response.ok) {
+        await fetchRiders();
+        setEditingRider(null);
+        alert('✅ Rider updated successfully!');
+        return;
+      } else {
+        lastError = `Auth endpoint: ${response.status}`;
       }
-
-      await fetchRiders();
-      setEditingRider(null);
-      alert('✅ Rider updated successfully!');
     } catch (error) {
-      console.error('Error updating rider:', error);
-      alert('❌ Failed to update rider');
+      lastError = `Auth endpoint: ${error.message}`;
     }
+    
+    // Try endpoint 2: /api/admin/users/:id
+    try {
+      const response = await fetch(`${API_URL}/admin/users/${riderId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(editForm)
+      });
+
+      if (response.ok) {
+        await fetchRiders();
+        setEditingRider(null);
+        alert('✅ Rider updated successfully!');
+        return;
+      } else {
+        lastError += ` | Admin endpoint: ${response.status}`;
+      }
+    } catch (error) {
+      lastError += ` | Admin endpoint: ${error.message}`;
+    }
+    
+    alert(`❌ Failed to update rider. Errors: ${lastError}`);
   };
 
-  // Cancel edit
   const handleCancelEdit = () => {
     setEditingRider(null);
     setEditForm({});
@@ -225,14 +381,10 @@ const RiderTab = () => {
     );
   };
 
-  // Calculate statistics
   const stats = {
     total: riders.length,
     approved: riders.filter(r => r.isApproved).length,
-    pending: riders.filter(r => !r.isApproved).length,
-    motorcycle: riders.filter(r => r.vehicleType === 'motorcycle').length,
-    bicycle: riders.filter(r => r.vehicleType === 'bicycle').length,
-    car: riders.filter(r => r.vehicleType === 'car').length
+    pending: riders.filter(r => !r.isApproved).length
   };
 
   if (loading) {
@@ -243,7 +395,7 @@ const RiderTab = () => {
         </div>
         <div className="text-center py-8">
           <div className="w-8 h-8 border-2 border-[#FFF0C4] border-t-[#8C1007] rounded-full animate-spin mx-auto"></div>
-          <p className="text-[#660B05] mt-2">Loading riders from database...</p>
+          <p className="text-[#660B05] mt-2">Loading riders...</p>
         </div>
       </div>
     );
@@ -251,405 +403,162 @@ const RiderTab = () => {
 
   return (
     <div className="bg-white rounded-xl shadow-sm border border-[#FFF0C4] p-4 sm:p-6">
+      {/* Debug Panel */}
+      <div className="mb-4 p-3 bg-gray-100 rounded-lg border border-gray-300">
+        <div className="flex items-center justify-between mb-2">
+          <h4 className="font-bold text-sm flex items-center">
+            <Bug size={14} className="mr-1" /> Debug Info
+          </h4>
+          <button 
+            onClick={() => setDebugInfo('')}
+            className="text-xs text-gray-500 hover:text-gray-700"
+          >
+            Clear
+          </button>
+        </div>
+        <pre className="text-xs text-gray-700 whitespace-pre-wrap break-all max-h-32 overflow-y-auto">
+          {debugInfo || 'No debug info yet...'}
+        </pre>
+      </div>
+
+      {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
         <h2 className="text-xl sm:text-2xl font-bold text-[#3E0703]">Rider Management</h2>
         <button
           onClick={handleRefresh}
           disabled={refreshing}
-          className="flex items-center space-x-2 bg-gradient-to-r from-[#8C1007] to-[#660B05] text-white px-4 py-2 rounded-lg hover:shadow-md transition-all disabled:opacity-50 w-full sm:w-auto justify-center"
+          className="flex items-center space-x-2 bg-gradient-to-r from-[#8C1007] to-[#660B05] text-white px-4 py-2 rounded-lg hover:shadow-md transition-all disabled:opacity-50"
         >
           <RefreshCw size={16} className={refreshing ? 'animate-spin' : ''} />
           <span>{refreshing ? 'Refreshing...' : 'Refresh'}</span>
         </button>
       </div>
 
-      {/* Error Message */}
+      {/* Error */}
       {error && (
         <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-start space-x-3">
           <AlertCircle size={20} className="text-red-600 mt-0.5 flex-shrink-0" />
-          <div className="flex-1 min-w-0">
-            <p className="text-red-800 font-medium">Failed to load riders</p>
-            <p className="text-red-700 text-sm break-words">{error}</p>
+          <div className="flex-1">
+            <p className="text-red-800 font-medium">{error}</p>
           </div>
         </div>
       )}
 
-      {/* Search and Filter */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-        <div className="relative">
-          <Search size={16} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-          <input
-            type="text"
-            placeholder="Search riders by name, email, phone, or vehicle..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#8C1007]"
-          />
+      {/* Stats */}
+      <div className="grid grid-cols-3 gap-4 mb-6">
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-center">
+          <p className="text-lg font-bold text-blue-800">{stats.total}</p>
+          <p className="text-xs text-blue-600">Total</p>
         </div>
-        <select 
-          value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value)}
-          className="border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#8C1007]"
-        >
-          <option value="all">All Status</option>
-          <option value="approved">Approved</option>
-          <option value="pending">Pending</option>
-        </select>
-      </div>
-
-      {/* Stats Summary */}
-      <div className="grid grid-cols-2 lg:grid-cols-5 gap-2 sm:gap-4 mb-6">
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 hover:shadow-md transition-all">
-          <div className="flex items-center justify-between">
-            <div className="min-w-0">
-              <p className="text-xs sm:text-sm font-medium text-blue-600 truncate">Total Riders</p>
-              <p className="text-lg sm:text-xl font-bold text-blue-800">{stats.total}</p>
-            </div>
-            <Bike size={16} className="text-blue-600 flex-shrink-0 ml-2" />
-          </div>
+        <div className="bg-green-50 border border-green-200 rounded-lg p-3 text-center">
+          <p className="text-lg font-bold text-green-800">{stats.approved}</p>
+          <p className="text-xs text-green-600">Approved</p>
         </div>
-        
-        <div className="bg-green-50 border border-green-200 rounded-lg p-3 hover:shadow-md transition-all">
-          <div className="flex items-center justify-between">
-            <div className="min-w-0">
-              <p className="text-xs sm:text-sm font-medium text-green-600 truncate">Approved</p>
-              <p className="text-lg sm:text-xl font-bold text-green-800">{stats.approved}</p>
-            </div>
-            <CheckCircle size={16} className="text-green-600 flex-shrink-0 ml-2" />
-          </div>
-        </div>
-
-        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 hover:shadow-md transition-all">
-          <div className="flex items-center justify-between">
-            <div className="min-w-0">
-              <p className="text-xs sm:text-sm font-medium text-yellow-600 truncate">Pending</p>
-              <p className="text-lg sm:text-xl font-bold text-yellow-800">{stats.pending}</p>
-            </div>
-            <Clock size={16} className="text-yellow-600 flex-shrink-0 ml-2" />
-          </div>
-        </div>
-
-        <div className="bg-purple-50 border border-purple-200 rounded-lg p-3 hover:shadow-md transition-all">
-          <div className="flex items-center justify-between">
-            <div className="min-w-0">
-              <p className="text-xs sm:text-sm font-medium text-purple-600 truncate">Motorcycles</p>
-              <p className="text-lg sm:text-xl font-bold text-purple-800">{stats.motorcycle}</p>
-            </div>
-            <span className="text-lg flex-shrink-0 ml-2">🏍️</span>
-          </div>
-        </div>
-
-        <div className="bg-orange-50 border border-orange-200 rounded-lg p-3 hover:shadow-md transition-all">
-          <div className="flex items-center justify-between">
-            <div className="min-w-0">
-              <p className="text-xs sm:text-sm font-medium text-orange-600 truncate">Bicycles</p>
-              <p className="text-lg sm:text-xl font-bold text-orange-800">{stats.bicycle}</p>
-            </div>
-            <span className="text-lg flex-shrink-0 ml-2">🚲</span>
-          </div>
+        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 text-center">
+          <p className="text-lg font-bold text-yellow-800">{stats.pending}</p>
+          <p className="text-xs text-yellow-600">Pending</p>
         </div>
       </div>
 
       {/* Riders List */}
       <div className="space-y-4">
-        {filteredRiders.length === 0 ? (
+        {riders.length === 0 ? (
           <div className="text-center py-8">
             <Bike size={48} className="mx-auto mb-2 text-gray-300" />
             <p className="text-[#660B05]">No riders found</p>
-            <p className="text-sm text-[#8C1007]">Try adjusting your search or filters</p>
           </div>
         ) : (
-          filteredRiders.map((rider) => (
-            <div key={rider._id || rider.id} className="border border-[#FFF0C4] rounded-lg p-4 hover:shadow-md transition-all duration-300 hover:-translate-y-1">
-              {/* Mobile Card Header */}
+          riders.map((rider) => (
+            <div key={rider._id || rider.id} className="border border-[#FFF0C4] rounded-lg p-4">
               <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center space-x-3 flex-1 min-w-0">
-                  <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-blue-600 rounded-full flex items-center justify-center flex-shrink-0">
-                    <span className="text-white font-bold text-sm">
-                      {getVehicleIcon(rider.vehicleType)}
-                    </span>
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    {editingRider === (rider._id || rider.id) ? (
-                      <input
-                        type="text"
-                        value={editForm.name}
-                        onChange={(e) => setEditForm({...editForm, name: e.target.value})}
-                        className="w-full border border-gray-300 rounded px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-[#8C1007]"
-                      />
-                    ) : (
-                      <>
-                        <p className="font-medium text-[#3E0703] truncate">{rider.name}</p>
-                        <p className="text-xs text-[#660B05] truncate">{rider.email}</p>
-                      </>
-                    )}
+                <div className="flex items-center space-x-3">
+                  <span className="text-2xl">{getVehicleIcon(rider.vehicleType)}</span>
+                  <div>
+                    <p className="font-medium text-[#3E0703]">{rider.name}</p>
+                    <p className="text-xs text-[#660B05]">{rider.email}</p>
                   </div>
                 </div>
-                <button
-                  onClick={() => toggleRiderExpand(rider._id || rider.id)}
-                  className="p-1 hover:bg-[#FFF0C4] rounded transition-colors"
+                {getStatusBadge(rider.isApproved)}
+              </div>
+
+              <div className="grid grid-cols-2 gap-2 text-sm mb-3">
+                <div>
+                  <span className="text-gray-500">Phone:</span> {rider.phone || 'N/A'}
+                </div>
+                <div>
+                  <span className="text-gray-500">License:</span> {rider.licenseNumber || 'N/A'}
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex flex-wrap gap-2">
+                {!rider.isApproved && (
+                  <button 
+                    onClick={() => handleApproveRider(rider._id || rider.id, rider.name)}
+                    className="bg-green-600 text-white px-3 py-1 rounded text-sm hover:bg-green-700"
+                  >
+                    Approve
+                  </button>
+                )}
+                <button 
+                  onClick={() => handleEditRider(rider)}
+                  className="bg-blue-600 text-white px-3 py-1 rounded text-sm hover:bg-blue-700"
                 >
-                  {expandedRider === (rider._id || rider.id) ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                  Edit
+                </button>
+                <button 
+                  onClick={() => handleDeleteRider(rider._id || rider.id, rider.name)}
+                  className="bg-red-600 text-white px-3 py-1 rounded text-sm hover:bg-red-700"
+                >
+                  Delete
+                </button>
+                <button 
+                  onClick={() => testEndpoints(rider._id || rider.id)}
+                  className="bg-gray-600 text-white px-3 py-1 rounded text-sm hover:bg-gray-700"
+                >
+                  Test APIs
                 </button>
               </div>
 
-              {/* Basic Info - Always Visible */}
-              <div className="grid grid-cols-2 gap-4 mb-3">
-                <div>
-                  <p className="text-xs text-[#660B05]">Vehicle</p>
-                  <div className="mt-1">
-                    {editingRider === (rider._id || rider.id) ? (
-                      <select
-                        value={editForm.vehicleType}
-                        onChange={(e) => setEditForm({...editForm, vehicleType: e.target.value})}
-                        className="w-full border border-gray-300 rounded px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-[#8C1007]"
-                      >
-                        <option value="motorcycle">Motorcycle</option>
-                        <option value="bicycle">Bicycle</option>
-                        <option value="car">Car</option>
-                      </select>
-                    ) : (
-                      <span className="text-sm font-medium text-[#3E0703]">
-                        {getVehicleIcon(rider.vehicleType)} {rider.vehicleType || 'Motorcycle'}
-                      </span>
-                    )}
+              {/* Edit Form */}
+              {editingRider === (rider._id || rider.id) && (
+                <div className="mt-3 p-3 bg-gray-50 rounded-lg">
+                  <div className="grid grid-cols-2 gap-2 mb-2">
+                    <input
+                      type="text"
+                      value={editForm.name}
+                      onChange={(e) => setEditForm({...editForm, name: e.target.value})}
+                      className="border rounded px-2 py-1 text-sm"
+                      placeholder="Name"
+                    />
+                    <input
+                      type="text"
+                      value={editForm.phone}
+                      onChange={(e) => setEditForm({...editForm, phone: e.target.value})}
+                      className="border rounded px-2 py-1 text-sm"
+                      placeholder="Phone"
+                    />
                   </div>
-                </div>
-                <div>
-                  <p className="text-xs text-[#660B05]">Status</p>
-                  <div className="mt-1">{getStatusBadge(rider.isApproved)}</div>
-                </div>
-              </div>
-
-              {/* Expanded Details */}
-              {expandedRider === (rider._id || rider.id) && (
-                <div className="border-t border-[#FFF0C4] pt-3 space-y-3">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div>
-                      <p className="text-xs text-[#660B05]">Phone</p>
-                      {editingRider === (rider._id || rider.id) ? (
-                        <input
-                          type="text"
-                          value={editForm.phone}
-                          onChange={(e) => setEditForm({...editForm, phone: e.target.value})}
-                          className="w-full border border-gray-300 rounded px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-[#8C1007]"
-                        />
-                      ) : (
-                        <p className="text-sm text-[#3E0703]">{rider.phone || 'N/A'}</p>
-                      )}
-                    </div>
-                    <div>
-                      <p className="text-xs text-[#660B05]">License Number</p>
-                      {editingRider === (rider._id || rider.id) ? (
-                        <input
-                          type="text"
-                          value={editForm.licenseNumber}
-                          onChange={(e) => setEditForm({...editForm, licenseNumber: e.target.value})}
-                          className="w-full border border-gray-300 rounded px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-[#8C1007]"
-                        />
-                      ) : (
-                        <p className="text-sm text-[#3E0703]">{rider.licenseNumber || 'N/A'}</p>
-                      )}
-                    </div>
-                    <div>
-                      <p className="text-xs text-[#660B05]">Joined</p>
-                      <p className="text-sm text-[#3E0703]">
-                        {rider.createdAt ? new Date(rider.createdAt).toLocaleDateString() : 'N/A'}
-                      </p>
-                    </div>
-                    {rider.licensePhoto && (
-                      <div>
-                        <p className="text-xs text-[#660B05]">License Photo</p>
-                        <button 
-                          onClick={() => window.open(rider.licensePhoto, '_blank')}
-                          className="text-blue-600 text-sm hover:underline"
-                        >
-                          View License
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                  
-                  <div className="grid grid-cols-2 gap-2 pt-2">
-                    {editingRider === (rider._id || rider.id) ? (
-                      <>
-                        <button 
-                          onClick={() => handleSaveEdit(rider._id || rider.id)}
-                          className="bg-green-600 text-white px-3 py-2 rounded text-sm font-medium hover:bg-green-700 transition-colors flex items-center justify-center space-x-1"
-                        >
-                          <Save size={14} />
-                          <span>Save</span>
-                        </button>
-                        <button 
-                          onClick={handleCancelEdit}
-                          className="bg-gray-600 text-white px-3 py-2 rounded text-sm font-medium hover:bg-gray-700 transition-colors flex items-center justify-center space-x-1"
-                        >
-                          <X size={14} />
-                          <span>Cancel</span>
-                        </button>
-                      </>
-                    ) : (
-                      <>
-                        <button 
-                          onClick={() => handleViewRider(rider)}
-                          className="bg-blue-600 text-white px-3 py-2 rounded text-sm font-medium hover:bg-blue-700 transition-colors"
-                        >
-                          View Details
-                        </button>
-                        <button 
-                          onClick={() => handleEditRider(rider)}
-                          className="bg-[#8C1007] text-white px-3 py-2 rounded text-sm font-medium hover:bg-[#660B05] transition-colors flex items-center justify-center space-x-1"
-                        >
-                          <Edit size={14} />
-                          <span>Edit</span>
-                        </button>
-                        
-                        {!rider.isApproved && (
-                          <button 
-                            onClick={() => handleApproveRider(rider._id || rider.id, rider.name)}
-                            className="bg-green-600 text-white px-3 py-2 rounded text-sm font-medium hover:bg-green-700 transition-colors"
-                          >
-                            Approve
-                          </button>
-                        )}
-                        
-                        <button 
-                          onClick={() => handleDeleteRider(rider._id || rider.id, rider.name)}
-                          className="bg-red-600 text-white px-3 py-2 rounded text-sm font-medium hover:bg-red-700 transition-colors flex items-center justify-center space-x-1"
-                        >
-                          <Trash2 size={14} />
-                          <span>Delete</span>
-                        </button>
-                      </>
-                    )}
-                  </div>
-                </div>
-              )}
-
-              {/* Action Buttons - Collapsed State */}
-              {expandedRider !== (rider._id || rider.id) && !editingRider && (
-                <div className="flex space-x-2 border-t border-[#FFF0C4] pt-3">
-                  <button 
-                    onClick={() => handleViewRider(rider)}
-                    className="flex-1 bg-blue-600 text-white px-2 py-1 rounded text-xs font-medium hover:bg-blue-700 transition-colors"
-                  >
-                    View
-                  </button>
-                  <button 
-                    onClick={() => handleEditRider(rider)}
-                    className="flex-1 bg-[#8C1007] text-white px-2 py-1 rounded text-xs font-medium hover:bg-[#660B05] transition-colors"
-                  >
-                    Edit
-                  </button>
-                  
-                  {!rider.isApproved && (
+                  <div className="flex gap-2">
                     <button 
-                      onClick={() => handleApproveRider(rider._id || rider.id, rider.name)}
-                      className="flex-1 bg-green-600 text-white px-2 py-1 rounded text-xs font-medium hover:bg-green-700 transition-colors"
+                      onClick={() => handleSaveEdit(rider._id || rider.id)}
+                      className="bg-green-600 text-white px-3 py-1 rounded text-sm"
                     >
-                      Approve
+                      Save
                     </button>
-                  )}
-                  
-                  <button 
-                    onClick={() => handleDeleteRider(rider._id || rider.id, rider.name)}
-                    className="flex-1 bg-red-600 text-white px-2 py-1 rounded text-xs font-medium hover:bg-red-700 transition-colors"
-                  >
-                    Delete
-                  </button>
+                    <button 
+                      onClick={handleCancelEdit}
+                      className="bg-gray-600 text-white px-3 py-1 rounded text-sm"
+                    >
+                      Cancel
+                    </button>
+                  </div>
                 </div>
               )}
             </div>
           ))
         )}
       </div>
-
-      {/* Rider Details Modal */}
-      {showRiderModal && selectedRider && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg shadow-xl p-6 max-w-md w-full max-h-[90vh] overflow-y-auto">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-xl font-bold text-[#3E0703]">Rider Details</h3>
-              <button 
-                onClick={() => setShowRiderModal(false)}
-                className="text-gray-400 hover:text-[#8C1007]"
-              >
-                <XCircle size={20} />
-              </button>
-            </div>
-            
-            <div className="space-y-4">
-              <div className="text-center mb-4">
-                <div className="w-16 h-16 bg-gradient-to-r from-blue-500 to-blue-600 rounded-full flex items-center justify-center mx-auto">
-                  <span className="text-white text-2xl">{getVehicleIcon(selectedRider.vehicleType)}</span>
-                </div>
-                <h4 className="font-bold text-lg mt-2">{selectedRider.name}</h4>
-                <p className="text-sm text-gray-600">{selectedRider.email}</p>
-              </div>
-              
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-[#660B05] mb-1">Phone</label>
-                  <p className="text-[#3E0703]">{selectedRider.phone || 'N/A'}</p>
-                </div>
-                
-                <div>
-                  <label className="block text-sm font-medium text-[#660B05] mb-1">Vehicle Type</label>
-                  <p className="text-[#3E0703]">{getVehicleIcon(selectedRider.vehicleType)} {selectedRider.vehicleType}</p>
-                </div>
-                
-                <div>
-                  <label className="block text-sm font-medium text-[#660B05] mb-1">License Number</label>
-                  <p className="text-[#3E0703]">{selectedRider.licenseNumber || 'N/A'}</p>
-                </div>
-                
-                <div>
-                  <label className="block text-sm font-medium text-[#660B05] mb-1">Status</label>
-                  {getStatusBadge(selectedRider.isApproved)}
-                </div>
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-[#660B05] mb-1">Joined Date</label>
-                <p className="text-[#3E0703]">
-                  {selectedRider.createdAt ? new Date(selectedRider.createdAt).toLocaleDateString() : 'N/A'}
-                </p>
-              </div>
-
-              {selectedRider.licensePhoto && (
-                <div>
-                  <label className="block text-sm font-medium text-[#660B05] mb-1">License Photo</label>
-                  <img 
-                    src={selectedRider.licensePhoto} 
-                    alt="License" 
-                    className="w-full h-48 object-contain border rounded-lg"
-                  />
-                </div>
-              )}
-            </div>
-            
-            <div className="flex justify-end space-x-3 mt-6">
-              <button
-                onClick={() => setShowRiderModal(false)}
-                className="px-4 py-2 text-[#660B05] hover:text-[#3E0703] font-medium"
-              >
-                Close
-              </button>
-              {!selectedRider.isApproved && (
-                <button
-                  onClick={() => {
-                    handleApproveRider(selectedRider._id || selectedRider.id, selectedRider.name);
-                    setShowRiderModal(false);
-                  }}
-                  className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 font-medium"
-                >
-                  Approve Rider
-                </button>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 };
