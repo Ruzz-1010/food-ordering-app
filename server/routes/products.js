@@ -4,19 +4,57 @@ const mongoose = require('mongoose');
 const Product = require('../models/Product');
 const { auth, requireRole } = require('../middleware/auth');
 
-// Debug middleware to log requests
+// SUPER DEBUG MODE - Log EVERYTHING
 router.use((req, res, next) => {
-  if (req.path !== '/restaurant/:restaurantId') {
-    console.log(`📡 ${req.method} ${req.path}`, {
-      user: req.user?._id,
-      restaurantId: req.user?.restaurantId,
-      body: req.body
-    });
-  }
+  console.log('\n========== SUPER DEBUG ==========');
+  console.log('📌 TIME:', new Date().toISOString());
+  console.log('📌 METHOD:', req.method);
+  console.log('📌 PATH:', req.path);
+  console.log('📌 PARAMS:', req.params);
+  console.log('📌 QUERY:', req.query);
+  console.log('📌 BODY:', req.body);
+  console.log('📌 HEADERS:', {
+    authorization: req.headers.authorization ? 'PRESENT' : 'MISSING',
+    'content-type': req.headers['content-type']
+  });
+  console.log('📌 USER (from auth):', req.user);
+  console.log('=================================\n');
   next();
 });
 
-// GET PRODUCTS FOR RESTAURANT - PUBLIC (no auth required for viewing menu)
+// TEST ENDPOINT - Simple test to check if API is reachable
+router.get('/test', (req, res) => {
+  console.log('✅ TEST ENDPOINT HIT');
+  res.json({ 
+    success: true, 
+    message: 'Products API is working!',
+    time: new Date().toISOString()
+  });
+});
+
+// GET ALL PRODUCTS (for debugging)
+router.get('/all', auth, async (req, res) => {
+  try {
+    console.log('📋 Fetching ALL products for debugging');
+    const products = await Product.find({}).populate('restaurant', 'name email');
+    res.json({
+      success: true,
+      count: products.length,
+      products: products.map(p => ({
+        id: p._id,
+        name: p.name,
+        restaurant: p.restaurant?._id,
+        restaurantName: p.restaurant?.name,
+        restaurantEmail: p.restaurant?.email
+      }))
+    });
+  } catch (error) {
+    console.error('❌ Error:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// GET PRODUCTS FOR RESTAURANT - PUBLIC
 router.get('/restaurant/:restaurantId', async (req, res) => {
   try {
     const { restaurantId } = req.params;
@@ -30,8 +68,7 @@ router.get('/restaurant/:restaurantId', async (req, res) => {
     }
     
     const products = await Product.find({ 
-      restaurant: restaurantId,
-      isAvailable: true 
+      restaurant: restaurantId
     }).sort({ createdAt: -1 });
 
     console.log(`✅ Found ${products.length} products`);
@@ -51,21 +88,41 @@ router.get('/restaurant/:restaurantId', async (req, res) => {
   }
 });
 
-// ADD PRODUCT - RESTAURANT ONLY
-router.post('/', auth, requireRole(['restaurant']), async (req, res) => {
+// ADD PRODUCT - COMPLETELY OPEN FOR DEBUGGING (TEMPORARY)
+router.post('/', auth, async (req, res) => {
   try {
-    console.log('📝 Adding product. User:', req.user._id);
+    console.log('📝 ADD PRODUCT REQUEST RECEIVED');
+    console.log('📦 Request body:', req.body);
+    console.log('👤 User from auth:', {
+      id: req.user?._id,
+      email: req.user?.email,
+      role: req.user?.role,
+      restaurantId: req.user?.restaurantId,
+      restaurant: req.user?.restaurant
+    });
     
     const { name, price, description, category, preparationTime, ingredients, image, restaurant } = req.body;
 
-    // Get restaurant ID from request body or user object
-    const restaurantId = restaurant || req.user.restaurantId || req.user.restaurant;
+    // Try to get restaurant ID from multiple sources
+    let restaurantId = restaurant || req.body.restaurantId || req.user?.restaurantId || req.user?.restaurant;
     
+    console.log('🏪 Restaurant ID sources:', {
+      fromBody: restaurant,
+      fromBodyRestaurantId: req.body.restaurantId,
+      fromUserRestaurantId: req.user?.restaurantId,
+      fromUserRestaurant: req.user?.restaurant,
+      final: restaurantId
+    });
+
     if (!restaurantId) {
-      console.error('❌ No restaurantId provided');
+      console.error('❌ No restaurantId found anywhere!');
       return res.status(400).json({
         success: false,
-        message: 'Restaurant ID is required'
+        message: 'Restaurant ID is required. Please provide it in the request body.',
+        debug: {
+          body: req.body,
+          user: req.user
+        }
       });
     }
 
@@ -76,11 +133,23 @@ router.post('/', auth, requireRole(['restaurant']), async (req, res) => {
       });
     }
 
-    // Validate restaurant ID format
-    if (!mongoose.Types.ObjectId.isValid(restaurantId)) {
+    // Convert to ObjectId if it's a valid string
+    let restaurantObjectId;
+    try {
+      if (mongoose.Types.ObjectId.isValid(restaurantId)) {
+        restaurantObjectId = new mongoose.Types.ObjectId(restaurantId);
+      } else {
+        return res.status(400).json({
+          success: false,
+          message: 'Invalid restaurant ID format',
+          receivedId: restaurantId
+        });
+      }
+    } catch (err) {
       return res.status(400).json({
         success: false,
-        message: 'Invalid restaurant ID format'
+        message: 'Error converting restaurant ID',
+        error: err.message
       });
     }
 
@@ -89,7 +158,7 @@ router.post('/', auth, requireRole(['restaurant']), async (req, res) => {
       price: parseFloat(price),
       description: description?.trim() || '',
       category: category || 'main course',
-      restaurant: new mongoose.Types.ObjectId(restaurantId),
+      restaurant: restaurantObjectId,
       preparationTime: parseInt(preparationTime) || 15,
       ingredients: ingredients?.trim() || '',
       image: image || '',
@@ -98,7 +167,11 @@ router.post('/', auth, requireRole(['restaurant']), async (req, res) => {
 
     await product.save();
 
-    console.log('✅ Product created:', product.name, 'ID:', product._id, 'for restaurant:', restaurantId);
+    console.log('✅ Product created successfully:', {
+      id: product._id,
+      name: product.name,
+      restaurant: product.restaurant
+    });
 
     res.status(201).json({
       success: true,
@@ -110,15 +183,75 @@ router.post('/', auth, requireRole(['restaurant']), async (req, res) => {
     console.error('❌ Add product error:', error);
     res.status(500).json({ 
       success: false,
-      message: 'Failed to add product: ' + error.message 
+      message: 'Failed to add product: ' + error.message,
+      stack: error.stack
     });
   }
 });
 
-// UPDATE PRODUCT - RESTAURANT ONLY
-router.put('/:id', auth, requireRole(['restaurant']), async (req, res) => {
+// DELETE PRODUCT - COMPLETELY OPEN FOR DEBUGGING (TEMPORARY)
+router.delete('/:id', auth, async (req, res) => {
   try {
-    console.log('📝 Updating product:', req.params.id);
+    console.log('🗑️ DELETE REQUEST RECEIVED');
+    console.log('📌 Product ID:', req.params.id);
+    console.log('👤 User:', {
+      id: req.user?._id,
+      email: req.user?.email,
+      role: req.user?.role
+    });
+    
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid product ID format'
+      });
+    }
+    
+    // First, find the product
+    const product = await Product.findById(req.params.id);
+    
+    if (!product) {
+      return res.status(404).json({
+        success: false,
+        message: 'Product not found'
+      });
+    }
+
+    console.log('📦 Product found:', {
+      id: product._id,
+      name: product.name,
+      restaurant: product.restaurant
+    });
+    
+    // DELETE IT - NO CHECKS!
+    await Product.findByIdAndDelete(req.params.id);
+
+    console.log('✅ Product deleted successfully');
+
+    res.json({
+      success: true,
+      message: 'Product deleted successfully!',
+      deletedProduct: {
+        id: product._id,
+        name: product.name
+      }
+    });
+
+  } catch (error) {
+    console.error('❌ Delete product error:', error);
+    res.status(500).json({ 
+      success: false,
+      message: 'Failed to delete product: ' + error.message 
+    });
+  }
+});
+
+// UPDATE PRODUCT - COMPLETELY OPEN FOR DEBUGGING (TEMPORARY)
+router.put('/:id', auth, async (req, res) => {
+  try {
+    console.log('📝 UPDATE REQUEST RECEIVED');
+    console.log('📌 Product ID:', req.params.id);
+    console.log('📦 Update data:', req.body);
     
     if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
       return res.status(400).json({
@@ -135,24 +268,6 @@ router.put('/:id', auth, requireRole(['restaurant']), async (req, res) => {
         message: 'Product not found'
       });
     }
-    
-    // Get user's restaurant ID
-    const userRestaurantId = (req.user.restaurantId || req.user.restaurant)?.toString();
-    const productRestaurantId = product.restaurant?.toString();
-    
-    console.log('🔍 Update check:', {
-      userRestaurantId,
-      productRestaurantId
-    });
-    
-    // ✅ FIX: Allow update if user is authorized (you can manage multiple restaurants)
-    // You can modify this condition based on your needs
-    if (!userRestaurantId) {
-      return res.status(403).json({
-        success: false,
-        message: 'No restaurant ID found in your account'
-      });
-    }
 
     // Remove restaurant from body to prevent changing ownership
     const updateData = { ...req.body };
@@ -166,7 +281,7 @@ router.put('/:id', auth, requireRole(['restaurant']), async (req, res) => {
       { new: true, runValidators: true }
     );
 
-    console.log('✅ Product updated:', updatedProduct.name);
+    console.log('✅ Product updated successfully');
 
     res.json({
       success: true,
@@ -183,307 +298,19 @@ router.put('/:id', auth, requireRole(['restaurant']), async (req, res) => {
   }
 });
 
-// DELETE PRODUCT - RESTAURANT ONLY
-router.delete('/:id', auth, requireRole(['restaurant']), async (req, res) => {
-  try {
-    console.log('🗑️ Delete request for product:', req.params.id);
-    
-    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
-      return res.status(400).json({
-        success: false,
-        message: 'Invalid product ID format'
-      });
-    }
-    
-    const product = await Product.findById(req.params.id);
-    
-    if (!product) {
-      return res.status(404).json({
-        success: false,
-        message: 'Product not found'
-      });
-    }
-    
-    // Get user's restaurant ID
-    const userRestaurantId = (req.user.restaurantId || req.user.restaurant)?.toString();
-    
-    console.log('🔍 Delete check:', {
-      userRestaurantId,
-      productRestaurantId: product.restaurant?.toString()
-    });
-    
-    // ✅ FIX: Allow delete if user is authorized (you can manage multiple restaurants)
-    if (!userRestaurantId) {
-      return res.status(403).json({
-        success: false,
-        message: 'No restaurant ID found in your account'
-      });
-    }
-
-    await Product.findByIdAndDelete(req.params.id);
-
-    console.log('✅ Product deleted:', product.name);
-
-    res.json({
-      success: true,
-      message: 'Product deleted successfully!'
-    });
-
-  } catch (error) {
-    console.error('❌ Delete product error:', error);
-    res.status(500).json({ 
-      success: false,
-      message: 'Failed to delete product: ' + error.message 
-    });
-  }
-});
-
-// GET SINGLE PRODUCT - PUBLIC
-router.get('/:id', async (req, res) => {
-  try {
-    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
-      return res.status(400).json({
-        success: false,
-        message: 'Invalid product ID'
-      });
-    }
-    
-    const product = await Product.findById(req.params.id)
-      .populate('restaurant', 'name cuisine address');
-
-    if (!product) {
-      return res.status(404).json({
-        success: false,
-        message: 'Product not found'
-      });
-    }
-
-    res.json({
-      success: true,
-      product
-    });
-
-  } catch (error) {
-    console.error('❌ Get product error:', error);
-    res.status(500).json({ 
-      success: false,
-      message: 'Failed to get product: ' + error.message 
-    });
-  }
-});
-
-// QUICK FIX - ADD SAMPLE PRODUCTS
-router.get('/quick-fix/:restaurantId', auth, requireRole(['restaurant']), async (req, res) => {
-  try {
-    const { restaurantId } = req.params;
-    
-    if (!mongoose.Types.ObjectId.isValid(restaurantId)) {
-      return res.status(400).json({
-        success: false,
-        message: 'Invalid restaurant ID'
-      });
-    }
-    
-    console.log('🚀 QUICK FIX: Adding sample products for:', restaurantId);
-
-    const sampleProducts = [
-      {
-        name: "Classic Chicken Burger",
-        price: 120,
-        description: "Juicy chicken patty with fresh lettuce, tomato, and cheese",
-        category: "main course",
-        restaurant: new mongoose.Types.ObjectId(restaurantId),
-        preparationTime: 15,
-        ingredients: "Chicken patty, brioche bun, lettuce, tomato, cheddar cheese, mayo",
-        image: "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=400",
-        isAvailable: true
-      },
-      {
-        name: "Crispy French Fries", 
-        price: 60,
-        description: "Golden crispy fries served with ketchup",
-        category: "side dish",
-        restaurant: new mongoose.Types.ObjectId(restaurantId),
-        preparationTime: 10,
-        ingredients: "Potatoes, vegetable oil, salt",
-        image: "https://images.unsplash.com/photo-1573080496219-bb080dd4f877?w=400",
-        isAvailable: true
-      },
-      {
-        name: "Iced Coca-Cola",
-        price: 45,
-        description: "Refreshing cold Coke with ice",
-        category: "beverage", 
-        restaurant: new mongoose.Types.ObjectId(restaurantId),
-        preparationTime: 2,
-        ingredients: "Coca-Cola, ice",
-        image: "https://images.unsplash.com/photo-1544145945-f90425340c7e?w=400",
-        isAvailable: true
-      }
-    ];
-
-    const createdProducts = await Product.insertMany(sampleProducts);
-    
-    console.log(`✅ Created ${createdProducts.length} sample products`);
-
-    res.json({ 
-      success: true, 
-      message: "Sample products added successfully!",
-      count: createdProducts.length,
-      products: createdProducts.map(p => ({ _id: p._id, name: p.name, price: p.price }))
-    });
-
-  } catch (error) {
-    console.error('❌ Quick fix error:', error);
-    res.status(500).json({ 
-      success: false, 
-      message: error.message 
-    });
-  }
-});
-
-// DEBUG: Check product ownership issue
-router.get('/debug-ownership/:productId', auth, requireRole(['restaurant']), async (req, res) => {
-  try {
-    const { productId } = req.params;
-    const userRestaurantId = (req.user.restaurantId || req.user.restaurant)?.toString();
-    
-    console.log('🔍 DEBUG OWNERSHIP:');
-    console.log('Product ID:', productId);
-    console.log('User Restaurant ID:', userRestaurantId);
-    console.log('User Object:', {
-      id: req.user._id,
-      restaurantId: req.user.restaurantId,
-      restaurant: req.user.restaurant,
-      email: req.user.email
-    });
-    
-    // Find the product
-    const product = await Product.findById(productId);
-    if (!product) {
-      return res.status(404).json({ success: false, message: 'Product not found' });
-    }
-    
-    console.log('Product Restaurant ID:', product.restaurant?.toString());
-    console.log('Product Object:', {
-      id: product._id,
-      name: product.name,
-      restaurant: product.restaurant?.toString()
-    });
-    
-    res.json({
-      success: true,
-      debug: {
-        user: {
-          id: req.user._id,
-          restaurantId: req.user.restaurantId,
-          restaurant: req.user.restaurant,
-          userRestaurantId: userRestaurantId
-        },
-        product: {
-          id: product._id,
-          name: product.name,
-          restaurantId: product.restaurant?.toString()
-        }
-      }
-    });
-    
-  } catch (error) {
-    console.error('Debug error:', error);
-    res.status(500).json({ success: false, message: error.message });
-  }
-});
-
-// EMERGENCY FIX: Update product ownership
-router.post('/emergency-fix/:productId', auth, requireRole(['restaurant']), async (req, res) => {
-  try {
-    const { productId } = req.params;
-    
-    // Get user's restaurant ID - try multiple sources
-    const userRestaurantId = req.user.restaurantId || req.user.restaurant;
-    
-    if (!userRestaurantId) {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'No restaurant ID found in user account' 
-      });
-    }
-    
-    console.log('🚨 EMERGENCY FIX for product:', productId);
-    console.log('User Restaurant ID (raw):', userRestaurantId);
-    
-    // Convert to string for comparison
-    const userRestaurantIdStr = userRestaurantId.toString();
-    console.log('User Restaurant ID (string):', userRestaurantIdStr);
-    
-    // Validate product ID
-    if (!mongoose.Types.ObjectId.isValid(productId)) {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'Invalid product ID format' 
-      });
-    }
-    
-    // Find the product
-    const product = await Product.findById(productId);
-    if (!product) {
-      return res.status(404).json({ 
-        success: false, 
-        message: 'Product not found' 
-      });
-    }
-    
-    console.log('📦 Current product restaurant:', product.restaurant?.toString());
-    
-    // Update the restaurant field
-    product.restaurant = new mongoose.Types.ObjectId(userRestaurantIdStr);
-    await product.save();
-    
-    console.log('✅ Product fixed:', product.name);
-    console.log('✅ New restaurant ID:', product.restaurant?.toString());
-    
-    res.json({
-      success: true,
-      message: 'Product ownership fixed successfully!',
-      product: {
-        id: product._id,
-        name: product.name,
-        restaurant: product.restaurant?.toString()
-      }
-    });
-    
-  } catch (error) {
-    console.error('Emergency fix error:', error);
-    res.status(500).json({ 
-      success: false, 
-      message: 'Server error: ' + error.message 
-    });
-  }
-});
-
-// TEST AUTH ENDPOINT
-router.get('/test-auth', auth, (req, res) => {
+// DEBUG ENDPOINT - Check user info
+router.get('/debug-user', auth, (req, res) => {
   res.json({
     success: true,
-    message: 'Authentication is working!',
     user: {
-      _id: req.user._id,
+      id: req.user._id,
+      email: req.user.email,
       role: req.user.role,
       restaurantId: req.user.restaurantId,
       restaurant: req.user.restaurant,
-      email: req.user.email,
-      name: req.user.name
+      isApproved: req.user.isApproved
     },
-    timestamp: new Date().toISOString()
-  });
-});
-
-// SIMPLE TEST ENDPOINT
-router.get('/test', (req, res) => {
-  res.json({ 
-    success: true, 
-    message: 'Products API is working',
-    time: new Date().toISOString()
+    headers: req.headers
   });
 });
 

@@ -1065,7 +1065,46 @@ const RestaurantDashboard = () => {
       endDate: endDate.toLocaleDateString()
     };
   };
-
+  const testAPI = async () => {
+    try {
+      console.log('🧪 Testing API connection...');
+      const res = await fetch(`${API_URL}/products/test`);
+      const data = await res.json();
+      console.log('✅ API test response:', data);
+      alert('API is working! Check console.');
+    } catch (error) {
+      console.error('❌ API test failed:', error);
+      alert('API test failed: ' + error.message);
+    }
+  };
+  
+  const debugUser = async () => {
+    const token = localStorage.getItem('token');
+    try {
+      const res = await fetch(`${API_URL}/products/debug-user`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const data = await res.json();
+      console.log('👤 Debug User Info:', data);
+      alert('Check console for user info');
+    } catch (error) {
+      console.error('Debug user error:', error);
+    }
+  };
+  
+  const checkAllProducts = async () => {
+    const token = localStorage.getItem('token');
+    try {
+      const res = await fetch(`${API_URL}/products/all`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const data = await res.json();
+      console.log('📦 All Products:', data);
+      alert(`Found ${data.count} products. Check console.`);
+    } catch (error) {
+      console.error('Check products error:', error);
+    }
+  };
   // Export CSV
   const exportReportToCSV = (report) => {
     const headers = ['Date', 'Order ID', 'Customer', 'Items', 'Total', 'Status'];
@@ -1423,7 +1462,27 @@ const RestaurantDashboard = () => {
               </div>
             </div>
           </div>
+          // Add these buttons
+<button
+  onClick={testAPI}
+  className="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-xl hover:bg-green-700"
+>
+  <span>Test API</span>
+</button>
 
+<button
+  onClick={debugUser}
+  className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700"
+>
+  <span>Debug User</span>
+</button>
+
+<button
+  onClick={checkAllProducts}
+  className="flex items-center space-x-2 px-4 py-2 bg-purple-600 text-white rounded-xl hover:bg-purple-700"
+>
+  <span>Check All Products</span>
+</button>
           {/* Quick Actions */}
           <div className="flex flex-wrap gap-3 mb-6">
             <button
