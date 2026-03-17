@@ -95,9 +95,18 @@ const RiderDashboard = () => {
         (error) => {
           let errorMessage = 'Location error';
           switch (error.code) {
-            case error.PERMISSION_DENIED: errorMessage = 'Location permission denied'; break;
-            case error.POSITION_UNAVAILABLE: errorMessage = 'Location unavailable'; break;
-            case error.TIMEOUT: errorMessage = 'Location timeout'; break;
+            case error.PERMISSION_DENIED: 
+              errorMessage = 'Location permission denied'; 
+              break;
+            case error.POSITION_UNAVAILABLE: 
+              errorMessage = 'Location unavailable'; 
+              break;
+            case error.TIMEOUT: 
+              errorMessage = 'Location timeout'; 
+              break;
+            default: // ✅ ADDED DEFAULT CASE
+              errorMessage = 'Unknown location error';
+              break;
           }
           setLocationError(errorMessage);
           reject(new Error(errorMessage));
