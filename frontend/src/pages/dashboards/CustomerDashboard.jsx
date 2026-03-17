@@ -3335,7 +3335,7 @@ const CustomerDashboard = () => {
 
             console.log('📦 Order data being sent:', orderData);
 
-            const response = await fetch(`${API_BASE_URL}/api/orders`, {
+            const response = await fetch(`${API_BASE_URL}/api/orders/create`, {
                 method: 'POST',
                 headers: getAuthHeaders(),
                 body: JSON.stringify(orderData)
