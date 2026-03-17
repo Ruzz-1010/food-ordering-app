@@ -349,6 +349,107 @@ router.get('/quick-fix/:restaurantId', auth, requireRole(['restaurant']), async 
   }
 });
 
+// DEBUG: Check product ownership issue
+router.get('/debug-ownership/:productId', auth, requireRole(['restaurant']), async (req, res) => {
+  try {
+    const { productId } = req.params;
+    const userRestaurantId = (req.user.restaurantId || req.user.restaurant)?.toString();
+    
+    console.log('🔍 DEBUG OWNERSHIP:');
+    console.log('Product ID:', productId);
+    console.log('User Restaurant ID:', userRestaurantId);
+    console.log('User Object:', {
+      id: req.user._id,
+      restaurantId: req.user.restaurantId,
+      restaurant: req.user.restaurant,
+      email: req.user.email
+    });
+    
+    // Find the product
+    const product = await Product.findById(productId);
+    if (!product) {
+      return res.status(404).json({ success: false, message: 'Product not found' });
+    }
+    
+    console.log('Product Restaurant ID:', product.restaurant?.toString());
+    console.log('Product Object:', {
+      id: product._id,
+      name: product.name,
+      restaurant: product.restaurant?.toString()
+    });
+    
+    // Check if they match
+    const match = product.restaurant?.toString() === userRestaurantId;
+    
+    res.json({
+      success: true,
+      debug: {
+        user: {
+          id: req.user._id,
+          restaurantId: req.user.restaurantId,
+          restaurant: req.user.restaurant,
+          userRestaurantId: userRestaurantId
+        },
+        product: {
+          id: product._id,
+          name: product.name,
+          restaurantId: product.restaurant?.toString()
+        },
+        match: match,
+        message: match ? '✅ Ownership matches' : '❌ Ownership mismatch'
+      }
+    });
+    
+  } catch (error) {
+    console.error('Debug error:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// EMERGENCY FIX: Update product ownership
+router.post('/emergency-fix/:productId', auth, requireRole(['restaurant']), async (req, res) => {
+  try {
+    const { productId } = req.params;
+    const userRestaurantId = (req.user.restaurantId || req.user.restaurant)?.toString();
+    
+    if (!userRestaurantId) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'No restaurant ID found in user account' 
+      });
+    }
+    
+    console.log('🚨 EMERGENCY FIX for product:', productId);
+    console.log('Setting restaurant ID to:', userRestaurantId);
+    
+    // Find and update the product
+    const product = await Product.findById(productId);
+    if (!product) {
+      return res.status(404).json({ success: false, message: 'Product not found' });
+    }
+    
+    // Force update the restaurant field
+    product.restaurant = new mongoose.Types.ObjectId(userRestaurantId);
+    await product.save();
+    
+    console.log('✅ Product fixed:', product.name);
+    
+    res.json({
+      success: true,
+      message: 'Product ownership fixed successfully!',
+      product: {
+        id: product._id,
+        name: product.name,
+        restaurant: product.restaurant
+      }
+    });
+    
+  } catch (error) {
+    console.error('Emergency fix error:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
 // TEST AUTH ENDPOINT
 router.get('/test-auth', auth, (req, res) => {
   res.json({

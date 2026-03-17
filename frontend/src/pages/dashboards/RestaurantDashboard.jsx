@@ -28,6 +28,7 @@ const RestaurantDashboard = () => {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [debugInfo, setDebugInfo] = useState(null);
+  const [showDebugPanel, setShowDebugPanel] = useState(false);
 
   const [restaurantId, setRestaurantId] = useState(null);
   const [restaurant, setRestaurant] = useState({});
@@ -64,6 +65,133 @@ const RestaurantDashboard = () => {
     bannerImage: '',
     location: { type: 'Point', coordinates: [0, 0] }
   });
+
+  // Debug function to check product ownership
+  const debugProductOwnership = async (productId) => {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      alert('No token found');
+      return;
+    }
+    
+    try {
+      console.log('🔍 Debugging product:', productId);
+      const res = await fetch(`${API_URL}/products/debug-ownership/${productId}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      
+      const data = await res.json();
+      console.log('📊 Debug result:', data);
+      
+      if (data.success) {
+        setDebugInfo(data.debug);
+        setShowDebugPanel(true);
+        alert(JSON.stringify(data.debug, null, 2));
+      } else {
+        alert('Debug failed: ' + data.message);
+      }
+    } catch (error) {
+      console.error('Debug error:', error);
+      alert('Error: ' + error.message);
+    }
+  };
+
+  // Emergency fix function for single product
+  const emergencyFixProduct = async (productId) => {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      alert('No token found');
+      return;
+    }
+    
+    if (!window.confirm('⚠️ This will force update the product ownership. Continue?')) {
+      return;
+    }
+    
+    setLoading(true);
+    try {
+      console.log('🚨 Applying emergency fix for product:', productId);
+      const res = await fetch(`${API_URL}/products/emergency-fix/${productId}`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      const data = await res.json();
+      console.log('📥 Fix response:', data);
+      
+      if (data.success) {
+        alert('✅ Product fixed! Refreshing menu...');
+        await fetchMenu(restaurantId);
+      } else {
+        alert('❌ Fix failed: ' + data.message);
+      }
+    } catch (error) {
+      console.error('Fix error:', error);
+      alert('Error: ' + error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Fix all products function
+  const fixAllProducts = async () => {
+    const token = localStorage.getItem('token');
+    if (!token || !restaurantId) {
+      alert('No restaurant ID found');
+      return;
+    }
+    
+    if (!window.confirm('⚠️ This will try to fix ALL your products. Continue?')) {
+      return;
+    }
+    
+    setLoading(true);
+    try {
+      let fixed = 0;
+      let failed = 0;
+      let results = [];
+      
+      for (const product of menuItems) {
+        try {
+          console.log(`Fixing product: ${product.name} (${product._id})`);
+          const res = await fetch(`${API_URL}/products/emergency-fix/${product._id}`, {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/json'
+            }
+          });
+          
+          const data = await res.json();
+          if (data.success) {
+            fixed++;
+            results.push(`✅ ${product.name}: Fixed`);
+          } else {
+            failed++;
+            results.push(`❌ ${product.name}: ${data.message}`);
+          }
+        } catch (err) {
+          console.error(`Failed to fix ${product._id}:`, err);
+          failed++;
+          results.push(`❌ ${product.name}: Error`);
+        }
+      }
+      
+      console.log('Fix results:', results);
+      alert(`✅ Fixed ${fixed} products, ${failed} failed. Check console for details.`);
+      await fetchMenu(restaurantId);
+    } catch (error) {
+      console.error('Fix all error:', error);
+      alert('Error: ' + error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // Fix user object on mount
   useEffect(() => {
@@ -1333,7 +1461,40 @@ const RestaurantDashboard = () => {
               <AlertTriangle className="w-4 h-4" />
               <span>Fix Auth Issues</span>
             </button>
+            <button
+              onClick={fixAllProducts}
+              className="flex items-center space-x-2 px-4 py-2 bg-purple-600 text-white rounded-xl hover:bg-purple-700 transition-all"
+              disabled={loading}
+            >
+              <Settings className="w-4 h-4" />
+              <span>Fix All Products</span>
+            </button>
+            <button
+              onClick={() => setShowDebugPanel(!showDebugPanel)}
+              className="flex items-center space-x-2 px-4 py-2 bg-gray-600 text-white rounded-xl hover:bg-gray-700 transition-all"
+            >
+              <AlertTriangle className="w-4 h-4" />
+              <span>Toggle Debug</span>
+            </button>
           </div>
+
+          {/* Debug Panel */}
+          {showDebugPanel && debugInfo && (
+            <div className="mb-6 p-4 bg-gray-900 text-green-400 rounded-xl overflow-auto max-h-96">
+              <div className="flex justify-between items-center mb-2">
+                <h3 className="font-bold text-white">Debug Info</h3>
+                <button
+                  onClick={() => setShowDebugPanel(false)}
+                  className="text-white hover:text-gray-300"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+              <pre className="text-xs">
+                {JSON.stringify(debugInfo, null, 2)}
+              </pre>
+            </div>
+          )}
 
           {/* Main Content Area */}
           <div className="bg-white rounded-2xl shadow-xl overflow-hidden">
@@ -1637,6 +1798,20 @@ const RestaurantDashboard = () => {
                               </div>
                               <div className="flex space-x-2">
                                 <button
+                                  onClick={() => debugProductOwnership(item._id)}
+                                  className="p-2 bg-yellow-100 text-yellow-600 rounded-lg hover:bg-yellow-200 transition-colors"
+                                  title="Debug Product"
+                                >
+                                  <AlertTriangle className="w-4 h-4" />
+                                </button>
+                                <button
+                                  onClick={() => emergencyFixProduct(item._id)}
+                                  className="p-2 bg-purple-100 text-purple-600 rounded-lg hover:bg-purple-200 transition-colors"
+                                  title="Emergency Fix"
+                                >
+                                  <Settings className="w-4 h-4" />
+                                </button>
+                                <button
                                   onClick={() => {
                                     setEditingProduct(item);
                                     setShowEditProduct(true);
@@ -1695,6 +1870,20 @@ const RestaurantDashboard = () => {
                               </div>
                             </div>
                             <div className="flex space-x-2">
+                              <button
+                                onClick={() => debugProductOwnership(item._id)}
+                                className="p-2 bg-yellow-100 text-yellow-600 rounded-lg hover:bg-yellow-200 transition-colors"
+                                title="Debug Product"
+                              >
+                                <AlertTriangle className="w-4 h-4" />
+                              </button>
+                              <button
+                                onClick={() => emergencyFixProduct(item._id)}
+                                className="p-2 bg-purple-100 text-purple-600 rounded-lg hover:bg-purple-200 transition-colors"
+                                title="Emergency Fix"
+                              >
+                                <Settings className="w-4 h-4" />
+                              </button>
                               <button
                                 onClick={() => {
                                   setEditingProduct(item);
@@ -2497,14 +2686,6 @@ const RestaurantDashboard = () => {
               </div>
             </div>
           </div>
-        </div>
-      )}
-
-      {/* Debug Panel (only in development) */}
-      {process.env.NODE_ENV === 'development' && debugInfo && (
-        <div className="fixed bottom-4 right-4 bg-black bg-opacity-80 text-white p-4 rounded-xl text-xs max-w-md overflow-auto z-50">
-          <p className="font-bold mb-2">Debug Info:</p>
-          <pre>{JSON.stringify(debugInfo, null, 2)}</pre>
         </div>
       )}
     </div>
