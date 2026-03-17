@@ -1,4 +1,3 @@
-// routes/orders.js
 const express = require('express');
 const router = express.Router();
 const { auth, requireRole } = require('../middleware/auth');
@@ -128,19 +127,78 @@ router.put('/:orderId/status', auth, requireRole(['restaurant']), async (req, re
   }
 });
 
+// ✅ NEW: Restaurant assigns rider to order
+router.put('/:orderId/assign-rider', auth, requireRole(['restaurant']), async (req, res) => {
+  try {
+    const { riderId } = req.body;
+    
+    if (!riderId) {
+      return res.status(400).json({ success: false, message: 'Rider ID is required' });
+    }
+
+    const restaurant = await Restaurant.findOne({ owner: req.user._id });
+    if (!restaurant) {
+      return res.status(404).json({ success: false, message: 'Restaurant not found' });
+    }
+
+    const order = await Order.findOne({ 
+      _id: req.params.orderId, 
+      restaurant: restaurant._id,
+      status: { $in: ['ready', 'confirmed', 'preparing'] } // Can assign from these statuses
+    });
+
+    if (!order) {
+      return res.status(404).json({ success: false, message: 'Order not found or cannot be assigned at this status' });
+    }
+
+    // Check if rider exists and is online
+    const Rider = require('../models/User'); // Assuming User model has riders
+    const rider = await Rider.findOne({ _id: riderId, role: 'rider', status: 'online' });
+    
+    if (!rider) {
+      return res.status(400).json({ success: false, message: 'Rider not found or not online' });
+    }
+
+    order.rider = riderId;
+    order.status = 'assigned';
+    order.assignedAt = new Date();
+    order.estimatedDelivery = new Date(Date.now() + 30 * 60000);
+    
+    await order.save();
+    
+    await order.populate('rider', 'name phone vehicleType');
+    await order.populate('user', 'name phone');
+    await order.populate('restaurant', 'name address phone');
+
+    console.log(`✅ Order ${order.orderId} assigned to rider ${riderId} by restaurant`);
+    
+    res.json({ 
+      success: true, 
+      message: 'Rider assigned successfully', 
+      order 
+    });
+  } catch (error) {
+    console.error('❌ Assign rider error:', error);
+    res.status(500).json({ success: false, message: 'Failed to assign rider: ' + error.message });
+  }
+});
+
 // ---------- RIDER ----------
 router.get('/rider/available', auth, requireRole(['rider']), async (req, res) => {
   try {
+    // ✅ FIXED: Also show 'assigned' orders for this rider, not just 'ready'
     const orders = await Order.find({ 
-      status: 'ready', 
-      rider: { $exists: false } 
+      $or: [
+        { status: 'ready', rider: { $exists: false } },
+        { status: 'assigned', rider: req.user._id }
+      ]
     })
       .populate('restaurant', 'name address phone location')
       .populate('user', 'name phone')
       .populate('items.product', 'name price')
       .sort({ createdAt: 1 });
     
-    console.log(`📦 Found ${orders.length} available orders for rider`);
+    console.log(`📦 Found ${orders.length} available/assigned orders for rider ${req.user._id}`);
     res.json({ success: true, orders });
   } catch (error) {
     console.error('Get available orders error', error);
@@ -167,40 +225,41 @@ router.get('/rider/my-deliveries', auth, requireRole(['rider']), async (req, res
   }
 });
 
-// ✅ Rider Accept Order (moves order from "ready" → "assigned")
+// ✅ FIXED: Rider Accept Order (can accept from 'ready' or if already assigned)
 router.put('/:orderId/accept', auth, requireRole(['rider']), async (req, res) => {
   try {
     const { riderId } = req.body;
     
     const order = await Order.findOne({
       _id: req.params.orderId,
-      status: 'ready',
-      rider: { $exists: false }
+      $or: [
+        { status: 'ready', rider: { $exists: false } },
+        { status: 'assigned', rider: req.user._id }
+      ]
     });
     
     if (!order) {
       return res.status(404).json({ 
         success: false, 
-        message: 'Order not available or already taken' 
+        message: 'Order not available, already taken, or not assigned to you' 
       });
     }
 
     order.rider = riderId || req.user._id;
     order.status = 'assigned';
-    order.assignedAt = new Date(); // ADD THIS
+    order.assignedAt = new Date();
     order.estimatedDelivery = new Date(Date.now() + 30 * 60000);
     
     await order.save();
     
-    // Populate before sending response
     await order.populate('restaurant', 'name address phone');
     await order.populate('user', 'name phone');
     await order.populate('items.product', 'name price');
 
-    console.log(`✅ Order ${order.orderId} assigned to rider ${order.rider}`);
+    console.log(`✅ Order ${order.orderId} accepted by rider ${order.rider}`);
     res.json({ 
       success: true, 
-      message: 'Order assigned to you successfully', 
+      message: 'Order accepted successfully', 
       order 
     });
   } catch (error) {
@@ -305,7 +364,7 @@ router.get('/admin/stats', auth, requireRole(['admin']), async (req, res) => {
   }
 });
 
-// ---------- SINGLE ORDER (ANY AUTH USER) ----------
+// ---------- SINGLE ORDER ----------
 router.get('/:orderId', auth, async (req, res) => {
   try {
     const order = await Order.findById(req.params.orderId)
