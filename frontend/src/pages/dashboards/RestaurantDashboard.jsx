@@ -531,6 +531,37 @@ const RestaurantDashboard = () => {
     }
   };
 
+  // Assign rider
+  const handleAssignRider = async (orderId, riderId) => {
+    const token = localStorage.getItem('token');
+    if (!token) return;
+
+    try {
+      const res = await fetch(`${API_URL}/orders/${orderId}/assign-rider`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ riderId })
+      });
+      
+      const data = await res.json();
+      
+      if (res.ok && data.success) {
+        await fetchData();
+        setShowRiderAssignment(false);
+        setSelectedOrderForRider(null);
+        alert('Rider assigned successfully!');
+      } else {
+        alert(`Failed: ${data.message}`);
+      }
+    } catch (error) {
+      console.error('Assign rider error:', error);
+      alert('Network error');
+    }
+  };
+
   // Quick fix
   const handleQuickFix = async () => {
     const token = localStorage.getItem('token');
