@@ -27,6 +27,7 @@ const RestaurantDashboard = () => {
   const [locationLoading, setLocationLoading] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const [debugInfo, setDebugInfo] = useState(null);
 
   const [restaurantId, setRestaurantId] = useState(null);
   const [restaurant, setRestaurant] = useState({});
@@ -45,12 +46,9 @@ const RestaurantDashboard = () => {
   const [selectedOrderForRider, setSelectedOrderForRider] = useState(null);
   const [reportPeriod, setReportPeriod] = useState('today');
   const [showReports, setShowReports] = useState(false);
-  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
-  const [confirmAction, setConfirmAction] = useState(null);
-  const [confirmMessage, setConfirmMessage] = useState('');
   const [notifications, setNotifications] = useState([]);
   const [showNotifications, setShowNotifications] = useState(false);
-  const [viewMode, setViewMode] = useState('grid'); // grid or list
+  const [viewMode, setViewMode] = useState('grid');
 
   const [profileData, setProfileData] = useState({
     name: '',
@@ -97,6 +95,32 @@ const RestaurantDashboard = () => {
     }
 
     return response;
+  };
+
+  // Debug auth status
+  const checkAuthStatus = async () => {
+    const token = localStorage.getItem('token');
+    console.log('🔐 Auth Check:');
+    console.log('Token:', token ? '✅ Present' : '❌ Missing');
+    console.log('User:', user);
+    console.log('Restaurant ID from user:', user?.restaurantId);
+    console.log('Restaurant from user:', user?.restaurant);
+    console.log('Restaurant ID from state:', restaurantId);
+    
+    if (token) {
+      try {
+        const res = await fetch(`${API_URL}/products/test-auth`, {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+        const data = await res.json();
+        console.log('Auth test response:', data);
+        setDebugInfo(data);
+      } catch (error) {
+        console.error('Auth test failed:', error);
+      }
+    }
   };
 
   // Initialize data
@@ -167,12 +191,15 @@ const RestaurantDashboard = () => {
     if (!id) return;
     
     try {
+      console.log('Fetching menu for restaurant:', id);
       const response = await fetch(`${API_URL}/products/restaurant/${id}`);
       const data = await response.json();
       
       if (data.success) {
         setMenuItems(data.products || []);
         console.log('Menu loaded:', data.products?.length);
+      } else {
+        console.error('Failed to fetch menu:', data);
       }
     } catch (error) {
       console.error('Fetch menu error:', error);
@@ -223,6 +250,7 @@ const RestaurantDashboard = () => {
         await fetchMenu(id);
         await fetchOrders();
         await fetchAvailableRiders();
+        await checkAuthStatus();
       } else {
         setError(new Error('No restaurant found. Please setup your restaurant.'));
       }
@@ -308,6 +336,7 @@ const RestaurantDashboard = () => {
     setLoading(true);
     
     try {
+      // IMPORTANT: Include restaurant field (not restaurantId) as backend expects
       const productData = {
         name: newProduct.name.trim(),
         price: parseFloat(newProduct.price),
@@ -315,8 +344,11 @@ const RestaurantDashboard = () => {
         category: newProduct.category,
         preparationTime: parseInt(newProduct.preparationTime) || 15,
         ingredients: newProduct.ingredients?.trim() || '',
-        image: newProduct.image?.trim() || ''
+        image: newProduct.image?.trim() || '',
+        restaurant: restaurantId  // Backend expects 'restaurant' field
       };
+
+      console.log('📤 Sending product data:', productData);
 
       const res = await fetch(`${API_URL}/products`, {
         method: 'POST',
@@ -328,18 +360,36 @@ const RestaurantDashboard = () => {
       });
       
       const data = await res.json();
+      console.log('📥 Add product response:', data);
       
       if (res.ok && data.success) {
-        alert('Product added successfully!');
+        alert('✅ Product added successfully!');
         setShowAddProduct(false);
-        setNewProduct({ name: '', price: '', description: '', category: 'main course', preparationTime: '15', ingredients: '', image: '' });
+        setNewProduct({ 
+          name: '', 
+          price: '', 
+          description: '', 
+          category: 'main course', 
+          preparationTime: '15', 
+          ingredients: '', 
+          image: '' 
+        });
         await fetchMenu(restaurantId);
+        
+        // Add notification
+        setNotifications(prev => [{
+          id: Date.now(),
+          message: `Product "${productData.name}" added successfully`,
+          time: new Date().toISOString(),
+          read: false
+        }, ...prev]);
       } else {
         if (res.status === 401) {
           alert('Session expired. Please login again.');
           logout();
         } else {
-          alert(`Failed: ${data.message || 'Unknown error'}`);
+          alert(`❌ Failed: ${data.message || 'Unknown error'}`);
+          console.error('Add product error details:', data);
         }
       }
     } catch (error) {
@@ -375,7 +425,10 @@ const RestaurantDashboard = () => {
         ingredients: editingProduct.ingredients?.trim() || '',
         image: editingProduct.image?.trim() || '',
         isAvailable: editingProduct.isAvailable !== false
+        // Don't send restaurant - it's not needed for updates
       };
+
+      console.log('📤 Updating product:', editingProduct._id, productData);
 
       const res = await fetch(`${API_URL}/products/${editingProduct._id}`, {
         method: 'PUT',
@@ -387,20 +440,29 @@ const RestaurantDashboard = () => {
       });
       
       const data = await res.json();
+      console.log('📥 Update response:', data);
       
       if (res.ok && data.success) {
-        alert('Product updated successfully!');
+        alert('✅ Product updated successfully!');
         setShowEditProduct(false);
         setEditingProduct(null);
         await fetchMenu(restaurantId);
+        
+        setNotifications(prev => [{
+          id: Date.now(),
+          message: `Product "${productData.name}" updated`,
+          time: new Date().toISOString(),
+          read: false
+        }, ...prev]);
       } else {
         if (res.status === 401) {
           alert('Session expired. Please login again.');
           logout();
         } else if (res.status === 403) {
-          alert('You are not authorized to edit this product.');
+          alert('❌ You are not authorized to edit this product.');
+          console.error('Auth error details:', data);
         } else {
-          alert(`Failed: ${data.message || 'Unknown error'}`);
+          alert(`❌ Failed: ${data.message || 'Unknown error'}`);
         }
       }
     } catch (error) {
@@ -427,6 +489,8 @@ const RestaurantDashboard = () => {
 
     setLoading(true);
     try {
+      console.log('🗑️ Deleting product:', productId);
+      
       const res = await fetch(`${API_URL}/products/${productId}`, {
         method: 'DELETE',
         headers: { 
@@ -436,18 +500,27 @@ const RestaurantDashboard = () => {
       });
       
       const data = await res.json();
+      console.log('📥 Delete response:', data);
       
       if (res.ok && data.success) {
-        alert('Product deleted successfully!');
+        alert('✅ Product deleted successfully!');
         await fetchMenu(restaurantId);
+        
+        setNotifications(prev => [{
+          id: Date.now(),
+          message: `Product deleted`,
+          time: new Date().toISOString(),
+          read: false
+        }, ...prev]);
       } else {
         if (res.status === 401) {
           alert('Session expired. Please login again.');
           logout();
         } else if (res.status === 403) {
-          alert('You are not authorized to delete this product.');
+          alert('❌ You are not authorized to delete this product.');
+          console.error('Auth error details:', data);
         } else {
-          alert(`Failed: ${data.message || 'Unknown error'}`);
+          alert(`❌ Failed: ${data.message || 'Unknown error'}`);
         }
       }
     } catch (error) {
@@ -469,6 +542,8 @@ const RestaurantDashboard = () => {
     }
 
     try {
+      console.log('🔄 Toggling availability for:', product._id, 'to:', !product.isAvailable);
+      
       const res = await fetch(`${API_URL}/products/${product._id}`, {
         method: 'PUT',
         headers: {
@@ -479,6 +554,7 @@ const RestaurantDashboard = () => {
       });
       
       const data = await res.json();
+      console.log('📥 Toggle response:', data);
       
       if (res.ok && data.success) {
         await fetchMenu(restaurantId);
@@ -487,7 +563,7 @@ const RestaurantDashboard = () => {
           alert('Session expired. Please login again.');
           logout();
         } else {
-          alert(`Failed: ${data.message || 'Unknown error'}`);
+          alert(`❌ Failed: ${data.message || 'Unknown error'}`);
         }
       }
     } catch (error) {
@@ -515,7 +591,6 @@ const RestaurantDashboard = () => {
       
       if (res.ok && data.success) {
         await fetchData();
-        // Add notification
         setNotifications(prev => [{
           id: Date.now(),
           message: `Order #${orderId.slice(-6)} status updated to ${newStatus}`,
@@ -568,6 +643,8 @@ const RestaurantDashboard = () => {
     if (!token || !restaurantId) return;
     
     try {
+      console.log('🚀 Running quick fix for restaurant:', restaurantId);
+      
       const res = await fetch(`${API_URL}/products/quick-fix/${restaurantId}`, {
         headers: { 
           'Authorization': `Bearer ${token}`,
@@ -576,15 +653,24 @@ const RestaurantDashboard = () => {
       });
       
       const data = await res.json();
+      console.log('📥 Quick fix response:', data);
       
       if (res.ok && data.success) {
         alert(`✅ ${data.message}`);
         await fetchMenu(restaurantId);
+        
+        setNotifications(prev => [{
+          id: Date.now(),
+          message: `Added ${data.count} sample products`,
+          time: new Date().toISOString(),
+          read: false
+        }, ...prev]);
       } else {
         alert('Quick fix failed: ' + (data.message || 'Unknown error'));
       }
     } catch (error) {
-      alert('Quick fix error');
+      console.error('Quick fix error:', error);
+      alert('Quick fix error: ' + error.message);
     }
   };
 
@@ -822,6 +908,16 @@ const RestaurantDashboard = () => {
               Logout
             </button>
           </div>
+
+          {/* Debug Info */}
+          {debugInfo && (
+            <div className="mt-6 p-4 bg-gray-100 rounded-xl text-left">
+              <p className="font-bold text-sm mb-2">Debug Info:</p>
+              <pre className="text-xs overflow-auto">
+                {JSON.stringify(debugInfo, null, 2)}
+              </pre>
+            </div>
+          )}
         </div>
       </div>
     );
@@ -1672,7 +1768,7 @@ const RestaurantDashboard = () => {
                   <label className="block text-sm font-medium text-red-700 mb-1">Image URL</label>
                   <input
                     type="url"
-                    value={editingProduct.image}
+                    value={editingProduct.image || ''}
                     onChange={(e) => setEditingProduct({...editingProduct, image: e.target.value})}
                     className="w-full px-4 py-2 border border-red-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent"
                   />
@@ -1682,7 +1778,7 @@ const RestaurantDashboard = () => {
                   <input
                     type="text"
                     required
-                    value={editingProduct.name}
+                    value={editingProduct.name || ''}
                     onChange={(e) => setEditingProduct({...editingProduct, name: e.target.value})}
                     className="w-full px-4 py-2 border border-red-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent"
                   />
@@ -1692,7 +1788,7 @@ const RestaurantDashboard = () => {
                   <input
                     type="number"
                     required
-                    value={editingProduct.price}
+                    value={editingProduct.price || ''}
                     onChange={(e) => setEditingProduct({...editingProduct, price: e.target.value})}
                     className="w-full px-4 py-2 border border-red-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent"
                     step="0.01"
@@ -1702,7 +1798,7 @@ const RestaurantDashboard = () => {
                 <div>
                   <label className="block text-sm font-medium text-red-700 mb-1">Category</label>
                   <select
-                    value={editingProduct.category}
+                    value={editingProduct.category || 'main course'}
                     onChange={(e) => setEditingProduct({...editingProduct, category: e.target.value})}
                     className="w-full px-4 py-2 border border-red-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent"
                   >
@@ -1717,10 +1813,28 @@ const RestaurantDashboard = () => {
                   <label className="block text-sm font-medium text-red-700 mb-1">Preparation Time (minutes)</label>
                   <input
                     type="number"
-                    value={editingProduct.preparationTime}
+                    value={editingProduct.preparationTime || 15}
                     onChange={(e) => setEditingProduct({...editingProduct, preparationTime: e.target.value})}
                     className="w-full px-4 py-2 border border-red-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent"
                     min="0"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-red-700 mb-1">Description</label>
+                  <textarea
+                    value={editingProduct.description || ''}
+                    onChange={(e) => setEditingProduct({...editingProduct, description: e.target.value})}
+                    rows="3"
+                    className="w-full px-4 py-2 border border-red-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-red-700 mb-1">Ingredients</label>
+                  <textarea
+                    value={editingProduct.ingredients || ''}
+                    onChange={(e) => setEditingProduct({...editingProduct, ingredients: e.target.value})}
+                    rows="2"
+                    className="w-full px-4 py-2 border border-red-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent"
                   />
                 </div>
                 <div className="flex items-center gap-2">
@@ -2224,6 +2338,14 @@ const RestaurantDashboard = () => {
               </div>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Debug Panel (only in development) */}
+      {process.env.NODE_ENV === 'development' && debugInfo && (
+        <div className="fixed bottom-4 right-4 bg-black bg-opacity-80 text-white p-4 rounded-xl text-xs max-w-md overflow-auto z-50">
+          <p className="font-bold mb-2">Debug Info:</p>
+          <pre>{JSON.stringify(debugInfo, null, 2)}</pre>
         </div>
       )}
     </div>
