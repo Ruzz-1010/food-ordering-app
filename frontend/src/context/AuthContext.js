@@ -127,16 +127,25 @@ export const AuthProvider = ({ children }) => {
             // If we already have restaurant data in localStorage, use it
             if (userObj.restaurantId && userObj.restaurantData) {
               console.log('✅ Restaurant data found in localStorage:', userObj.restaurantId);
-              setUser(userObj);
+              
+              // FIX: Add both restaurantId and restaurant fields
+              const fixedUser = {
+                ...userObj,
+                restaurant: userObj.restaurantId, // Add this for backend compatibility
+              };
+              setUser(fixedUser);
+              localStorage.setItem('user', JSON.stringify(fixedUser));
             } else {
               // Fetch restaurant data
               console.log('🔄 No restaurant data in localStorage, fetching...');
               const restaurantInfo = await fetchRestaurantData(userObj._id, userObj.email);
               
               if (restaurantInfo) {
+                // FIX: Set both restaurantId and restaurant fields
                 const updatedUser = {
                   ...userObj,
                   restaurantId: restaurantInfo.restaurantId,
+                  restaurant: restaurantInfo.restaurantId, // Add this for backend
                   restaurantData: restaurantInfo.restaurantData
                 };
                 console.log('✅ User updated with restaurant data:', updatedUser);
@@ -236,7 +245,9 @@ export const AuthProvider = ({ children }) => {
         if (userInfo.role === 'restaurant') {
           const restaurantInfo = await fetchRestaurantData(userInfo._id, userInfo.email);
           if (restaurantInfo) {
+            // FIX: Set both restaurantId and restaurant fields
             userInfo.restaurantId = restaurantInfo.restaurantId;
+            userInfo.restaurant = restaurantInfo.restaurantId; // Add this for backend
             userInfo.restaurantData = restaurantInfo.restaurantData;
           }
         }
@@ -315,7 +326,9 @@ export const AuthProvider = ({ children }) => {
           const restaurantInfo = await fetchRestaurantData(userData._id, userData.email);
           
           if (restaurantInfo) {
+            // FIX: Set both restaurantId and restaurant fields
             userData.restaurantId = restaurantInfo.restaurantId;
+            userData.restaurant = restaurantInfo.restaurantId; // Add this for backend
             userData.restaurantData = restaurantInfo.restaurantData;
             console.log('✅ Restaurant data added to user:', userData.restaurantId);
           } else {
@@ -422,7 +435,9 @@ export const AuthProvider = ({ children }) => {
           if (userData.role === 'restaurant') {
             const restaurantInfo = await fetchRestaurantData(userData._id, userData.email);
             if (restaurantInfo) {
+              // FIX: Set both restaurantId and restaurant fields
               userData.restaurantId = restaurantInfo.restaurantId;
+              userData.restaurant = restaurantInfo.restaurantId; // Add this for backend
               userData.restaurantData = restaurantInfo.restaurantData;
             }
           }
@@ -441,9 +456,11 @@ export const AuthProvider = ({ children }) => {
     if (user?.role === 'restaurant' && user?._id) {
       const restaurantInfo = await fetchRestaurantData(user._id, user.email);
       if (restaurantInfo) {
+        // FIX: Set both restaurantId and restaurant fields
         const updatedUser = {
           ...user,
           restaurantId: restaurantInfo.restaurantId,
+          restaurant: restaurantInfo.restaurantId, // Add this for backend
           restaurantData: restaurantInfo.restaurantData
         };
         setUser(updatedUser);
@@ -457,7 +474,7 @@ export const AuthProvider = ({ children }) => {
     return await emergencySyncApproval(email);
   };
 
-  // Utility functions
+  // Utility functions - UPDATED getRestaurantId to also check restaurant field
   const hasRole = (role) => user?.role === role;
   const isApproved = () => user?.isApproved === true;
   const isAuthenticated = () => !!user && !!localStorage.getItem('token');
@@ -465,8 +482,8 @@ export const AuthProvider = ({ children }) => {
   const getRestaurantId = () => {
     // Try multiple sources for restaurant ID
     if (user?.restaurantId) return user.restaurantId;
+    if (user?.restaurant) return user.restaurant; // Check restaurant field too
     if (user?.restaurantData?._id) return user.restaurantData._id;
-    if (user?.restaurant) return user.restaurant;
     return null;
   };
   const getRestaurantData = () => user?.restaurantData || null;

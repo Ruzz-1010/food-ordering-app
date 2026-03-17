@@ -267,7 +267,14 @@ const RestaurantDashboard = () => {
       fetchData();
     }
   }, [user]);
-
+// Fix user object if needed
+useEffect(() => {
+  if (user && user.restaurantId && !user.restaurant) {
+    console.log('🔄 Fixing user object - adding restaurant field');
+    const fixedUser = { ...user, restaurant: user.restaurantId };
+    updateUser(fixedUser);
+  }
+}, [user]);
   // Stats calculation
   const stats = {
     totalOrders: orders.length,
