@@ -3,6 +3,7 @@ const router = express.Router();
 const { auth, requireRole } = require('../middleware/auth');
 const Order = require('../models/Order');
 const Restaurant = require('../models/Restaurant');
+const User = require('../models/User'); // Need this for rider lookup
 
 // ---------- CUSTOMER ----------
 router.get('/user', auth, async (req, res) => {
@@ -127,10 +128,12 @@ router.put('/:orderId/status', auth, requireRole(['restaurant']), async (req, re
   }
 });
 
-// ✅ NEW: Restaurant assigns rider to order
+// ✅ NEW: Restaurant assigns rider to order (THIS WAS MISSING!)
 router.put('/:orderId/assign-rider', auth, requireRole(['restaurant']), async (req, res) => {
   try {
     const { riderId } = req.body;
+    
+    console.log('🔄 Assign rider request:', req.params.orderId, 'Rider:', riderId);
     
     if (!riderId) {
       return res.status(400).json({ success: false, message: 'Rider ID is required' });
@@ -141,24 +144,35 @@ router.put('/:orderId/assign-rider', auth, requireRole(['restaurant']), async (r
       return res.status(404).json({ success: false, message: 'Restaurant not found' });
     }
 
+    // Find order that belongs to this restaurant and is ready for pickup
     const order = await Order.findOne({ 
       _id: req.params.orderId, 
       restaurant: restaurant._id,
-      status: { $in: ['ready', 'confirmed', 'preparing'] } // Can assign from these statuses
+      status: { $in: ['ready', 'confirmed', 'preparing'] }
     });
 
     if (!order) {
-      return res.status(404).json({ success: false, message: 'Order not found or cannot be assigned at this status' });
+      return res.status(404).json({ 
+        success: false, 
+        message: 'Order not found or not ready for rider assignment' 
+      });
     }
 
-    // Check if rider exists and is online
-    const Rider = require('../models/User'); // Assuming User model has riders
-    const rider = await Rider.findOne({ _id: riderId, role: 'rider', status: 'online' });
+    // Verify rider exists and is online
+    const rider = await User.findOne({ 
+      _id: riderId, 
+      role: 'rider',
+      status: 'online'  // Make sure rider is online
+    });
     
     if (!rider) {
-      return res.status(400).json({ success: false, message: 'Rider not found or not online' });
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Rider not found or not online' 
+      });
     }
 
+    // Assign rider
     order.rider = riderId;
     order.status = 'assigned';
     order.assignedAt = new Date();
@@ -166,31 +180,39 @@ router.put('/:orderId/assign-rider', auth, requireRole(['restaurant']), async (r
     
     await order.save();
     
+    // Populate all fields for response
     await order.populate('rider', 'name phone vehicleType');
     await order.populate('user', 'name phone');
     await order.populate('restaurant', 'name address phone');
+    await order.populate('items.product', 'name price');
 
-    console.log(`✅ Order ${order.orderId} assigned to rider ${riderId} by restaurant`);
+    console.log(`✅ Order ${order.orderId} assigned to rider ${rider.name} (${riderId})`);
     
     res.json({ 
       success: true, 
-      message: 'Rider assigned successfully', 
+      message: `Rider ${rider.name} assigned successfully`, 
       order 
     });
   } catch (error) {
     console.error('❌ Assign rider error:', error);
-    res.status(500).json({ success: false, message: 'Failed to assign rider: ' + error.message });
+    res.status(500).json({ 
+      success: false, 
+      message: 'Failed to assign rider: ' + error.message 
+    });
   }
 });
 
 // ---------- RIDER ----------
+// ✅ FIXED: Query for available orders - also show assigned to this rider
 router.get('/rider/available', auth, requireRole(['rider']), async (req, res) => {
   try {
-    // ✅ FIXED: Also show 'assigned' orders for this rider, not just 'ready'
+    console.log('🔍 Finding available orders for rider:', req.user._id);
+    
+    // ✅ FIXED: Use $or to find both unassigned ready orders AND orders assigned to this rider
     const orders = await Order.find({ 
       $or: [
-        { status: 'ready', rider: { $exists: false } },
-        { status: 'assigned', rider: req.user._id }
+        { status: 'ready', rider: null },  // ✅ Use null instead of $exists: false
+        { status: 'assigned', rider: req.user._id }  // Orders already assigned to me
       ]
     })
       .populate('restaurant', 'name address phone location')
@@ -198,7 +220,7 @@ router.get('/rider/available', auth, requireRole(['rider']), async (req, res) =>
       .populate('items.product', 'name price')
       .sort({ createdAt: 1 });
     
-    console.log(`📦 Found ${orders.length} available/assigned orders for rider ${req.user._id}`);
+    console.log(`📦 Found ${orders.length} orders for rider ${req.user._id}`);
     res.json({ success: true, orders });
   } catch (error) {
     console.error('Get available orders error', error);
@@ -225,15 +247,18 @@ router.get('/rider/my-deliveries', auth, requireRole(['rider']), async (req, res
   }
 });
 
-// ✅ FIXED: Rider Accept Order (can accept from 'ready' or if already assigned)
+// ✅ FIXED: Rider Accept Order
 router.put('/:orderId/accept', auth, requireRole(['rider']), async (req, res) => {
   try {
     const { riderId } = req.body;
     
+    console.log('🔄 Rider accepting order:', req.params.orderId);
+    
+    // Find order that's ready and unassigned, or already assigned to this rider
     const order = await Order.findOne({
       _id: req.params.orderId,
       $or: [
-        { status: 'ready', rider: { $exists: false } },
+        { status: 'ready', rider: null },
         { status: 'assigned', rider: req.user._id }
       ]
     });
@@ -241,7 +266,7 @@ router.put('/:orderId/accept', auth, requireRole(['rider']), async (req, res) =>
     if (!order) {
       return res.status(404).json({ 
         success: false, 
-        message: 'Order not available, already taken, or not assigned to you' 
+        message: 'Order not available or already taken by another rider' 
       });
     }
 
@@ -289,7 +314,7 @@ router.put('/:orderId/delivery-status', auth, requireRole(['rider']), async (req
     if (!order) {
       return res.status(404).json({ 
         success: false, 
-        message: 'Order not found or you are not assigned to this order' 
+        message: 'Order not found or not assigned to you' 
       });
     }
 
@@ -297,14 +322,14 @@ router.put('/:orderId/delivery-status', auth, requireRole(['rider']), async (req
     if (status === 'out_for_delivery' && order.status !== 'assigned') {
       return res.status(400).json({ 
         success: false, 
-        message: 'Order must be in assigned status before going out for delivery' 
+        message: 'Order must be assigned first' 
       });
     }
 
     if (status === 'delivered' && order.status !== 'out_for_delivery') {
       return res.status(400).json({ 
         success: false, 
-        message: 'Order must be out for delivery before marking as delivered' 
+        message: 'Order must be out for delivery first' 
       });
     }
 
@@ -316,10 +341,10 @@ router.put('/:orderId/delivery-status', auth, requireRole(['rider']), async (req
     
     await order.save();
 
-    console.log(`📦 Order ${order.orderId} status updated to ${status} by rider ${req.user._id}`);
+    console.log(`📦 Order ${order.orderId} status: ${status}`);
     res.json({ 
       success: true, 
-      message: `Delivery status updated to ${status}`, 
+      message: `Status updated to ${status}`, 
       order 
     });
   } catch (error) {
