@@ -5,6 +5,42 @@ const { auth, requireRole } = require('../middleware/auth');
 const User = require('../models/User');
 const Order = require('../models/Order');
 
+// ✅ ADD THIS: Get all online riders (for restaurant to assign)
+router.get('/active', auth, requireRole(['restaurant']), async (req, res) => {
+  try {
+    console.log('🔎 Fetching active riders for restaurant:', req.user._id);
+    
+    const riders = await User.find({ 
+      role: 'rider',
+      status: 'online',
+      isActive: true
+    }).select('name phone vehicleType licensePlate rating status location');
+    
+    console.log(`✅ Found ${riders.length} active riders`);
+    
+    res.json({ 
+      success: true, 
+      count: riders.length,
+      riders: riders.map(r => ({
+        _id: r._id,
+        name: r.name,
+        phone: r.phone,
+        vehicleType: r.vehicleType || 'Motorcycle',
+        licensePlate: r.licensePlate || 'N/A',
+        rating: r.rating || 5.0,
+        status: r.status,
+        location: r.location
+      }))
+    });
+  } catch (error) {
+    console.error('❌ Error fetching active riders:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Failed to fetch riders: ' + error.message 
+    });
+  }
+});
+
 // Get rider profile and status
 router.get('/profile', auth, requireRole(['rider']), async (req, res) => {
   try {
