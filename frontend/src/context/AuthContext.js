@@ -121,22 +121,31 @@ export const AuthProvider = ({ children }) => {
           console.log('👤 User from localStorage:', userObj);
 
           // For restaurant users, ensure we have restaurant data
-          if (userObj.role === 'restaurant' && userObj._id && !userObj.restaurantId) {
-            console.log('🏪 Restaurant user detected, fetching restaurant data...');
-            const restaurantInfo = await fetchRestaurantData(userObj._id, userObj.email);
+          if (userObj.role === 'restaurant') {
+            console.log('🏪 Restaurant user detected, checking restaurant data...');
             
-            if (restaurantInfo) {
-              const updatedUser = {
-                ...userObj,
-                restaurantId: restaurantInfo.restaurantId,
-                restaurantData: restaurantInfo.restaurantData
-              };
-              console.log('✅ User updated with restaurant data:', updatedUser);
-              setUser(updatedUser);
-              localStorage.setItem('user', JSON.stringify(updatedUser));
-            } else {
-              console.log('❌ No restaurant data found, setting user without restaurant');
+            // If we already have restaurant data in localStorage, use it
+            if (userObj.restaurantId && userObj.restaurantData) {
+              console.log('✅ Restaurant data found in localStorage:', userObj.restaurantId);
               setUser(userObj);
+            } else {
+              // Fetch restaurant data
+              console.log('🔄 No restaurant data in localStorage, fetching...');
+              const restaurantInfo = await fetchRestaurantData(userObj._id, userObj.email);
+              
+              if (restaurantInfo) {
+                const updatedUser = {
+                  ...userObj,
+                  restaurantId: restaurantInfo.restaurantId,
+                  restaurantData: restaurantInfo.restaurantData
+                };
+                console.log('✅ User updated with restaurant data:', updatedUser);
+                setUser(updatedUser);
+                localStorage.setItem('user', JSON.stringify(updatedUser));
+              } else {
+                console.log('❌ No restaurant data found, setting user without restaurant');
+                setUser(userObj);
+              }
             }
           } else {
             console.log('✅ User loaded from localStorage:', userObj);
@@ -453,8 +462,14 @@ export const AuthProvider = ({ children }) => {
   const isApproved = () => user?.isApproved === true;
   const isAuthenticated = () => !!user && !!localStorage.getItem('token');
   const getUserId = () => user?._id;
-  const getRestaurantId = () => user?.restaurantId;
-  const getRestaurantData = () => user?.restaurantData;
+  const getRestaurantId = () => {
+    // Try multiple sources for restaurant ID
+    if (user?.restaurantId) return user.restaurantId;
+    if (user?.restaurantData?._id) return user.restaurantData._id;
+    if (user?.restaurant) return user.restaurant;
+    return null;
+  };
+  const getRestaurantData = () => user?.restaurantData || null;
   const isAuthChecked = () => authChecked;
 
   return (

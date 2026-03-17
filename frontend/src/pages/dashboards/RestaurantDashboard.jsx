@@ -5,11 +5,13 @@ import {
   CheckCircle, Users, TrendingUp, Phone, MessageCircle, Settings,
   User, Edit, Camera, Upload, Map, Crosshair, Trash2, 
   ToggleLeft, ToggleRight, BarChart3, Calendar, FileText, 
-  Truck, UserCheck, Ban, Filter, Download, AlertTriangle
+  Truck, UserCheck, Ban, Filter, Download, AlertTriangle,
+  TrendingUp as TrendingUpIcon, Award, CreditCard, ShoppingBag,
+  Heart, Share2, MoreVertical, Bell, Search, Menu, Grid,
+  List, ChevronDown, ChevronRight, Home, PieChart, Settings as SettingsIcon
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 
-// ✅ CRITICAL FIX: API_URL must include /api path
 const API_URL = (process.env.REACT_APP_API_URL || 'http://localhost:5000') + '/api';
 
 const RestaurantDashboard = () => {
@@ -23,6 +25,8 @@ const RestaurantDashboard = () => {
   const [error, setError] = useState(null);
   const [currentLocation, setCurrentLocation] = useState(null);
   const [locationLoading, setLocationLoading] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
 
   const [restaurantId, setRestaurantId] = useState(null);
   const [restaurant, setRestaurant] = useState({});
@@ -30,7 +34,8 @@ const RestaurantDashboard = () => {
   const [orders, setOrders] = useState([]);
   
   const [newProduct, setNewProduct] = useState({
-    name: '', price: '', description: '', category: 'main course', preparationTime: '', ingredients: '', image: ''
+    name: '', price: '', description: '', category: 'main course', 
+    preparationTime: '15', ingredients: '', image: ''
   });
 
   const [showEditProduct, setShowEditProduct] = useState(false);
@@ -43,6 +48,9 @@ const RestaurantDashboard = () => {
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const [confirmAction, setConfirmAction] = useState(null);
   const [confirmMessage, setConfirmMessage] = useState('');
+  const [notifications, setNotifications] = useState([]);
+  const [showNotifications, setShowNotifications] = useState(false);
+  const [viewMode, setViewMode] = useState('grid'); // grid or list
 
   const [profileData, setProfileData] = useState({
     name: '',
@@ -59,252 +67,159 @@ const RestaurantDashboard = () => {
     location: { type: 'Point', coordinates: [0, 0] }
   });
 
-  // ✅ CRITICAL FIX: Centralized token getter with logging
+  // Get token helper
   const getToken = () => {
     const token = localStorage.getItem('token');
     if (!token) {
-      console.error('❌ NO TOKEN FOUND in localStorage!');
+      console.error('No token found');
       return null;
     }
     return token;
   };
 
-  const showConfirmation = (message, onConfirm) => {
-    setConfirmMessage(message);
-    setConfirmAction(() => onConfirm);
-    setShowConfirmDialog(true);
-  };
+  // Fetch with auth helper
+  const fetchWithAuth = async (url, options = {}) => {
+    const token = getToken();
+    if (!token) throw new Error('No authentication token');
 
-  const handleConfirm = () => {
-    if (confirmAction) confirmAction();
-    setShowConfirmDialog(false);
-    setConfirmAction(null);
-    setConfirmMessage('');
-  };
+    const response = await fetch(url, {
+      ...options,
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+        ...options.headers
+      }
+    });
 
-  const handleCancelConfirm = () => {
-    setShowConfirmDialog(false);
-    setConfirmAction(null);
-    setConfirmMessage('');
-  };
-
-  const getCurrentLocation = () => {
-    setLocationLoading(true);
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          const { latitude, longitude } = position.coords;
-          setCurrentLocation({ lat: latitude, lng: longitude });
-          setProfileData(prev => ({
-            ...prev,
-            location: { type: 'Point', coordinates: [longitude, latitude] }
-          }));
-          console.log('📍 Location captured:', { lat: latitude, lng: longitude });
-          setLocationLoading(false);
-        },
-        (error) => {
-          console.error('❌ Location error:', error);
-          setLocationLoading(false);
-          alert('Unable to get location. Please enable GPS.');
-        },
-        { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
-      );
-    } else {
-      alert('Geolocation not supported.');
-      setLocationLoading(false);
+    if (response.status === 401) {
+      logout();
+      throw new Error('Session expired');
     }
+
+    return response;
   };
 
-  // ✅ FIXED: Initialize with proper logging
+  // Initialize data
   const initializeRestaurantData = async () => {
-    const token = getToken();
-    let currentRestaurantId = getRestaurantId();
-    let restaurantData = getRestaurantData();
+    try {
+      let currentRestaurantId = getRestaurantId();
+      let restaurantData = getRestaurantData();
 
-    console.log('🏪 Initializing...');
-    console.log('   Context restaurantId:', currentRestaurantId);
-    console.log('   Context restaurantData:', restaurantData ? 'exists' : 'null');
+      console.log('Initializing with:', { currentRestaurantId, restaurantData: !!restaurantData });
 
-    if (currentRestaurantId && restaurantData) {
-      setRestaurantId(currentRestaurantId);
-      setRestaurant(restaurantData);
-      setProfileData({
-        name: restaurantData.name || '',
-        email: restaurantData.email || user?.email || '',
-        phone: restaurantData.phone || user?.phone || '',
-        address: restaurantData.address || user?.address || '',
-        cuisine: restaurantData.cuisine || '',
-        description: restaurantData.description || '',
-        deliveryTime: restaurantData.deliveryTime || '20-30 min',
-        deliveryFee: restaurantData.deliveryFee || 35,
-        openingHours: restaurantData.openingHours || { open: '08:00', close: '22:00' },
-        image: restaurantData.image || '',
-        bannerImage: restaurantData.bannerImage || '',
-        location: restaurantData.location || { type: 'Point', coordinates: [0, 0] }
-      });
-      return currentRestaurantId;
-    }
-
-    if (user?._id) {
-      try {
-        console.log('🔄 Fetching restaurant by owner:', user._id);
-        const res = await fetch(`${API_URL}/restaurants/owner/${user._id}`, {
-          headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }
+      if (currentRestaurantId && restaurantData) {
+        setRestaurantId(currentRestaurantId);
+        setRestaurant(restaurantData);
+        setProfileData({
+          name: restaurantData.name || '',
+          email: restaurantData.email || user?.email || '',
+          phone: restaurantData.phone || user?.phone || '',
+          address: restaurantData.address || user?.address || '',
+          cuisine: restaurantData.cuisine || '',
+          description: restaurantData.description || '',
+          deliveryTime: restaurantData.deliveryTime || '20-30 min',
+          deliveryFee: restaurantData.deliveryFee || 35,
+          openingHours: restaurantData.openingHours || { open: '08:00', close: '22:00' },
+          image: restaurantData.image || '',
+          bannerImage: restaurantData.bannerImage || '',
+          location: restaurantData.location || { type: 'Point', coordinates: [0, 0] }
         });
+        return currentRestaurantId;
+      }
+
+      // Try to fetch restaurant by owner
+      if (user?._id) {
+        const response = await fetchWithAuth(`${API_URL}/restaurants/owner/${user._id}`);
+        const data = await response.json();
         
-        console.log('📡 Restaurant fetch status:', res.status);
-        
-        if (res.ok) {
-          const data = await res.json();
-          console.log('📡 Restaurant data:', data);
-          
-          if (data.success && data.restaurant) {
-            currentRestaurantId = data.restaurant._id;
-            setRestaurantId(currentRestaurantId);
-            setRestaurant(data.restaurant);
-            setProfileData({
-              name: data.restaurant.name || '',
-              email: data.restaurant.email || user?.email || '',
-              phone: data.restaurant.phone || user?.phone || '',
-              address: data.restaurant.address || user?.address || '',
-              cuisine: data.restaurant.cuisine || '',
-              description: data.restaurant.description || '',
-              deliveryTime: data.restaurant.deliveryTime || '20-30 min',
-              deliveryFee: data.restaurant.deliveryFee || 35,
-              openingHours: data.restaurant.openingHours || { open: '08:00', close: '22:00' },
-              image: data.restaurant.image || '',
-              bannerImage: data.restaurant.bannerImage || '',
-              location: data.restaurant.location || { type: 'Point', coordinates: [0, 0] }
-            });
-            refreshRestaurantData();
-            return currentRestaurantId;
-          }
-        } else {
-          const errText = await res.text();
-          console.error('❌ Restaurant fetch failed:', res.status, errText);
+        if (data.success && data.restaurant) {
+          currentRestaurantId = data.restaurant._id;
+          setRestaurantId(currentRestaurantId);
+          setRestaurant(data.restaurant);
+          setProfileData({
+            name: data.restaurant.name || '',
+            email: data.restaurant.email || user?.email || '',
+            phone: data.restaurant.phone || user?.phone || '',
+            address: data.restaurant.address || user?.address || '',
+            cuisine: data.restaurant.cuisine || '',
+            description: data.restaurant.description || '',
+            deliveryTime: data.restaurant.deliveryTime || '20-30 min',
+            deliveryFee: data.restaurant.deliveryFee || 35,
+            openingHours: data.restaurant.openingHours || { open: '08:00', close: '22:00' },
+            image: data.restaurant.image || '',
+            bannerImage: data.restaurant.bannerImage || '',
+            location: data.restaurant.location || { type: 'Point', coordinates: [0, 0] }
+          });
+          refreshRestaurantData();
+          return currentRestaurantId;
         }
-      } catch (e) {
-        console.error('❌ Error fetching restaurant:', e);
-      }
-    }
-
-    console.error('❌ No restaurant found');
-    return null;
-  };
-
-  // ✅ FIXED: Fetch orders with proper error handling
-  const fetchOrders = async () => {
-    const token = getToken();
-    if (!token) return;
-
-    try {
-      console.log('📦 Fetching orders...');
-      const res = await fetch(`${API_URL}/orders/restaurant`, {
-        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }
-      });
-      
-      console.log('📡 Orders status:', res.status);
-      
-      const text = await res.text();
-      let data;
-      try {
-        data = JSON.parse(text);
-      } catch (e) {
-        console.error('❌ Invalid JSON from orders:', text.substring(0, 200));
-        setOrders([]);
-        return;
       }
 
-      if (res.ok && data.success) {
-        setOrders(data.orders || []);
-        console.log('✅ Orders loaded:', data.orders?.length || 0);
-      } else {
-        console.error('❌ Orders fetch failed:', data.message || 'Unknown error');
-        setOrders([]);
-      }
+      return null;
     } catch (error) {
-      console.error('❌ Error fetching orders:', error);
-      setOrders([]);
+      console.error('Initialize error:', error);
+      return null;
     }
   };
 
-  // ✅ FIXED: Fetch menu with comprehensive logging
-  const fetchMenu = async (restaurantId) => {
-    const token = getToken();
-    if (!token || !restaurantId) {
-      console.error('❌ Missing token or restaurantId');
-      return;
-    }
-
+  // Fetch menu
+  const fetchMenu = async (id) => {
+    if (!id) return;
+    
     try {
-      console.log('🍽️ Fetching menu for:', restaurantId);
-      const url = `${API_URL}/products/restaurant/${restaurantId}`;
-      console.log('🔗 URL:', url);
-
-      const res = await fetch(url, {
-        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }
-      });
+      const response = await fetch(`${API_URL}/products/restaurant/${id}`);
+      const data = await response.json();
       
-      console.log('📡 Products status:', res.status);
-      
-      const text = await res.text();
-      console.log('📡 Raw response:', text.substring(0, 500));
-      
-      let data;
-      try {
-        data = JSON.parse(text);
-      } catch (e) {
-        console.error('❌ Invalid JSON:', e);
-        setMenuItems([]);
-        return;
-      }
-
-      if (res.ok && data.success) {
+      if (data.success) {
         setMenuItems(data.products || []);
-        console.log('✅ Products loaded:', data.products?.length || 0);
-      } else {
-        console.error('❌ Products fetch failed:', data.message);
-        setMenuItems([]);
+        console.log('Menu loaded:', data.products?.length);
       }
     } catch (error) {
-      console.error('❌ Error fetching menu:', error);
-      setMenuItems([]);
+      console.error('Fetch menu error:', error);
     }
   };
 
-  // ✅ FIXED: Fetch riders
-  const fetchAvailableRiders = async () => {
-    const token = getToken();
-    if (!token) return;
-
+  // Fetch orders
+  const fetchOrders = async () => {
     try {
-      console.log('🚴 Fetching riders...');
-      const res = await fetch(`${API_URL}/riders/active`, {
-        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }
-      });
+      const response = await fetchWithAuth(`${API_URL}/orders/restaurant`);
+      const data = await response.json();
       
-      const data = await res.json();
-      
-      if (res.ok && data.success) {
-        setAvailableRiders(data.riders || []);
-        console.log('✅ Riders loaded:', data.riders?.length || 0);
-      } else {
-        setAvailableRiders([]);
+      if (data.success) {
+        setOrders(data.orders || []);
+        console.log('Orders loaded:', data.orders?.length);
       }
     } catch (error) {
-      console.error('❌ Error fetching riders:', error);
-      setAvailableRiders([]);
+      console.error('Fetch orders error:', error);
     }
   };
 
-  // ✅ FIXED: Main data fetch with sequential loading
+  // Fetch riders
+  const fetchAvailableRiders = async () => {
+    try {
+      const response = await fetchWithAuth(`${API_URL}/riders/active`);
+      const data = await response.json();
+      
+      if (data.success) {
+        setAvailableRiders(data.riders || []);
+        console.log('Riders loaded:', data.riders?.length);
+      }
+    } catch (error) {
+      console.error('Fetch riders error:', error);
+    }
+  };
+
+  // Main data fetch
   const fetchData = async () => {
     setLoading(true);
     setError(null);
     
     try {
       const id = await initializeRestaurantData();
+      console.log('Restaurant ID from init:', id);
+      
       if (id) {
+        setRestaurantId(id);
         await fetchMenu(id);
         await fetchOrders();
         await fetchAvailableRiders();
@@ -312,7 +227,7 @@ const RestaurantDashboard = () => {
         setError(new Error('No restaurant found. Please setup your restaurant.'));
       }
     } catch (error) {
-      console.error('❌ fetchData error:', error);
+      console.error('fetchData error:', error);
       setError(error);
     } finally {
       setLoading(false);
@@ -329,6 +244,8 @@ const RestaurantDashboard = () => {
   const stats = {
     totalOrders: orders.length,
     pendingOrders: orders.filter(o => o.status === 'pending').length,
+    preparingOrders: orders.filter(o => o.status === 'preparing').length,
+    readyOrders: orders.filter(o => o.status === 'ready').length,
     completedOrders: orders.filter(o => ['delivered', 'completed'].includes(o.status)).length,
     todayRevenue: orders
       .filter(o => {
@@ -339,27 +256,52 @@ const RestaurantDashboard = () => {
       .reduce((sum, o) => sum + (o.total || o.totalAmount || 0), 0),
     totalRevenue: orders
       .filter(o => ['delivered', 'completed'].includes(o.status))
-      .reduce((sum, o) => sum + (o.total || o.totalAmount || 0), 0)
+      .reduce((sum, o) => sum + (o.total || o.totalAmount || 0), 0),
+    averageOrderValue: orders
+      .filter(o => ['delivered', 'completed'].includes(o.status))
+      .reduce((sum, o, _, arr) => arr.length ? sum + (o.total || o.totalAmount || 0) / arr.length : 0, 0)
   };
 
   const formatCurrency = (amount) => {
     if (!amount && amount !== 0) return '₱0';
-    return `₱${parseFloat(amount).toLocaleString('en-PH', { minimumFractionDigits: 2 })}`;
+    return `₱${parseFloat(amount).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   };
 
   const formatDate = (dateString) => {
     if (!dateString) return 'No date';
-    return new Date(dateString).toLocaleDateString('en-PH', {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-PH', {
       year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
     });
   };
 
-  // ✅ FIXED: Add product (no restaurant in body - from auth)
+  const formatTimeAgo = (dateString) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffMs = now - date;
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMins / 60);
+    const diffDays = Math.floor(diffHours / 24);
+
+    if (diffMins < 1) return 'Just now';
+    if (diffMins < 60) return `${diffMins} min ago`;
+    if (diffHours < 24) return `${diffHours} hour${diffHours > 1 ? 's' : ''} ago`;
+    return `${diffDays} day${diffDays > 1 ? 's' : ''} ago`;
+  };
+
+  // Add product
   const handleAddProduct = async (e) => {
     e.preventDefault();
-    const token = getToken();
-    if (!token || !restaurantId) {
-      alert('❌ Authentication error');
+    const token = localStorage.getItem('token');
+    
+    if (!token) {
+      alert('Please login again');
+      logout();
+      return;
+    }
+    
+    if (!restaurantId) {
+      alert('Restaurant ID not found. Please refresh.');
       return;
     }
     
@@ -374,7 +316,6 @@ const RestaurantDashboard = () => {
         preparationTime: parseInt(newProduct.preparationTime) || 15,
         ingredients: newProduct.ingredients?.trim() || '',
         image: newProduct.image?.trim() || ''
-        // ❌ DON'T send restaurant - backend gets from auth token!
       };
 
       const res = await fetch(`${API_URL}/products`, {
@@ -389,97 +330,143 @@ const RestaurantDashboard = () => {
       const data = await res.json();
       
       if (res.ok && data.success) {
-        alert('✅ Product added!');
+        alert('Product added successfully!');
         setShowAddProduct(false);
-        setNewProduct({ name: '', price: '', description: '', category: 'main course', preparationTime: '', ingredients: '', image: '' });
+        setNewProduct({ name: '', price: '', description: '', category: 'main course', preparationTime: '15', ingredients: '', image: '' });
         await fetchMenu(restaurantId);
       } else {
-        alert(`❌ Failed: ${data.message}`);
+        if (res.status === 401) {
+          alert('Session expired. Please login again.');
+          logout();
+        } else {
+          alert(`Failed: ${data.message || 'Unknown error'}`);
+        }
       }
     } catch (error) {
-      alert('❌ Network error');
+      console.error('Add product error:', error);
+      alert('Network error. Please try again.');
     } finally {
       setLoading(false);
     }
   };
 
-  // ✅ FIXED: Edit product
+  // Edit product
   const handleEditProduct = async (e) => {
     e.preventDefault();
-    const token = getToken();
-    if (!token || !editingProduct) return;
+    const token = localStorage.getItem('token');
+    
+    if (!token) {
+      alert('Please login again');
+      logout();
+      return;
+    }
+    
+    if (!editingProduct) return;
     
     setLoading(true);
     
     try {
+      const productData = {
+        name: editingProduct.name.trim(),
+        price: parseFloat(editingProduct.price),
+        description: editingProduct.description?.trim() || '',
+        category: editingProduct.category,
+        preparationTime: parseInt(editingProduct.preparationTime) || 15,
+        ingredients: editingProduct.ingredients?.trim() || '',
+        image: editingProduct.image?.trim() || '',
+        isAvailable: editingProduct.isAvailable !== false
+      };
+
       const res = await fetch(`${API_URL}/products/${editingProduct._id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
-        body: JSON.stringify({
-          name: editingProduct.name.trim(),
-          price: parseFloat(editingProduct.price),
-          description: editingProduct.description?.trim() || '',
-          category: editingProduct.category,
-          preparationTime: parseInt(editingProduct.preparationTime) || 15,
-          ingredients: editingProduct.ingredients?.trim() || '',
-          image: editingProduct.image?.trim() || '',
-          isAvailable: editingProduct.isAvailable
-        })
+        body: JSON.stringify(productData)
       });
       
       const data = await res.json();
       
       if (res.ok && data.success) {
-        alert('✅ Product updated!');
+        alert('Product updated successfully!');
         setShowEditProduct(false);
         setEditingProduct(null);
         await fetchMenu(restaurantId);
       } else {
-        alert(`❌ Failed: ${data.message}`);
+        if (res.status === 401) {
+          alert('Session expired. Please login again.');
+          logout();
+        } else if (res.status === 403) {
+          alert('You are not authorized to edit this product.');
+        } else {
+          alert(`Failed: ${data.message || 'Unknown error'}`);
+        }
       }
     } catch (error) {
-      alert('❌ Network error');
+      console.error('Edit product error:', error);
+      alert('Network error. Please try again.');
     } finally {
       setLoading(false);
     }
   };
 
-  // ✅ FIXED: Delete product
+  // Delete product
   const handleDeleteProduct = async (productId) => {
-    const token = getToken();
-    if (!token) return;
+    const token = localStorage.getItem('token');
+    
+    if (!token) {
+      alert('Please login again');
+      logout();
+      return;
+    }
 
-    showConfirmation('Delete this product?', async () => {
-      setLoading(true);
-      try {
-        const res = await fetch(`${API_URL}/products/${productId}`, {
-          method: 'DELETE',
-          headers: { 'Authorization': `Bearer ${token}` }
-        });
-        
-        const data = await res.json();
-        
-        if (res.ok && data.success) {
-          alert('✅ Deleted!');
-          await fetchMenu(restaurantId);
-        } else {
-          alert(`❌ Failed: ${data.message}`);
+    if (!window.confirm('Are you sure you want to delete this product?')) {
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const res = await fetch(`${API_URL}/products/${productId}`, {
+        method: 'DELETE',
+        headers: { 
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
         }
-      } catch (error) {
-        alert('❌ Network error');
-      } finally {
-        setLoading(false);
+      });
+      
+      const data = await res.json();
+      
+      if (res.ok && data.success) {
+        alert('Product deleted successfully!');
+        await fetchMenu(restaurantId);
+      } else {
+        if (res.status === 401) {
+          alert('Session expired. Please login again.');
+          logout();
+        } else if (res.status === 403) {
+          alert('You are not authorized to delete this product.');
+        } else {
+          alert(`Failed: ${data.message || 'Unknown error'}`);
+        }
       }
-    });
+    } catch (error) {
+      console.error('Delete product error:', error);
+      alert('Network error. Please try again.');
+    } finally {
+      setLoading(false);
+    }
   };
 
-  // ✅ FIXED: Toggle availability
+  // Toggle availability
   const handleToggleAvailability = async (product) => {
-    const token = getToken();
-    if (!token) return;
+    const token = localStorage.getItem('token');
+    
+    if (!token) {
+      alert('Please login again');
+      logout();
+      return;
+    }
 
     try {
       const res = await fetch(`${API_URL}/products/${product._id}`, {
@@ -496,16 +483,22 @@ const RestaurantDashboard = () => {
       if (res.ok && data.success) {
         await fetchMenu(restaurantId);
       } else {
-        alert(`❌ Failed: ${data.message}`);
+        if (res.status === 401) {
+          alert('Session expired. Please login again.');
+          logout();
+        } else {
+          alert(`Failed: ${data.message || 'Unknown error'}`);
+        }
       }
     } catch (error) {
-      alert('❌ Network error');
+      console.error('Toggle availability error:', error);
+      alert('Network error. Please try again.');
     }
   };
 
-  // ✅ FIXED: Update order status
+  // Update order status
   const handleUpdateOrderStatus = async (orderId, newStatus) => {
-    const token = getToken();
+    const token = localStorage.getItem('token');
     if (!token) return;
 
     try {
@@ -522,82 +515,54 @@ const RestaurantDashboard = () => {
       
       if (res.ok && data.success) {
         await fetchData();
-        alert(`✅ Status: ${newStatus}`);
+        // Add notification
+        setNotifications(prev => [{
+          id: Date.now(),
+          message: `Order #${orderId.slice(-6)} status updated to ${newStatus}`,
+          time: new Date().toISOString(),
+          read: false
+        }, ...prev]);
       } else {
-        alert(`❌ Failed: ${data.message}`);
+        alert(`Failed: ${data.message}`);
       }
     } catch (error) {
-      alert('❌ Network error');
+      console.error('Update order error:', error);
+      alert('Network error');
     }
   };
 
-  // ✅ FIXED: Reject order
-  const handleRejectOrder = async (orderId) => {
-    const token = getToken();
-    if (!token) return;
-
-    showConfirmation('Reject this order?', async () => {
-      try {
-        const res = await fetch(`${API_URL}/orders/${orderId}/status`, {
-          method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
-          },
-          body: JSON.stringify({ status: 'cancelled' })
-        });
-        
-        const data = await res.json();
-        
-        if (res.ok && data.success) {
-          await fetchData();
-          alert('✅ Order rejected');
-          setShowOrderDetails(false);
-        } else {
-          alert(`❌ Failed: ${data.message}`);
-        }
-      } catch (error) {
-        alert('❌ Network error');
-      }
-    });
-  };
-
-  // ✅ FIXED: Assign rider
-  const handleAssignRider = async (orderId, riderId) => {
-    const token = getToken();
-    if (!token) return;
-
+  // Quick fix
+  const handleQuickFix = async () => {
+    const token = localStorage.getItem('token');
+    if (!token || !restaurantId) return;
+    
     try {
-      const res = await fetch(`${API_URL}/orders/${orderId}/assign-rider`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({ riderId })
+      const res = await fetch(`${API_URL}/products/quick-fix/${restaurantId}`, {
+        headers: { 
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
       });
       
       const data = await res.json();
       
       if (res.ok && data.success) {
-        await fetchData();
-        setShowRiderAssignment(false);
-        setSelectedOrderForRider(null);
-        alert('✅ Rider assigned!');
+        alert(`✅ ${data.message}`);
+        await fetchMenu(restaurantId);
       } else {
-        alert(`❌ Failed: ${data.message}`);
+        alert('Quick fix failed: ' + (data.message || 'Unknown error'));
       }
     } catch (error) {
-      alert('❌ Network error');
+      alert('Quick fix error');
     }
   };
 
-  // ✅ FIXED: Update profile
+  // Update profile
   const handleUpdateProfile = async (e) => {
     e.preventDefault();
-    const token = getToken();
+    const token = localStorage.getItem('token');
     if (!token || !restaurantId) {
-      alert('❌ Authentication error');
+      alert('Authentication error');
       return;
     }
     
@@ -616,7 +581,7 @@ const RestaurantDashboard = () => {
       const data = await res.json();
       
       if (res.ok && data.success) {
-        alert('✅ Profile updated!');
+        alert('Profile updated!');
         setShowProfile(false);
         setRestaurant(data.restaurant);
         refreshRestaurantData();
@@ -624,38 +589,39 @@ const RestaurantDashboard = () => {
           updateUser({ name: profileData.name });
         }
       } else {
-        alert(`❌ Failed: ${data.message}`);
+        alert(`Failed: ${data.message}`);
       }
     } catch (error) {
-      alert('❌ Network error');
+      alert('Network error');
     } finally {
       setLoading(false);
     }
   };
 
-  // ✅ FIXED: Quick fix with auth
-  const handleQuickFix = async () => {
-    const token = getToken();
-    if (!token || !restaurantId) return;
-    
-    try {
-      const res = await fetch(`${API_URL}/products/quick-fix/${restaurantId}`, {
-        headers: { 
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
-      
-      const data = await res.json();
-      
-      if (res.ok && data.success) {
-        alert(`✅ ${data.message}`);
-        await fetchMenu(restaurantId);
-      } else {
-        alert('❌ Quick fix failed: ' + (data.message || 'Unknown error'));
-      }
-    } catch (error) {
-      alert('❌ Quick fix error');
+  // Get current location
+  const getCurrentLocation = () => {
+    setLocationLoading(true);
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const { latitude, longitude } = position.coords;
+          setCurrentLocation({ lat: latitude, lng: longitude });
+          setProfileData(prev => ({
+            ...prev,
+            location: { type: 'Point', coordinates: [longitude, latitude] }
+          }));
+          setLocationLoading(false);
+        },
+        (error) => {
+          console.error('Location error:', error);
+          setLocationLoading(false);
+          alert('Unable to get location. Please enable GPS.');
+        },
+        { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
+      );
+    } else {
+      alert('Geolocation not supported.');
+      setLocationLoading(false);
     }
   };
 
@@ -692,24 +658,11 @@ const RestaurantDashboard = () => {
     const totalOrders = filteredOrders.length;
     const averageOrderValue = totalOrders > 0 ? totalRevenue / totalOrders : 0;
 
-    const categoryBreakdown = {};
-    filteredOrders.forEach(order => {
-      order.items?.forEach(item => {
-        const category = item.product?.category || 'uncategorized';
-        if (!categoryBreakdown[category]) {
-          categoryBreakdown[category] = { revenue: 0, orders: 0 };
-        }
-        categoryBreakdown[category].revenue += item.price * item.quantity;
-        categoryBreakdown[category].orders += 1;
-      });
-    });
-
     return {
       period: reportPeriod,
       totalRevenue,
       totalOrders,
       averageOrderValue,
-      categoryBreakdown,
       orders: filteredOrders,
       startDate: startDate.toLocaleDateString(),
       endDate: endDate.toLocaleDateString()
@@ -741,57 +694,26 @@ const RestaurantDashboard = () => {
     URL.revokeObjectURL(url);
   };
 
-  // Location Map Component
-  const LocationMap = ({ coordinates }) => {
-    if (!coordinates || coordinates[0] === 0 || coordinates[1] === 0) {
-      return (
-        <div className="h-48 bg-gray-100 rounded-lg flex items-center justify-center">
-          <div className="text-center">
-            <Map className="mx-auto text-gray-400 mb-2 w-8 h-8" />
-            <p className="text-gray-500 text-sm">No location set</p>
-          </div>
-        </div>
-      );
-    }
-
-    const [lng, lat] = coordinates;
-    return (
-      <div className="h-48 bg-gray-100 rounded-lg overflow-hidden relative">
-        <iframe
-          width="100%"
-          height="100%"
-          frameBorder="0"
-          scrolling="no"
-          src={`https://www.openstreetmap.org/export/embed.html?bbox=${lng - 0.01}%2C${lat - 0.01}%2C${lng + 0.01}%2C${lat + 0.01}&layer=mapnik&marker=${lat}%2C${lng}`}
-          title="Location"
-        />
-        <div className="absolute bottom-2 left-2 bg-white bg-opacity-90 px-2 py-1 rounded text-xs">📍 Restaurant</div>
-      </div>
-    );
-  };
-
-  // Earnings data
-  const earningsArray = Object.entries(
-    orders
-      .filter(order => ['completed', 'delivered'].includes(order.status))
-      .reduce((groups, order) => {
-        const date = new Date(order.createdAt).toLocaleDateString();
-        if (!groups[date]) groups[date] = { revenue: 0, orders: 0 };
-        groups[date].revenue += order.total || order.totalAmount || 0;
-        groups[date].orders += 1;
-        return groups;
-      }, {})
-  ).map(([date, data]) => ({ date, ...data })).slice(0, 7);
-
-  const salesReport = generateSalesReport();
+  // Filter menu items by search
+  const filteredMenuItems = menuItems.filter(item => 
+    item.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    item.category?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    item.description?.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
   // Loading state
   if (loading && !menuItems.length && !orders.length) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+      <div className="min-h-screen bg-gradient-to-br from-red-50 to-red-100 flex items-center justify-center p-4">
         <div className="text-center">
-          <div className="w-12 h-12 border-4 border-orange-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading Restaurant Data...</p>
+          <div className="relative">
+            <div className="w-20 h-20 border-4 border-red-200 border-t-red-600 rounded-full animate-spin mx-auto mb-4"></div>
+            <div className="absolute inset-0 flex items-center justify-center">
+              <Store className="w-8 h-8 text-red-600 animate-pulse" />
+            </div>
+          </div>
+          <p className="text-red-800 font-medium mt-4">Loading Restaurant Dashboard...</p>
+          <p className="text-red-600 text-sm mt-2">Please wait</p>
         </div>
       </div>
     );
@@ -800,15 +722,27 @@ const RestaurantDashboard = () => {
   // Error state
   if (error) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-        <div className="text-center max-w-sm">
-          <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <X className="text-red-600 w-8 h-8" />
+      <div className="min-h-screen bg-gradient-to-br from-red-50 to-red-100 flex items-center justify-center p-4">
+        <div className="bg-white rounded-2xl shadow-xl max-w-md w-full p-8 text-center">
+          <div className="w-20 h-20 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-6">
+            <AlertTriangle className="text-red-600 w-10 h-10" />
           </div>
-          <h2 className="text-xl font-bold mb-2">Error</h2>
-          <p className="text-gray-600 mb-4 text-sm">{error.message}</p>
-          <button onClick={fetchData} className="w-full bg-orange-600 text-white px-6 py-3 rounded-lg mb-2">Retry</button>
-          <button onClick={logout} className="w-full bg-gray-600 text-white px-6 py-3 rounded-lg">Logout</button>
+          <h2 className="text-2xl font-bold text-red-800 mb-2">Oops! Something went wrong</h2>
+          <p className="text-red-600 mb-6">{error.message}</p>
+          <div className="space-y-3">
+            <button 
+              onClick={fetchData} 
+              className="w-full bg-gradient-to-r from-red-600 to-red-700 text-white px-6 py-3 rounded-xl font-medium hover:from-red-700 hover:to-red-800 transition-all transform hover:scale-105 shadow-lg"
+            >
+              Try Again
+            </button>
+            <button 
+              onClick={logout} 
+              className="w-full bg-red-100 text-red-700 px-6 py-3 rounded-xl font-medium hover:bg-red-200 transition-all"
+            >
+              Logout
+            </button>
+          </div>
         </div>
       </div>
     );
@@ -817,10 +751,17 @@ const RestaurantDashboard = () => {
   // No user
   if (!user) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-        <div className="text-center">
-          <h2 className="text-xl font-bold mb-2">Not Logged In</h2>
-          <p className="text-gray-600">Please login to continue.</p>
+      <div className="min-h-screen bg-gradient-to-br from-red-50 to-red-100 flex items-center justify-center p-4">
+        <div className="bg-white rounded-2xl shadow-xl max-w-md w-full p-8 text-center">
+          <Store className="w-16 h-16 text-red-600 mx-auto mb-4" />
+          <h2 className="text-2xl font-bold text-red-800 mb-2">Not Logged In</h2>
+          <p className="text-red-600 mb-6">Please login to continue.</p>
+          <button 
+            onClick={() => window.location.href = '/login'} 
+            className="w-full bg-gradient-to-r from-red-600 to-red-700 text-white px-6 py-3 rounded-xl font-medium hover:from-red-700 hover:to-red-800 transition-all"
+          >
+            Go to Login
+          </button>
         </div>
       </div>
     );
@@ -829,314 +770,734 @@ const RestaurantDashboard = () => {
   // No restaurant
   if (!restaurantId) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-        <div className="text-center max-w-sm">
-          <div className="w-16 h-16 bg-yellow-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <Store className="text-yellow-600 w-8 h-8" />
+      <div className="min-h-screen bg-gradient-to-br from-red-50 to-red-100 flex items-center justify-center p-4">
+        <div className="bg-white rounded-2xl shadow-xl max-w-md w-full p-8 text-center">
+          <div className="w-20 h-20 bg-yellow-100 rounded-full flex items-center justify-center mx-auto mb-6">
+            <Store className="text-yellow-600 w-10 h-10" />
           </div>
-          <h2 className="text-xl font-bold mb-2">Setup Required</h2>
-          <p className="text-gray-600 mb-4 text-sm">Restaurant not found.</p>
-          <button onClick={fetchData} className="w-full bg-orange-600 text-white px-6 py-3 rounded-lg mb-2">Retry</button>
-          <button onClick={logout} className="w-full bg-gray-600 text-white px-6 py-3 rounded-lg">Logout</button>
+          <h2 className="text-2xl font-bold text-red-800 mb-2">Setup Required</h2>
+          <p className="text-red-600 mb-6">Restaurant not found. Please complete your restaurant setup.</p>
+          <div className="space-y-3">
+            <button 
+              onClick={fetchData} 
+              className="w-full bg-gradient-to-r from-red-600 to-red-700 text-white px-6 py-3 rounded-xl font-medium hover:from-red-700 hover:to-red-800 transition-all"
+            >
+              Retry
+            </button>
+            <button 
+              onClick={logout} 
+              className="w-full bg-red-100 text-red-700 px-6 py-3 rounded-xl font-medium hover:bg-red-200 transition-all"
+            >
+              Logout
+            </button>
+          </div>
         </div>
       </div>
     );
   }
 
+  const salesReport = generateSalesReport();
+
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="bg-white shadow-sm border-b">
-        <div className="max-w-7xl mx-auto px-4 py-4">
-          <div className="flex flex-col sm:flex-row justify-between gap-3">
-            <div className="flex items-center space-x-3">
-              <div className="w-10 h-10 bg-orange-600 rounded-lg flex items-center justify-center">
-                <Store className="text-white w-5 h-5" />
+    <div className="min-h-screen bg-gradient-to-br from-red-50 to-red-100">
+      {/* Sidebar */}
+      <div className={`fixed left-0 top-0 h-full bg-gradient-to-b from-red-800 to-red-900 text-white transition-all duration-300 shadow-2xl z-30 ${sidebarCollapsed ? 'w-20' : 'w-64'}`}>
+        <div className="p-4">
+          <div className="flex items-center justify-between mb-8">
+            {!sidebarCollapsed && (
+              <div className="flex items-center space-x-2">
+                <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center">
+                  <Store className="w-6 h-6 text-red-600" />
+                </div>
+                <span className="font-bold text-lg">Restaurant</span>
               </div>
-              <div>
-                <h1 className="text-lg font-bold text-gray-900">{restaurant.name || 'Restaurant'}</h1>
-                <p className="text-xs text-gray-500">Orders: {orders.length} | Products: {menuItems.length}</p>
+            )}
+            {sidebarCollapsed && (
+              <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center mx-auto">
+                <Store className="w-6 h-6 text-red-600" />
               </div>
-            </div>
-            <div className="flex items-center gap-2">
-              <button onClick={() => setShowProfile(true)} className="bg-blue-600 text-white px-3 py-2 rounded-lg text-sm flex items-center">
-                <User className="w-4 h-4 mr-1" /> Profile
+            )}
+            <button 
+              onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+              className="p-2 hover:bg-red-700 rounded-lg transition-colors"
+            >
+              <Menu className="w-5 h-5" />
+            </button>
+          </div>
+
+          <nav className="space-y-2">
+            {[
+              { id: 'dashboard', icon: Home, label: 'Dashboard' },
+              { id: 'orders', icon: Package, label: 'Orders', badge: stats.pendingOrders },
+              { id: 'menu', icon: ShoppingBag, label: 'Menu', badge: menuItems.length },
+              { id: 'earnings', icon: TrendingUpIcon, label: 'Earnings' },
+              { id: 'reports', icon: PieChart, label: 'Reports' }
+            ].map(item => (
+              <button
+                key={item.id}
+                onClick={() => {
+                  setActiveTab(item.id);
+                  if (item.id === 'reports') setShowReports(true);
+                }}
+                className={`w-full flex items-center ${sidebarCollapsed ? 'justify-center' : 'justify-between'} p-3 rounded-xl transition-all ${
+                  activeTab === item.id 
+                    ? 'bg-white text-red-600 shadow-lg' 
+                    : 'text-red-100 hover:bg-red-700'
+                }`}
+              >
+                <div className="flex items-center space-x-3">
+                  <item.icon className={`w-5 h-5 ${activeTab === item.id ? 'text-red-600' : ''}`} />
+                  {!sidebarCollapsed && <span>{item.label}</span>}
+                </div>
+                {!sidebarCollapsed && item.badge > 0 && (
+                  <span className={`px-2 py-1 rounded-full text-xs ${
+                    activeTab === item.id 
+                      ? 'bg-red-600 text-white' 
+                      : 'bg-red-700 text-white'
+                  }`}>
+                    {item.badge}
+                  </span>
+                )}
               </button>
-              <button onClick={fetchData} className="bg-gray-600 text-white px-3 py-2 rounded-lg text-sm flex items-center">
-                <RefreshCw className="w-4 h-4 mr-1" /> Refresh
-              </button>
-              <button onClick={logout} className="bg-red-600 text-white px-3 py-2 rounded-lg text-sm flex items-center">
-                <LogOut className="w-4 h-4 mr-1" /> Logout
-              </button>
-            </div>
-          </div>
-        </div>
-      </header>
-
-      <div className="max-w-7xl mx-auto px-4 py-4">
-        {/* Debug Banner - Remove after fixing */}
-        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-2 mb-4 text-xs font-mono">
-          DEBUG: ID={restaurantId} | Products={menuItems.length} | Orders={orders.length} | API={API_URL}
+            ))}
+          </nav>
         </div>
 
-        {/* Stats */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
-          <div className="bg-white p-4 rounded-lg shadow-sm border text-center">
-            <p className="text-xs text-gray-600">Today's Revenue</p>
-            <p className="text-xl font-bold">{formatCurrency(stats.todayRevenue)}</p>
-          </div>
-          <div className="bg-white p-4 rounded-lg shadow-sm border text-center">
-            <p className="text-xs text-gray-600">Total Orders</p>
-            <p className="text-xl font-bold">{stats.totalOrders}</p>
-          </div>
-          <div className="bg-white p-4 rounded-lg shadow-sm border text-center">
-            <p className="text-xs text-gray-600">Pending</p>
-            <p className="text-xl font-bold text-orange-600">{stats.pendingOrders}</p>
-          </div>
-          <div className="bg-white p-4 rounded-lg shadow-sm border text-center">
-            <p className="text-xs text-gray-600">Menu Items</p>
-            <p className="text-xl font-bold text-green-600">{menuItems.length}</p>
-          </div>
+        <div className="absolute bottom-0 left-0 right-0 p-4">
+          <button
+            onClick={() => setShowProfile(true)}
+            className={`w-full flex items-center ${sidebarCollapsed ? 'justify-center' : 'space-x-3'} p-3 rounded-xl hover:bg-red-700 transition-colors text-red-100`}
+          >
+            <User className="w-5 h-5" />
+            {!sidebarCollapsed && <span>Profile</span>}
+          </button>
         </div>
+      </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-          {/* Sidebar */}
-          <div className="lg:col-span-1 space-y-4">
-            <div className="bg-white rounded-lg shadow-sm border p-4">
-              <h3 className="font-semibold mb-3">Quick Actions</h3>
-              <div className="space-y-2">
-                <button onClick={() => setShowAddProduct(true)} className="w-full bg-orange-600 text-white px-3 py-2 rounded-lg text-sm flex items-center">
-                  <Plus className="w-4 h-4 mr-2" /> Add Product
-                </button>
-                <button onClick={() => setActiveTab('orders')} className="w-full bg-green-600 text-white px-3 py-2 rounded-lg text-sm flex items-center">
-                  <Package className="w-4 h-4 mr-2" /> Orders ({orders.length})
-                </button>
-                <button onClick={() => setShowReports(true)} className="w-full bg-purple-600 text-white px-3 py-2 rounded-lg text-sm flex items-center">
-                  <BarChart3 className="w-4 h-4 mr-2" /> Reports
-                </button>
-                <button onClick={handleQuickFix} className="w-full bg-indigo-600 text-white px-3 py-2 rounded-lg text-sm flex items-center">
-                  <Plus className="w-4 h-4 mr-2" /> Sample Products
-                </button>
+      {/* Main Content */}
+      <div className={`transition-all duration-300 ${sidebarCollapsed ? 'ml-20' : 'ml-64'}`}>
+        {/* Header */}
+        <header className="bg-white shadow-lg border-b border-red-100 sticky top-0 z-20">
+          <div className="px-6 py-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-4">
+                <h1 className="text-2xl font-bold bg-gradient-to-r from-red-600 to-red-800 bg-clip-text text-transparent">
+                  {restaurant.name || 'Restaurant Dashboard'}
+                </h1>
+                <span className="px-3 py-1 bg-red-100 text-red-700 rounded-full text-sm font-medium">
+                  {restaurant.cuisine || 'Restaurant'}
+                </span>
               </div>
-            </div>
 
-            <div className="bg-white rounded-lg shadow-sm border p-4">
-              <h3 className="font-semibold mb-3">Restaurant Info</h3>
-              <div className="text-sm space-y-1">
-                <p><strong>Name:</strong> {restaurant.name}</p>
-                <p><strong>Cuisine:</strong> {restaurant.cuisine || 'Not set'}</p>
-                <p><strong>Status:</strong> <span className={restaurant.isApproved ? 'text-green-600' : 'text-yellow-600'}>{restaurant.isApproved ? 'Approved' : 'Pending'}</span></p>
-                <p><strong>Address:</strong> {restaurant.address || 'Not set'}</p>
-              </div>
-            </div>
-          </div>
+              <div className="flex items-center space-x-4">
+                {/* Search Bar */}
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-red-400 w-4 h-4" />
+                  <input
+                    type="text"
+                    placeholder="Search..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pl-10 pr-4 py-2 border border-red-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent w-64"
+                  />
+                </div>
 
-          {/* Main Content */}
-          <div className="lg:col-span-3">
-            <div className="bg-white rounded-lg shadow-sm border">
-              {/* Tabs */}
-              <div className="flex border-b overflow-x-auto">
-                {['dashboard', 'orders', 'menu', 'earnings'].map(tab => (
+                {/* Notifications */}
+                <div className="relative">
                   <button
-                    key={tab}
-                    onClick={() => setActiveTab(tab)}
-                    className={`flex-1 py-3 px-4 text-sm font-medium whitespace-nowrap ${activeTab === tab ? 'text-orange-600 border-b-2 border-orange-600' : 'text-gray-600'}`}
+                    onClick={() => setShowNotifications(!showNotifications)}
+                    className="p-2 hover:bg-red-50 rounded-xl relative"
                   >
-                    {tab === 'dashboard' && '📊 Dashboard'}
-                    {tab === 'orders' && `📦 Orders (${orders.length})`}
-                    {tab === 'menu' && `🍽️ Menu (${menuItems.length})`}
-                    {tab === 'earnings' && '💰 Earnings'}
+                    <Bell className="w-5 h-5 text-red-600" />
+                    {notifications.filter(n => !n.read).length > 0 && (
+                      <span className="absolute top-1 right-1 w-2 h-2 bg-red-600 rounded-full"></span>
+                    )}
                   </button>
-                ))}
-              </div>
 
-              <div className="p-4">
-                {/* Dashboard Tab */}
-                {activeTab === 'dashboard' && (
-                  <div>
-                    <h2 className="text-xl font-bold mb-4">Overview</h2>
-                    {orders.slice(0, 5).length > 0 ? (
-                      <div className="space-y-3">
-                        {orders.slice(0, 5).map(order => (
-                          <div key={order._id} className="border rounded-lg p-4">
-                            <div className="flex justify-between items-start">
-                              <div>
-                                <p className="font-medium">#{order.orderId || order._id}</p>
-                                <p className="text-sm text-gray-600">{order.user?.name || 'Customer'}</p>
-                                <p className="text-xs text-gray-500">{formatDate(order.createdAt)}</p>
+                  {showNotifications && (
+                    <div className="absolute right-0 mt-2 w-80 bg-white rounded-xl shadow-xl border border-red-100 z-50">
+                      <div className="p-3 border-b border-red-100">
+                        <h3 className="font-semibold text-red-800">Notifications</h3>
+                      </div>
+                      <div className="max-h-96 overflow-y-auto">
+                        {notifications.length === 0 ? (
+                          <div className="p-4 text-center text-red-500">
+                            <Bell className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                            <p className="text-sm">No notifications</p>
+                          </div>
+                        ) : (
+                          notifications.map(notification => (
+                            <div key={notification.id} className="p-3 hover:bg-red-50 border-b border-red-100 last:border-0">
+                              <p className="text-sm text-red-800">{notification.message}</p>
+                              <p className="text-xs text-red-500 mt-1">{formatTimeAgo(notification.time)}</p>
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* User Menu */}
+                <div className="flex items-center space-x-3">
+                  <div className="text-right">
+                    <p className="text-sm font-medium text-red-800">{user?.name}</p>
+                    <p className="text-xs text-red-500">{user?.email}</p>
+                  </div>
+                  <div className="w-10 h-10 bg-gradient-to-r from-red-600 to-red-700 rounded-xl flex items-center justify-center text-white font-bold">
+                    {user?.name?.charAt(0) || 'R'}
+                  </div>
+                </div>
+
+                <button
+                  onClick={logout}
+                  className="flex items-center space-x-2 px-4 py-2 bg-red-600 text-white rounded-xl hover:bg-red-700 transition-all"
+                >
+                  <LogOut className="w-4 h-4" />
+                  <span>Logout</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </header>
+
+        <div className="p-6">
+          {/* Stats Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+            <div className="bg-white rounded-2xl shadow-lg p-6 border-l-4 border-red-600 transform hover:scale-105 transition-all">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-red-600 mb-1">Today's Revenue</p>
+                  <p className="text-2xl font-bold text-red-800">{formatCurrency(stats.todayRevenue)}</p>
+                  <p className="text-xs text-red-500 mt-1">+{stats.completedOrders} orders today</p>
+                </div>
+                <div className="w-12 h-12 bg-red-100 rounded-xl flex items-center justify-center">
+                  <DollarSign className="w-6 h-6 text-red-600" />
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-white rounded-2xl shadow-lg p-6 border-l-4 border-red-600 transform hover:scale-105 transition-all">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-red-600 mb-1">Total Orders</p>
+                  <p className="text-2xl font-bold text-red-800">{stats.totalOrders}</p>
+                  <p className="text-xs text-red-500 mt-1">{stats.pendingOrders} pending</p>
+                </div>
+                <div className="w-12 h-12 bg-red-100 rounded-xl flex items-center justify-center">
+                  <Package className="w-6 h-6 text-red-600" />
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-white rounded-2xl shadow-lg p-6 border-l-4 border-red-600 transform hover:scale-105 transition-all">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-red-600 mb-1">Menu Items</p>
+                  <p className="text-2xl font-bold text-red-800">{menuItems.length}</p>
+                  <p className="text-xs text-red-500 mt-1">{menuItems.filter(i => i.isAvailable !== false).length} available</p>
+                </div>
+                <div className="w-12 h-12 bg-red-100 rounded-xl flex items-center justify-center">
+                  <ShoppingBag className="w-6 h-6 text-red-600" />
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-white rounded-2xl shadow-lg p-6 border-l-4 border-red-600 transform hover:scale-105 transition-all">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-red-600 mb-1">Avg Order Value</p>
+                  <p className="text-2xl font-bold text-red-800">{formatCurrency(stats.averageOrderValue)}</p>
+                  <p className="text-xs text-red-500 mt-1">Per order</p>
+                </div>
+                <div className="w-12 h-12 bg-red-100 rounded-xl flex items-center justify-center">
+                  <TrendingUpIcon className="w-6 h-6 text-red-600" />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Quick Actions */}
+          <div className="flex flex-wrap gap-3 mb-6">
+            <button
+              onClick={() => setShowAddProduct(true)}
+              className="flex items-center space-x-2 px-4 py-2 bg-gradient-to-r from-red-600 to-red-700 text-white rounded-xl hover:from-red-700 hover:to-red-800 transition-all shadow-lg"
+            >
+              <Plus className="w-4 h-4" />
+              <span>Add Product</span>
+            </button>
+            <button
+              onClick={handleQuickFix}
+              className="flex items-center space-x-2 px-4 py-2 bg-red-100 text-red-700 rounded-xl hover:bg-red-200 transition-all"
+            >
+              <Package className="w-4 h-4" />
+              <span>Add Sample Products</span>
+            </button>
+            <button
+              onClick={() => setShowReports(true)}
+              className="flex items-center space-x-2 px-4 py-2 bg-red-100 text-red-700 rounded-xl hover:bg-red-200 transition-all"
+            >
+              <BarChart3 className="w-4 h-4" />
+              <span>View Reports</span>
+            </button>
+            <button
+              onClick={fetchData}
+              className="flex items-center space-x-2 px-4 py-2 bg-red-100 text-red-700 rounded-xl hover:bg-red-200 transition-all"
+            >
+              <RefreshCw className="w-4 h-4" />
+              <span>Refresh</span>
+            </button>
+          </div>
+
+          {/* Main Content Area */}
+          <div className="bg-white rounded-2xl shadow-xl overflow-hidden">
+            {/* Tab Navigation */}
+            <div className="flex border-b border-red-100">
+              {['dashboard', 'orders', 'menu', 'earnings'].map(tab => (
+                <button
+                  key={tab}
+                  onClick={() => setActiveTab(tab)}
+                  className={`flex-1 py-4 px-6 text-sm font-medium transition-all relative ${
+                    activeTab === tab 
+                      ? 'text-red-600 after:absolute after:bottom-0 after:left-0 after:right-0 after:h-0.5 after:bg-red-600' 
+                      : 'text-red-400 hover:text-red-600'
+                  }`}
+                >
+                  <span className="capitalize">{tab}</span>
+                  {tab === 'orders' && stats.pendingOrders > 0 && (
+                    <span className="ml-2 px-2 py-0.5 bg-red-600 text-white text-xs rounded-full">
+                      {stats.pendingOrders}
+                    </span>
+                  )}
+                </button>
+              ))}
+              
+              {/* View Toggle for Menu */}
+              {activeTab === 'menu' && (
+                <div className="flex items-center px-4 border-l border-red-100">
+                  <button
+                    onClick={() => setViewMode('grid')}
+                    className={`p-2 rounded-lg transition-colors ${
+                      viewMode === 'grid' ? 'bg-red-600 text-white' : 'text-red-400 hover:text-red-600'
+                    }`}
+                  >
+                    <Grid className="w-4 h-4" />
+                  </button>
+                  <button
+                    onClick={() => setViewMode('list')}
+                    className={`p-2 rounded-lg transition-colors ${
+                      viewMode === 'list' ? 'bg-red-600 text-white' : 'text-red-400 hover:text-red-600'
+                    }`}
+                  >
+                    <List className="w-4 h-4" />
+                  </button>
+                </div>
+              )}
+            </div>
+
+            <div className="p-6">
+              {/* Dashboard Tab */}
+              {activeTab === 'dashboard' && (
+                <div>
+                  <div className="flex justify-between items-center mb-6">
+                    <h2 className="text-xl font-bold text-red-800">Recent Orders</h2>
+                    <button
+                      onClick={() => setActiveTab('orders')}
+                      className="text-red-600 hover:text-red-700 text-sm flex items-center"
+                    >
+                      View All <ChevronRight className="w-4 h-4 ml-1" />
+                    </button>
+                  </div>
+
+                  {orders.slice(0, 5).length === 0 ? (
+                    <div className="text-center py-12">
+                      <Package className="w-16 h-16 text-red-300 mx-auto mb-4" />
+                      <p className="text-red-600 text-lg">No orders yet</p>
+                      <p className="text-red-400 text-sm mt-2">When customers place orders, they'll appear here</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      {orders.slice(0, 5).map(order => (
+                        <div key={order._id} className="bg-gradient-to-r from-red-50 to-white rounded-xl p-4 border border-red-100 hover:shadow-lg transition-all">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center space-x-4">
+                              <div className="w-12 h-12 bg-red-100 rounded-xl flex items-center justify-center">
+                                <Package className="w-6 h-6 text-red-600" />
                               </div>
-                              <span className={`px-2 py-1 text-xs rounded-full ${
+                              <div>
+                                <h3 className="font-semibold text-red-800">#{order.orderId || order._id.slice(-6)}</h3>
+                                <p className="text-sm text-red-600">{order.user?.name || 'Customer'}</p>
+                                <p className="text-xs text-red-400">{formatDate(order.createdAt)}</p>
+                              </div>
+                            </div>
+                            <div className="text-right">
+                              <p className="text-lg font-bold text-red-800">{formatCurrency(order.total || order.totalAmount)}</p>
+                              <span className={`inline-block px-3 py-1 text-xs rounded-full ${
                                 order.status === 'delivered' || order.status === 'completed' ? 'bg-green-100 text-green-800' :
                                 order.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
-                                order.status === 'cancelled' ? 'bg-red-100 text-red-800' :
-                                'bg-blue-100 text-blue-800'
-                              }`}>{order.status}</span>
+                                order.status === 'preparing' ? 'bg-blue-100 text-blue-800' :
+                                order.status === 'ready' ? 'bg-purple-100 text-purple-800' :
+                                'bg-red-100 text-red-800'
+                              }`}>
+                                {order.status}
+                              </span>
                             </div>
-                            <div className="flex justify-between items-center mt-2">
-                              <span className="text-green-600 font-semibold">{formatCurrency(order.total || order.totalAmount)}</span>
-                              <button onClick={() => { setSelectedOrder(order); setShowOrderDetails(true); }} className="text-orange-600 text-sm flex items-center">
-                                <Eye className="w-4 h-4 mr-1" /> View
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Orders Tab */}
+              {activeTab === 'orders' && (
+                <div>
+                  <div className="flex justify-between items-center mb-6">
+                    <h2 className="text-xl font-bold text-red-800">All Orders</h2>
+                    <div className="flex items-center space-x-2">
+                      <span className="text-sm text-red-600">Total: {orders.length}</span>
+                      <span className="px-3 py-1 bg-yellow-100 text-yellow-800 rounded-full text-xs">
+                        {stats.pendingOrders} pending
+                      </span>
+                      <span className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-xs">
+                        {stats.preparingOrders} preparing
+                      </span>
+                    </div>
+                  </div>
+
+                  {orders.length === 0 ? (
+                    <div className="text-center py-12">
+                      <Package className="w-16 h-16 text-red-300 mx-auto mb-4" />
+                      <p className="text-red-600 text-lg">No orders yet</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      {orders.map(order => (
+                        <div key={order._id} className="bg-white rounded-xl p-4 border border-red-100 hover:shadow-lg transition-all">
+                          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                            <div className="flex-1">
+                              <div className="flex items-center space-x-4 mb-2">
+                                <h3 className="font-semibold text-red-800">#{order.orderId || order._id.slice(-6)}</h3>
+                                <span className={`px-3 py-1 text-xs rounded-full ${
+                                  order.status === 'delivered' || order.status === 'completed' ? 'bg-green-100 text-green-800' :
+                                  order.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                                  order.status === 'preparing' ? 'bg-blue-100 text-blue-800' :
+                                  order.status === 'ready' ? 'bg-purple-100 text-purple-800' :
+                                  'bg-red-100 text-red-800'
+                                }`}>
+                                  {order.status}
+                                </span>
+                                {order.rider && (
+                                  <span className="flex items-center text-xs text-blue-600">
+                                    <Truck className="w-3 h-3 mr-1" />
+                                    {order.rider.name}
+                                  </span>
+                                )}
+                              </div>
+                              <p className="text-sm text-red-600 mb-1">{order.user?.name || 'Customer'} • {formatDate(order.createdAt)}</p>
+                              <p className="text-sm text-red-800 font-medium">{formatCurrency(order.total || order.totalAmount)}</p>
+                              <p className="text-xs text-red-400 mt-1">
+                                {order.items?.length} item{order.items?.length !== 1 ? 's' : ''}
+                              </p>
+                            </div>
+                            <div className="flex flex-wrap gap-2">
+                              <button
+                                onClick={() => {
+                                  setSelectedOrder(order);
+                                  setShowOrderDetails(true);
+                                }}
+                                className="px-4 py-2 bg-red-100 text-red-700 rounded-lg text-sm hover:bg-red-200 transition-colors"
+                              >
+                                Details
+                              </button>
+                              
+                              {order.status === 'pending' && (
+                                <>
+                                  <button
+                                    onClick={() => handleUpdateOrderStatus(order._id, 'confirmed')}
+                                    className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700 transition-colors"
+                                  >
+                                    Accept
+                                  </button>
+                                  <button
+                                    onClick={() => {
+                                      setSelectedOrder(order);
+                                      handleUpdateOrderStatus(order._id, 'cancelled');
+                                    }}
+                                    className="px-4 py-2 bg-red-600 text-white rounded-lg text-sm hover:bg-red-700 transition-colors"
+                                  >
+                                    Reject
+                                  </button>
+                                </>
+                              )}
+
+                              {order.status === 'confirmed' && (
+                                <>
+                                  <button
+                                    onClick={() => handleUpdateOrderStatus(order._id, 'preparing')}
+                                    className="px-4 py-2 bg-purple-600 text-white rounded-lg text-sm hover:bg-purple-700 transition-colors"
+                                  >
+                                    Start Preparing
+                                  </button>
+                                  <button
+                                    onClick={() => {
+                                      setSelectedOrderForRider(order);
+                                      setShowRiderAssignment(true);
+                                    }}
+                                    className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm hover:bg-indigo-700 transition-colors"
+                                  >
+                                    Assign Rider
+                                  </button>
+                                </>
+                              )}
+
+                              {order.status === 'preparing' && (
+                                <button
+                                  onClick={() => handleUpdateOrderStatus(order._id, 'ready')}
+                                  className="px-4 py-2 bg-green-600 text-white rounded-lg text-sm hover:bg-green-700 transition-colors"
+                                >
+                                  Mark Ready
+                                </button>
+                              )}
+
+                              {order.status === 'ready' && !order.rider && (
+                                <button
+                                  onClick={() => {
+                                    setSelectedOrderForRider(order);
+                                    setShowRiderAssignment(true);
+                                  }}
+                                  className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm hover:bg-indigo-700 transition-colors"
+                                >
+                                  Assign Rider
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Menu Tab */}
+              {activeTab === 'menu' && (
+                <div>
+                  <div className="flex justify-between items-center mb-6">
+                    <h2 className="text-xl font-bold text-red-800">Menu Items</h2>
+                    <div className="flex items-center space-x-2">
+                      <span className="text-sm text-red-600">Total: {filteredMenuItems.length}</span>
+                      <button
+                        onClick={() => setShowAddProduct(true)}
+                        className="flex items-center space-x-2 px-4 py-2 bg-gradient-to-r from-red-600 to-red-700 text-white rounded-lg hover:from-red-700 hover:to-red-800 transition-all"
+                      >
+                        <Plus className="w-4 h-4" />
+                        <span>Add Product</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  {filteredMenuItems.length === 0 ? (
+                    <div className="text-center py-12">
+                      <Package className="w-16 h-16 text-red-300 mx-auto mb-4" />
+                      <p className="text-red-600 text-lg">No menu items</p>
+                      <p className="text-red-400 text-sm mt-2">Click "Add Product" to create your first menu item</p>
+                      <button
+                        onClick={handleQuickFix}
+                        className="mt-4 px-6 py-3 bg-gradient-to-r from-red-600 to-red-700 text-white rounded-xl hover:from-red-700 hover:to-red-800 transition-all"
+                      >
+                        Add Sample Products
+                      </button>
+                    </div>
+                  ) : viewMode === 'grid' ? (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                      {filteredMenuItems.map(item => (
+                        <div key={item._id} className="bg-white rounded-xl border border-red-100 overflow-hidden hover:shadow-xl transition-all group">
+                          <div className="relative h-48 bg-gradient-to-br from-red-100 to-red-200">
+                            {item.image ? (
+                              <img src={item.image} alt={item.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300" />
+                            ) : (
+                              <div className="w-full h-full flex items-center justify-center">
+                                <Image className="w-12 h-12 text-red-400" />
+                              </div>
+                            )}
+                            <div className="absolute top-2 right-2">
+                              <button
+                                onClick={() => handleToggleAvailability(item)}
+                                className={`px-3 py-1 rounded-full text-xs font-medium ${
+                                  item.isAvailable !== false 
+                                    ? 'bg-green-100 text-green-800' 
+                                    : 'bg-red-100 text-red-800'
+                                }`}
+                              >
+                                {item.isAvailable !== false ? 'Available' : 'Unavailable'}
                               </button>
                             </div>
                           </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <div className="text-center py-8 text-gray-500">
-                        <Package className="mx-auto w-12 h-12 mb-4 text-gray-300" />
-                        <p>No orders yet</p>
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {/* Orders Tab */}
-                {activeTab === 'orders' && (
-                  <div>
-                    <div className="flex justify-between items-center mb-4">
-                      <h2 className="text-xl font-bold">All Orders ({orders.length})</h2>
-                      <button onClick={fetchData} className="bg-orange-600 text-white px-3 py-2 rounded-lg text-sm flex items-center">
-                        <RefreshCw className="w-4 h-4 mr-1" /> Refresh
-                      </button>
-                    </div>
-                    {orders.length === 0 ? (
-                      <div className="text-center py-8 text-gray-500">
-                        <Package className="mx-auto w-12 h-12 mb-4 text-gray-300" />
-                        <p>No orders yet</p>
-                      </div>
-                    ) : (
-                      <div className="space-y-4">
-                        {orders.map(order => (
-                          <div key={order._id} className="border rounded-lg p-4">
+                          <div className="p-4">
                             <div className="flex justify-between items-start mb-2">
-                              <div>
-                                <h3 className="font-semibold">#{order.orderId || order._id}</h3>
-                                <p className="text-sm text-gray-600">{order.user?.name || 'Customer'} • {formatDate(order.createdAt)}</p>
-                                {order.rider && <p className="text-sm text-blue-600">Rider: {order.rider.name}</p>}
-                              </div>
-                              <span className={`px-2 py-1 text-xs rounded-full ${
-                                order.status === 'delivered' ? 'bg-green-100 text-green-800' :
-                                order.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
-                                'bg-blue-100 text-blue-800'
-                              }`}>{order.status}</span>
+                              <h3 className="font-semibold text-red-800">{item.name}</h3>
+                              <p className="text-lg font-bold text-red-600">{formatCurrency(item.price)}</p>
                             </div>
-                            <div className="flex flex-wrap gap-2">
-                              <button onClick={() => { setSelectedOrder(order); setShowOrderDetails(true); }} className="bg-orange-600 text-white px-3 py-1 rounded text-sm">Details</button>
-                              {order.status === 'pending' && (
-                                <>
-                                  <button onClick={() => handleUpdateOrderStatus(order._id, 'confirmed')} className="bg-blue-600 text-white px-3 py-1 rounded text-sm">Accept</button>
-                                  <button onClick={() => handleRejectOrder(order._id)} className="bg-red-600 text-white px-3 py-1 rounded text-sm">Reject</button>
-                                </>
-                              )}
-                              {order.status === 'confirmed' && (
-                                <>
-                                  <button onClick={() => handleUpdateOrderStatus(order._id, 'preparing')} className="bg-purple-600 text-white px-3 py-1 rounded text-sm">Preparing</button>
-                                  <button onClick={() => { setSelectedOrderForRider(order); setShowRiderAssignment(true); }} className="bg-indigo-600 text-white px-3 py-1 rounded text-sm">Assign Rider</button>
-                                </>
-                              )}
-                              {order.status === 'preparing' && (
-                                <button onClick={() => handleUpdateOrderStatus(order._id, 'ready')} className="bg-green-600 text-white px-3 py-1 rounded text-sm">Mark Ready</button>
-                              )}
-                              {order.status === 'ready' && !order.rider && (
-                                <button onClick={() => { setSelectedOrderForRider(order); setShowRiderAssignment(true); }} className="bg-indigo-600 text-white px-3 py-1 rounded text-sm">Assign Rider</button>
-                              )}
+                            <p className="text-sm text-red-600 mb-2 capitalize">{item.category}</p>
+                            {item.description && (
+                              <p className="text-xs text-red-400 mb-3 line-clamp-2">{item.description}</p>
+                            )}
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center space-x-2 text-xs text-red-500">
+                                <Clock className="w-3 h-3" />
+                                <span>{item.preparationTime || 15} min</span>
+                              </div>
+                              <div className="flex space-x-2">
+                                <button
+                                  onClick={() => {
+                                    setEditingProduct(item);
+                                    setShowEditProduct(true);
+                                  }}
+                                  className="p-2 bg-blue-100 text-blue-600 rounded-lg hover:bg-blue-200 transition-colors"
+                                >
+                                  <Edit className="w-4 h-4" />
+                                </button>
+                                <button
+                                  onClick={() => handleDeleteProduct(item._id)}
+                                  className="p-2 bg-red-100 text-red-600 rounded-lg hover:bg-red-200 transition-colors"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </button>
+                              </div>
                             </div>
                           </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {/* Menu Tab */}
-                {activeTab === 'menu' && (
-                  <div>
-                    <div className="flex justify-between items-center mb-4">
-                      <h2 className="text-xl font-bold">Menu Items ({menuItems.length})</h2>
-                      <div className="flex gap-2">
-                        <button onClick={() => setShowAddProduct(true)} className="bg-orange-600 text-white px-3 py-2 rounded-lg text-sm flex items-center">
-                          <Plus className="w-4 h-4 mr-1" /> Add
-                        </button>
-                        <button onClick={handleQuickFix} className="bg-purple-600 text-white px-3 py-2 rounded-lg text-sm flex items-center">
-                          <Plus className="w-4 h-4 mr-1" /> Samples
-                        </button>
-                      </div>
+                        </div>
+                      ))}
                     </div>
-                    {menuItems.length === 0 ? (
-                      <div className="text-center py-8 text-gray-500">
-                        <Package className="mx-auto w-12 h-12 mb-4 text-gray-300" />
-                        <p>No menu items</p>
-                        <button onClick={handleQuickFix} className="mt-4 bg-purple-600 text-white px-4 py-2 rounded-lg text-sm">Add Sample Products</button>
-                      </div>
-                    ) : (
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {menuItems.map(item => (
-                          <div key={item._id} className="border rounded-lg p-4">
-                            <div className="flex items-start space-x-3 mb-2">
+                  ) : (
+                    <div className="space-y-4">
+                      {filteredMenuItems.map(item => (
+                        <div key={item._id} className="bg-white rounded-xl p-4 border border-red-100 hover:shadow-lg transition-all">
+                          <div className="flex items-center space-x-4">
+                            <div className="w-20 h-20 bg-gradient-to-br from-red-100 to-red-200 rounded-lg overflow-hidden flex-shrink-0">
                               {item.image ? (
-                                <img src={item.image} alt={item.name} className="w-16 h-16 object-cover rounded-lg" />
+                                <img src={item.image} alt={item.name} className="w-full h-full object-cover" />
                               ) : (
-                                <div className="w-16 h-16 bg-gray-200 rounded-lg flex items-center justify-center">
-                                  <Image className="text-gray-400 w-6 h-6" />
+                                <div className="w-full h-full flex items-center justify-center">
+                                  <Image className="w-8 h-8 text-red-400" />
                                 </div>
                               )}
-                              <div className="flex-1">
-                                <div className="flex justify-between items-start">
-                                  <h3 className="font-semibold">{item.name}</h3>
-                                  <button onClick={() => handleToggleAvailability(item)} className={`text-xs px-2 py-1 rounded ${item.isAvailable !== false ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
-                                    {item.isAvailable !== false ? 'Available' : 'Unavailable'}
-                                  </button>
-                                </div>
-                                <p className="text-sm text-gray-600 capitalize">{item.category}</p>
+                            </div>
+                            <div className="flex-1">
+                              <div className="flex items-center justify-between mb-2">
+                                <h3 className="font-semibold text-red-800">{item.name}</h3>
+                                <p className="text-lg font-bold text-red-600">{formatCurrency(item.price)}</p>
+                              </div>
+                              <div className="flex items-center space-x-4 text-sm">
+                                <span className="text-red-600 capitalize">{item.category}</span>
+                                <span className="flex items-center text-red-500">
+                                  <Clock className="w-3 h-3 mr-1" />
+                                  {item.preparationTime || 15} min
+                                </span>
+                                <button
+                                  onClick={() => handleToggleAvailability(item)}
+                                  className={`px-2 py-1 rounded-full text-xs ${
+                                    item.isAvailable !== false 
+                                      ? 'bg-green-100 text-green-800' 
+                                      : 'bg-red-100 text-red-800'
+                                  }`}
+                                >
+                                  {item.isAvailable !== false ? 'Available' : 'Unavailable'}
+                                </button>
                               </div>
                             </div>
-                            <div className="flex justify-between items-center">
-                              <div>
-                                <p className="text-lg font-bold text-green-600">{formatCurrency(item.price)}</p>
-                                {item.preparationTime && <p className="text-xs text-gray-500">{item.preparationTime} min</p>}
-                              </div>
-                              <div className="flex gap-2">
-                                <button onClick={() => { setEditingProduct(item); setShowEditProduct(true); }} className="bg-blue-600 text-white px-3 py-1 rounded text-sm">Edit</button>
-                                <button onClick={() => handleDeleteProduct(item._id)} className="bg-red-600 text-white px-3 py-1 rounded text-sm">Delete</button>
-                              </div>
+                            <div className="flex space-x-2">
+                              <button
+                                onClick={() => {
+                                  setEditingProduct(item);
+                                  setShowEditProduct(true);
+                                }}
+                                className="p-2 bg-blue-100 text-blue-600 rounded-lg hover:bg-blue-200 transition-colors"
+                              >
+                                <Edit className="w-4 h-4" />
+                              </button>
+                              <button
+                                onClick={() => handleDeleteProduct(item._id)}
+                                className="p-2 bg-red-100 text-red-600 rounded-lg hover:bg-red-200 transition-colors"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
                             </div>
                           </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
 
-                {/* Earnings Tab */}
-                {activeTab === 'earnings' && (
-                  <div>
-                    <h2 className="text-xl font-bold mb-4">Earnings</h2>
-                    {earningsArray.length === 0 ? (
-                      <div className="text-center py-8 text-gray-500">
-                        <DollarSign className="mx-auto w-12 h-12 mb-4 text-gray-300" />
-                        <p>No earnings data</p>
-                      </div>
-                    ) : (
-                      <div className="space-y-4">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          {earningsArray.map((earning, idx) => (
-                            <div key={idx} className="bg-gray-50 rounded-lg p-4">
-                              <p className="text-sm text-gray-600">{earning.date}</p>
-                              <p className="text-xl font-bold">{formatCurrency(earning.revenue)}</p>
-                              <p className="text-xs text-gray-500">{earning.orders} orders</p>
-                            </div>
-                          ))}
-                        </div>
-                        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                          <h4 className="font-semibold text-blue-900">Total Revenue</h4>
-                          <p className="text-2xl font-bold text-blue-900">{formatCurrency(stats.totalRevenue)}</p>
-                          <p className="text-sm text-blue-700">{stats.completedOrders} completed orders</p>
-                        </div>
-                      </div>
-                    )}
+              {/* Earnings Tab */}
+              {activeTab === 'earnings' && (
+                <div>
+                  <h2 className="text-xl font-bold text-red-800 mb-6">Earnings Overview</h2>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                    <div className="bg-gradient-to-br from-red-600 to-red-700 rounded-xl p-6 text-white">
+                      <p className="text-red-100 mb-2">Total Revenue</p>
+                      <p className="text-3xl font-bold">{formatCurrency(stats.totalRevenue)}</p>
+                      <p className="text-red-200 text-sm mt-2">{stats.completedOrders} completed orders</p>
+                    </div>
+                    
+                    <div className="bg-white rounded-xl p-6 border border-red-100">
+                      <p className="text-red-600 mb-2">This Week</p>
+                      <p className="text-2xl font-bold text-red-800">
+                        {formatCurrency(orders
+                          .filter(o => {
+                            const date = new Date(o.createdAt);
+                            const weekAgo = new Date();
+                            weekAgo.setDate(weekAgo.getDate() - 7);
+                            return date >= weekAgo && ['delivered', 'completed'].includes(o.status);
+                          })
+                          .reduce((sum, o) => sum + (o.total || o.totalAmount || 0), 0)
+                        )}
+                      </p>
+                    </div>
+                    
+                    <div className="bg-white rounded-xl p-6 border border-red-100">
+                      <p className="text-red-600 mb-2">This Month</p>
+                      <p className="text-2xl font-bold text-red-800">
+                        {formatCurrency(orders
+                          .filter(o => {
+                            const date = new Date(o.createdAt);
+                            const monthAgo = new Date();
+                            monthAgo.setMonth(monthAgo.getMonth() - 1);
+                            return date >= monthAgo && ['delivered', 'completed'].includes(o.status);
+                          })
+                          .reduce((sum, o) => sum + (o.total || o.totalAmount || 0), 0)
+                        )}
+                      </p>
+                    </div>
                   </div>
-                )}
-              </div>
+
+                  <h3 className="font-semibold text-red-800 mb-4">Recent Earnings</h3>
+                  <div className="space-y-4">
+                    {orders
+                      .filter(o => ['delivered', 'completed'].includes(o.status))
+                      .slice(0, 10)
+                      .map(order => (
+                        <div key={order._id} className="bg-white rounded-xl p-4 border border-red-100">
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <p className="font-medium text-red-800">#{order.orderId || order._id.slice(-6)}</p>
+                              <p className="text-sm text-red-600">{formatDate(order.createdAt)}</p>
+                            </div>
+                            <div className="text-right">
+                              <p className="text-lg font-bold text-red-800">{formatCurrency(order.total || order.totalAmount)}</p>
+                              <p className="text-xs text-red-500">{order.items?.length} items</p>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -1145,28 +1506,59 @@ const RestaurantDashboard = () => {
       {/* Add Product Modal */}
       {showAddProduct && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg shadow-lg max-w-md w-full max-h-[90vh] overflow-y-auto">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full max-h-[90vh] overflow-y-auto">
             <div className="p-6">
-              <div className="flex justify-between items-center mb-4">
-                <h3 className="text-lg font-bold">Add Product</h3>
-                <button onClick={() => setShowAddProduct(false)} className="text-gray-500"><X className="w-5 h-5" /></button>
+              <div className="flex justify-between items-center mb-6">
+                <h3 className="text-xl font-bold text-red-800">Add New Product</h3>
+                <button 
+                  onClick={() => setShowAddProduct(false)} 
+                  className="p-2 hover:bg-red-50 rounded-lg transition-colors"
+                >
+                  <X className="w-5 h-5 text-red-600" />
+                </button>
               </div>
               <form onSubmit={handleAddProduct} className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium mb-1">Image URL</label>
-                  <input type="url" value={newProduct.image} onChange={(e) => setNewProduct({...newProduct, image: e.target.value})} className="w-full px-3 py-2 border rounded-lg text-sm" placeholder="https://..." />
+                  <label className="block text-sm font-medium text-red-700 mb-1">Image URL</label>
+                  <input
+                    type="url"
+                    value={newProduct.image}
+                    onChange={(e) => setNewProduct({...newProduct, image: e.target.value})}
+                    className="w-full px-4 py-2 border border-red-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                    placeholder="https://example.com/image.jpg"
+                  />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium mb-1">Name *</label>
-                  <input type="text" required value={newProduct.name} onChange={(e) => setNewProduct({...newProduct, name: e.target.value})} className="w-full px-3 py-2 border rounded-lg text-sm" />
+                  <label className="block text-sm font-medium text-red-700 mb-1">Name *</label>
+                  <input
+                    type="text"
+                    required
+                    value={newProduct.name}
+                    onChange={(e) => setNewProduct({...newProduct, name: e.target.value})}
+                    className="w-full px-4 py-2 border border-red-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                    placeholder="e.g., Classic Burger"
+                  />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium mb-1">Price *</label>
-                  <input type="number" required value={newProduct.price} onChange={(e) => setNewProduct({...newProduct, price: e.target.value})} className="w-full px-3 py-2 border rounded-lg text-sm" step="0.01" min="0" />
+                  <label className="block text-sm font-medium text-red-700 mb-1">Price *</label>
+                  <input
+                    type="number"
+                    required
+                    value={newProduct.price}
+                    onChange={(e) => setNewProduct({...newProduct, price: e.target.value})}
+                    className="w-full px-4 py-2 border border-red-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                    step="0.01"
+                    min="0"
+                    placeholder="0.00"
+                  />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium mb-1">Category</label>
-                  <select value={newProduct.category} onChange={(e) => setNewProduct({...newProduct, category: e.target.value})} className="w-full px-3 py-2 border rounded-lg text-sm">
+                  <label className="block text-sm font-medium text-red-700 mb-1">Category</label>
+                  <select
+                    value={newProduct.category}
+                    onChange={(e) => setNewProduct({...newProduct, category: e.target.value})}
+                    className="w-full px-4 py-2 border border-red-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                  >
                     <option value="main course">Main Course</option>
                     <option value="appetizer">Appetizer</option>
                     <option value="dessert">Dessert</option>
@@ -1175,17 +1567,50 @@ const RestaurantDashboard = () => {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium mb-1">Prep Time (min)</label>
-                  <input type="number" value={newProduct.preparationTime} onChange={(e) => setNewProduct({...newProduct, preparationTime: e.target.value})} className="w-full px-3 py-2 border rounded-lg text-sm" />
+                  <label className="block text-sm font-medium text-red-700 mb-1">Preparation Time (minutes)</label>
+                  <input
+                    type="number"
+                    value={newProduct.preparationTime}
+                    onChange={(e) => setNewProduct({...newProduct, preparationTime: e.target.value})}
+                    className="w-full px-4 py-2 border border-red-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                    min="0"
+                    placeholder="15"
+                  />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium mb-1">Description</label>
-                  <textarea value={newProduct.description} onChange={(e) => setNewProduct({...newProduct, description: e.target.value})} rows="2" className="w-full px-3 py-2 border rounded-lg text-sm" />
+                  <label className="block text-sm font-medium text-red-700 mb-1">Description</label>
+                  <textarea
+                    value={newProduct.description}
+                    onChange={(e) => setNewProduct({...newProduct, description: e.target.value})}
+                    rows="3"
+                    className="w-full px-4 py-2 border border-red-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                    placeholder="Describe your product..."
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-red-700 mb-1">Ingredients</label>
+                  <textarea
+                    value={newProduct.ingredients}
+                    onChange={(e) => setNewProduct({...newProduct, ingredients: e.target.value})}
+                    rows="2"
+                    className="w-full px-4 py-2 border border-red-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                    placeholder="List ingredients..."
+                  />
                 </div>
                 <div className="flex gap-3 pt-4">
-                  <button type="button" onClick={() => setShowAddProduct(false)} className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-sm">Cancel</button>
-                  <button type="submit" disabled={loading} className="flex-1 px-4 py-2 bg-orange-600 text-white rounded-lg text-sm disabled:opacity-50">
-                    {loading ? 'Adding...' : 'Add'}
+                  <button
+                    type="button"
+                    onClick={() => setShowAddProduct(false)}
+                    className="flex-1 px-4 py-2 border border-red-200 text-red-700 rounded-lg hover:bg-red-50 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={loading}
+                    className="flex-1 px-4 py-2 bg-gradient-to-r from-red-600 to-red-700 text-white rounded-lg hover:from-red-700 hover:to-red-800 transition-all disabled:opacity-50"
+                  >
+                    {loading ? 'Adding...' : 'Add Product'}
                   </button>
                 </div>
               </form>
@@ -1197,28 +1622,59 @@ const RestaurantDashboard = () => {
       {/* Edit Product Modal */}
       {showEditProduct && editingProduct && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg shadow-lg max-w-md w-full max-h-[90vh] overflow-y-auto">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full max-h-[90vh] overflow-y-auto">
             <div className="p-6">
-              <div className="flex justify-between items-center mb-4">
-                <h3 className="text-lg font-bold">Edit Product</h3>
-                <button onClick={() => { setShowEditProduct(false); setEditingProduct(null); }} className="text-gray-500"><X className="w-5 h-5" /></button>
+              <div className="flex justify-between items-center mb-6">
+                <h3 className="text-xl font-bold text-red-800">Edit Product</h3>
+                <button 
+                  onClick={() => {
+                    setShowEditProduct(false);
+                    setEditingProduct(null);
+                  }} 
+                  className="p-2 hover:bg-red-50 rounded-lg transition-colors"
+                >
+                  <X className="w-5 h-5 text-red-600" />
+                </button>
               </div>
               <form onSubmit={handleEditProduct} className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium mb-1">Image URL</label>
-                  <input type="url" value={editingProduct.image} onChange={(e) => setEditingProduct({...editingProduct, image: e.target.value})} className="w-full px-3 py-2 border rounded-lg text-sm" />
+                  <label className="block text-sm font-medium text-red-700 mb-1">Image URL</label>
+                  <input
+                    type="url"
+                    value={editingProduct.image}
+                    onChange={(e) => setEditingProduct({...editingProduct, image: e.target.value})}
+                    className="w-full px-4 py-2 border border-red-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                  />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium mb-1">Name *</label>
-                  <input type="text" required value={editingProduct.name} onChange={(e) => setEditingProduct({...editingProduct, name: e.target.value})} className="w-full px-3 py-2 border rounded-lg text-sm" />
+                  <label className="block text-sm font-medium text-red-700 mb-1">Name *</label>
+                  <input
+                    type="text"
+                    required
+                    value={editingProduct.name}
+                    onChange={(e) => setEditingProduct({...editingProduct, name: e.target.value})}
+                    className="w-full px-4 py-2 border border-red-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                  />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium mb-1">Price *</label>
-                  <input type="number" required value={editingProduct.price} onChange={(e) => setEditingProduct({...editingProduct, price: e.target.value})} className="w-full px-3 py-2 border rounded-lg text-sm" step="0.01" min="0" />
+                  <label className="block text-sm font-medium text-red-700 mb-1">Price *</label>
+                  <input
+                    type="number"
+                    required
+                    value={editingProduct.price}
+                    onChange={(e) => setEditingProduct({...editingProduct, price: e.target.value})}
+                    className="w-full px-4 py-2 border border-red-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                    step="0.01"
+                    min="0"
+                  />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium mb-1">Category</label>
-                  <select value={editingProduct.category} onChange={(e) => setEditingProduct({...editingProduct, category: e.target.value})} className="w-full px-3 py-2 border rounded-lg text-sm">
+                  <label className="block text-sm font-medium text-red-700 mb-1">Category</label>
+                  <select
+                    value={editingProduct.category}
+                    onChange={(e) => setEditingProduct({...editingProduct, category: e.target.value})}
+                    className="w-full px-4 py-2 border border-red-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                  >
                     <option value="main course">Main Course</option>
                     <option value="appetizer">Appetizer</option>
                     <option value="dessert">Dessert</option>
@@ -1226,14 +1682,45 @@ const RestaurantDashboard = () => {
                     <option value="side dish">Side Dish</option>
                   </select>
                 </div>
+                <div>
+                  <label className="block text-sm font-medium text-red-700 mb-1">Preparation Time (minutes)</label>
+                  <input
+                    type="number"
+                    value={editingProduct.preparationTime}
+                    onChange={(e) => setEditingProduct({...editingProduct, preparationTime: e.target.value})}
+                    className="w-full px-4 py-2 border border-red-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                    min="0"
+                  />
+                </div>
                 <div className="flex items-center gap-2">
-                  <input type="checkbox" id="isAvailable" checked={editingProduct.isAvailable !== false} onChange={(e) => setEditingProduct({...editingProduct, isAvailable: e.target.checked})} className="w-4 h-4" />
-                  <label htmlFor="isAvailable" className="text-sm">Available for ordering</label>
+                  <input
+                    type="checkbox"
+                    id="isAvailable"
+                    checked={editingProduct.isAvailable !== false}
+                    onChange={(e) => setEditingProduct({...editingProduct, isAvailable: e.target.checked})}
+                    className="w-4 h-4 text-red-600 focus:ring-red-500 border-red-300 rounded"
+                  />
+                  <label htmlFor="isAvailable" className="text-sm text-red-700">
+                    Available for ordering
+                  </label>
                 </div>
                 <div className="flex gap-3 pt-4">
-                  <button type="button" onClick={() => { setShowEditProduct(false); setEditingProduct(null); }} className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-sm">Cancel</button>
-                  <button type="submit" disabled={loading} className="flex-1 px-4 py-2 bg-orange-600 text-white rounded-lg text-sm disabled:opacity-50">
-                    {loading ? 'Saving...' : 'Save'}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowEditProduct(false);
+                      setEditingProduct(null);
+                    }}
+                    className="flex-1 px-4 py-2 border border-red-200 text-red-700 rounded-lg hover:bg-red-50 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={loading}
+                    className="flex-1 px-4 py-2 bg-gradient-to-r from-red-600 to-red-700 text-white rounded-lg hover:from-red-700 hover:to-red-800 transition-all disabled:opacity-50"
+                  >
+                    {loading ? 'Saving...' : 'Save Changes'}
                   </button>
                 </div>
               </form>
@@ -1245,42 +1732,62 @@ const RestaurantDashboard = () => {
       {/* Reports Modal */}
       {showReports && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg shadow-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
             <div className="p-6">
-              <div className="flex justify-between items-center mb-4">
-                <h3 className="text-xl font-bold">Sales Reports</h3>
-                <button onClick={() => setShowReports(false)} className="text-gray-500"><X className="w-6 h-6" /></button>
+              <div className="flex justify-between items-center mb-6">
+                <h3 className="text-2xl font-bold text-red-800">Sales Reports</h3>
+                <button 
+                  onClick={() => setShowReports(false)} 
+                  className="p-2 hover:bg-red-50 rounded-lg transition-colors"
+                >
+                  <X className="w-6 h-6 text-red-600" />
+                </button>
               </div>
-              <div className="flex gap-2 mb-4">
+
+              <div className="flex flex-wrap gap-2 mb-6">
                 {['today', 'week', 'month', 'all'].map(period => (
-                  <button key={period} onClick={() => setReportPeriod(period)} className={`px-4 py-2 rounded-lg text-sm ${reportPeriod === period ? 'bg-orange-600 text-white' : 'bg-gray-200'}`}>
+                  <button
+                    key={period}
+                    onClick={() => setReportPeriod(period)}
+                    className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                      reportPeriod === period 
+                        ? 'bg-gradient-to-r from-red-600 to-red-700 text-white shadow-lg' 
+                        : 'bg-red-100 text-red-700 hover:bg-red-200'
+                    }`}
+                  >
                     {period.charAt(0).toUpperCase() + period.slice(1)}
                   </button>
                 ))}
               </div>
+
               {salesReport.totalOrders === 0 ? (
-                <div className="text-center py-8 text-gray-500">
-                  <BarChart3 className="mx-auto w-12 h-12 mb-4 text-gray-300" />
-                  <p>No sales data for this period</p>
+                <div className="text-center py-12">
+                  <BarChart3 className="w-16 h-16 text-red-300 mx-auto mb-4" />
+                  <p className="text-red-600 text-lg">No sales data for this period</p>
                 </div>
               ) : (
-                <div className="space-y-4">
-                  <div className="grid grid-cols-3 gap-4">
-                    <div className="bg-blue-50 p-4 rounded-lg">
-                      <p className="text-sm text-blue-700">Revenue</p>
-                      <p className="text-2xl font-bold text-blue-900">{formatCurrency(salesReport.totalRevenue)}</p>
+                <div className="space-y-6">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="bg-gradient-to-br from-red-600 to-red-700 rounded-xl p-6 text-white">
+                      <p className="text-red-100 text-sm mb-1">Total Revenue</p>
+                      <p className="text-2xl font-bold">{formatCurrency(salesReport.totalRevenue)}</p>
                     </div>
-                    <div className="bg-green-50 p-4 rounded-lg">
-                      <p className="text-sm text-green-700">Orders</p>
-                      <p className="text-2xl font-bold text-green-900">{salesReport.totalOrders}</p>
+                    <div className="bg-white rounded-xl p-6 border border-red-100">
+                      <p className="text-red-600 text-sm mb-1">Total Orders</p>
+                      <p className="text-2xl font-bold text-red-800">{salesReport.totalOrders}</p>
                     </div>
-                    <div className="bg-purple-50 p-4 rounded-lg">
-                      <p className="text-sm text-purple-700">Avg Order</p>
-                      <p className="text-2xl font-bold text-purple-900">{formatCurrency(salesReport.averageOrderValue)}</p>
+                    <div className="bg-white rounded-xl p-6 border border-red-100">
+                      <p className="text-red-600 text-sm mb-1">Average Order</p>
+                      <p className="text-2xl font-bold text-red-800">{formatCurrency(salesReport.averageOrderValue)}</p>
                     </div>
                   </div>
-                  <button onClick={() => exportReportToCSV(salesReport)} className="bg-green-600 text-white px-4 py-2 rounded-lg text-sm flex items-center">
-                    <Download className="w-4 h-4 mr-2" /> Export CSV
+
+                  <button
+                    onClick={() => exportReportToCSV(salesReport)}
+                    className="flex items-center space-x-2 px-6 py-3 bg-gradient-to-r from-green-600 to-green-700 text-white rounded-xl hover:from-green-700 hover:to-green-800 transition-all"
+                  >
+                    <Download className="w-4 h-4" />
+                    <span>Export as CSV</span>
                   </button>
                 </div>
               )}
@@ -1292,30 +1799,50 @@ const RestaurantDashboard = () => {
       {/* Rider Assignment Modal */}
       {showRiderAssignment && selectedOrderForRider && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg shadow-lg max-w-md w-full max-h-[90vh] overflow-y-auto">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full max-h-[90vh] overflow-y-auto">
             <div className="p-6">
-              <div className="flex justify-between items-center mb-4">
-                <h3 className="text-lg font-bold">Assign Rider</h3>
-                <button onClick={() => { setShowRiderAssignment(false); setSelectedOrderForRider(null); }} className="text-gray-500"><X className="w-5 h-5" /></button>
+              <div className="flex justify-between items-center mb-6">
+                <h3 className="text-xl font-bold text-red-800">Assign Rider</h3>
+                <button 
+                  onClick={() => {
+                    setShowRiderAssignment(false);
+                    setSelectedOrderForRider(null);
+                  }} 
+                  className="p-2 hover:bg-red-50 rounded-lg transition-colors"
+                >
+                  <X className="w-5 h-5 text-red-600" />
+                </button>
               </div>
-              <div className="bg-blue-50 p-3 rounded-lg mb-4 text-sm">
-                <p className="font-medium">Order #{selectedOrderForRider.orderId || selectedOrderForRider._id}</p>
-                <p>Customer: {selectedOrderForRider.user?.name || 'Customer'}</p>
+
+              <div className="bg-gradient-to-r from-red-50 to-white rounded-xl p-4 mb-6 border border-red-100">
+                <p className="font-medium text-red-800 mb-1">Order #{selectedOrderForRider.orderId || selectedOrderForRider._id.slice(-6)}</p>
+                <p className="text-sm text-red-600">Customer: {selectedOrderForRider.user?.name || 'Customer'}</p>
+                <p className="text-sm text-red-600">Total: {formatCurrency(selectedOrderForRider.total || selectedOrderForRider.totalAmount)}</p>
               </div>
+
               {availableRiders.filter(r => r.status === 'online').length === 0 ? (
-                <div className="text-center py-8 text-gray-500">
-                  <Truck className="mx-auto w-12 h-12 mb-4 text-gray-300" />
-                  <p>No riders available</p>
+                <div className="text-center py-8">
+                  <Truck className="w-12 h-12 text-red-300 mx-auto mb-4" />
+                  <p className="text-red-600">No riders available</p>
+                  <p className="text-sm text-red-400 mt-2">Check back later</p>
                 </div>
               ) : (
                 <div className="space-y-3">
                   {availableRiders.filter(r => r.status === 'online').map(rider => (
-                    <div key={rider._id} className="border rounded-lg p-3 flex justify-between items-center">
-                      <div>
-                        <p className="font-medium">{rider.name}</p>
-                        <p className="text-sm text-gray-600">{rider.phone}</p>
+                    <div key={rider._id} className="bg-white rounded-xl p-4 border border-red-100 hover:shadow-lg transition-all">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="font-medium text-red-800">{rider.name}</p>
+                          <p className="text-sm text-red-600">{rider.phone}</p>
+                          <p className="text-xs text-green-600 mt-1">Online</p>
+                        </div>
+                        <button
+                          onClick={() => handleAssignRider(selectedOrderForRider._id, rider._id)}
+                          className="px-4 py-2 bg-gradient-to-r from-red-600 to-red-700 text-white rounded-lg hover:from-red-700 hover:to-red-800 transition-all"
+                        >
+                          Assign
+                        </button>
                       </div>
-                      <button onClick={() => handleAssignRider(selectedOrderForRider._id, rider._id)} className="bg-orange-600 text-white px-4 py-2 rounded-lg text-sm">Assign</button>
                     </div>
                   ))}
                 </div>
@@ -1328,59 +1855,184 @@ const RestaurantDashboard = () => {
       {/* Profile Modal */}
       {showProfile && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg shadow-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
             <div className="p-6">
-              <div className="flex justify-between items-center mb-4">
-                <h3 className="text-xl font-bold">Edit Profile</h3>
-                <button onClick={() => setShowProfile(false)} className="text-gray-500"><X className="w-6 h-6" /></button>
+              <div className="flex justify-between items-center mb-6">
+                <h3 className="text-2xl font-bold text-red-800">Edit Profile</h3>
+                <button 
+                  onClick={() => setShowProfile(false)} 
+                  className="p-2 hover:bg-red-50 rounded-lg transition-colors"
+                >
+                  <X className="w-6 h-6 text-red-600" />
+                </button>
               </div>
+
               <form onSubmit={handleUpdateProfile} className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium mb-1">Name *</label>
-                    <input type="text" required value={profileData.name} onChange={(e) => setProfileData({...profileData, name: e.target.value})} className="w-full px-3 py-2 border rounded-lg text-sm" />
+                    <label className="block text-sm font-medium text-red-700 mb-1">Restaurant Name *</label>
+                    <input
+                      type="text"
+                      required
+                      value={profileData.name}
+                      onChange={(e) => setProfileData({...profileData, name: e.target.value})}
+                      className="w-full px-4 py-2 border border-red-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                    />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium mb-1">Cuisine *</label>
-                    <input type="text" required value={profileData.cuisine} onChange={(e) => setProfileData({...profileData, cuisine: e.target.value})} className="w-full px-3 py-2 border rounded-lg text-sm" />
+                    <label className="block text-sm font-medium text-red-700 mb-1">Cuisine Type *</label>
+                    <input
+                      type="text"
+                      required
+                      value={profileData.cuisine}
+                      onChange={(e) => setProfileData({...profileData, cuisine: e.target.value})}
+                      className="w-full px-4 py-2 border border-red-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                      placeholder="e.g., Italian, Japanese, Filipino"
+                    />
                   </div>
                 </div>
-                <div className="grid grid-cols-2 gap-4">
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium mb-1">Email *</label>
-                    <input type="email" required value={profileData.email} onChange={(e) => setProfileData({...profileData, email: e.target.value})} className="w-full px-3 py-2 border rounded-lg text-sm" />
+                    <label className="block text-sm font-medium text-red-700 mb-1">Email *</label>
+                    <input
+                      type="email"
+                      required
+                      value={profileData.email}
+                      onChange={(e) => setProfileData({...profileData, email: e.target.value})}
+                      className="w-full px-4 py-2 border border-red-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                    />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium mb-1">Phone *</label>
-                    <input type="tel" required value={profileData.phone} onChange={(e) => setProfileData({...profileData, phone: e.target.value})} className="w-full px-3 py-2 border rounded-lg text-sm" />
+                    <label className="block text-sm font-medium text-red-700 mb-1">Phone *</label>
+                    <input
+                      type="tel"
+                      required
+                      value={profileData.phone}
+                      onChange={(e) => setProfileData({...profileData, phone: e.target.value})}
+                      className="w-full px-4 py-2 border border-red-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                    />
                   </div>
                 </div>
+
                 <div>
-                  <label className="block text-sm font-medium mb-1">Address *</label>
-                  <textarea required value={profileData.address} onChange={(e) => setProfileData({...profileData, address: e.target.value})} rows="2" className="w-full px-3 py-2 border rounded-lg text-sm" />
+                  <label className="block text-sm font-medium text-red-700 mb-1">Address *</label>
+                  <textarea
+                    required
+                    value={profileData.address}
+                    onChange={(e) => setProfileData({...profileData, address: e.target.value})}
+                    rows="2"
+                    className="w-full px-4 py-2 border border-red-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                  />
                 </div>
-                <div className="bg-blue-50 p-4 rounded-lg">
+
+                <div>
+                  <label className="block text-sm font-medium text-red-700 mb-1">Description</label>
+                  <textarea
+                    value={profileData.description}
+                    onChange={(e) => setProfileData({...profileData, description: e.target.value})}
+                    rows="3"
+                    className="w-full px-4 py-2 border border-red-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                    placeholder="Tell customers about your restaurant..."
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-red-700 mb-1">Delivery Time</label>
+                    <input
+                      type="text"
+                      value={profileData.deliveryTime}
+                      onChange={(e) => setProfileData({...profileData, deliveryTime: e.target.value})}
+                      className="w-full px-4 py-2 border border-red-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                      placeholder="e.g., 20-30 min"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-red-700 mb-1">Delivery Fee</label>
+                    <input
+                      type="number"
+                      value={profileData.deliveryFee}
+                      onChange={(e) => setProfileData({...profileData, deliveryFee: e.target.value})}
+                      className="w-full px-4 py-2 border border-red-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                      step="0.01"
+                      min="0"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-red-700 mb-1">Opening Hours</label>
+                  <div className="flex items-center space-x-2">
+                    <input
+                      type="time"
+                      value={profileData.openingHours.open}
+                      onChange={(e) => setProfileData({
+                        ...profileData, 
+                        openingHours: { ...profileData.openingHours, open: e.target.value }
+                      })}
+                      className="flex-1 px-4 py-2 border border-red-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                    />
+                    <span className="text-red-600">to</span>
+                    <input
+                      type="time"
+                      value={profileData.openingHours.close}
+                      onChange={(e) => setProfileData({
+                        ...profileData, 
+                        openingHours: { ...profileData.openingHours, close: e.target.value }
+                      })}
+                      className="flex-1 px-4 py-2 border border-red-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                    />
+                  </div>
+                </div>
+
+                <div className="bg-gradient-to-r from-red-50 to-white rounded-xl p-4">
                   <div className="flex justify-between items-center mb-2">
                     <div>
-                      <p className="font-medium text-blue-900">GPS Location</p>
-                      <p className="text-sm text-blue-700">Set exact location for delivery</p>
+                      <p className="font-medium text-red-800">Location</p>
+                      <p className="text-sm text-red-600">Set your restaurant location for delivery</p>
                     </div>
-                    <button type="button" onClick={getCurrentLocation} disabled={locationLoading} className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm flex items-center disabled:opacity-50">
-                      {locationLoading ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" /> : <Crosshair className="w-4 h-4 mr-2" />}
-                      {locationLoading ? 'Getting...' : 'Get Location'}
+                    <button
+                      type="button"
+                      onClick={getCurrentLocation}
+                      disabled={locationLoading}
+                      className="flex items-center space-x-2 px-4 py-2 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-lg hover:from-blue-700 hover:to-blue-800 transition-all disabled:opacity-50"
+                    >
+                      {locationLoading ? (
+                        <>
+                          <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                          <span>Getting...</span>
+                        </>
+                      ) : (
+                        <>
+                          <Crosshair className="w-4 h-4" />
+                          <span>Get Current Location</span>
+                        </>
+                      )}
                     </button>
                   </div>
                   {profileData.location?.coordinates?.[0] !== 0 && (
-                    <div className="bg-white p-2 rounded text-xs font-mono">
-                      Lat: {profileData.location.coordinates[1]?.toFixed(6)}, Lng: {profileData.location.coordinates[0]?.toFixed(6)}
+                    <div className="bg-white p-3 rounded-lg text-xs font-mono border border-red-100">
+                      <p>Latitude: {profileData.location.coordinates[1]?.toFixed(6)}</p>
+                      <p>Longitude: {profileData.location.coordinates[0]?.toFixed(6)}</p>
                     </div>
                   )}
-                  <LocationMap coordinates={profileData.location?.coordinates} />
                 </div>
+
                 <div className="flex gap-3 pt-4">
-                  <button type="button" onClick={() => setShowProfile(false)} className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-sm">Cancel</button>
-                  <button type="submit" disabled={loading} className="flex-1 px-4 py-2 bg-orange-600 text-white rounded-lg text-sm disabled:opacity-50">
-                    {loading ? 'Saving...' : 'Save'}
+                  <button
+                    type="button"
+                    onClick={() => setShowProfile(false)}
+                    className="flex-1 px-4 py-2 border border-red-200 text-red-700 rounded-lg hover:bg-red-50 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={loading}
+                    className="flex-1 px-4 py-2 bg-gradient-to-r from-red-600 to-red-700 text-white rounded-lg hover:from-red-700 hover:to-red-800 transition-all disabled:opacity-50"
+                  >
+                    {loading ? 'Saving...' : 'Save Changes'}
                   </button>
                 </div>
               </form>
@@ -1392,90 +2044,153 @@ const RestaurantDashboard = () => {
       {/* Order Details Modal */}
       {showOrderDetails && selectedOrder && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg shadow-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
             <div className="p-6">
-              <div className="flex justify-between items-center mb-4">
-                <h3 className="text-xl font-bold">Order Details</h3>
-                <button onClick={() => setShowOrderDetails(false)} className="text-gray-500"><X className="w-6 h-6" /></button>
+              <div className="flex justify-between items-center mb-6">
+                <h3 className="text-2xl font-bold text-red-800">Order Details</h3>
+                <button 
+                  onClick={() => setShowOrderDetails(false)} 
+                  className="p-2 hover:bg-red-50 rounded-lg transition-colors"
+                >
+                  <X className="w-6 h-6 text-red-600" />
+                </button>
               </div>
-              <div className="space-y-4">
-                <div className="grid grid-cols-2 gap-4 text-sm">
-                  <div>
-                    <p className="text-gray-600">Order ID</p>
-                    <p className="font-medium">{selectedOrder.orderId || selectedOrder._id}</p>
+
+              <div className="space-y-6">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="bg-gradient-to-r from-red-50 to-white rounded-xl p-4">
+                    <p className="text-sm text-red-600 mb-1">Order ID</p>
+                    <p className="font-medium text-red-800">#{selectedOrder.orderId || selectedOrder._id}</p>
                   </div>
-                  <div>
-                    <p className="text-gray-600">Status</p>
-                    <span className={`px-2 py-1 text-xs rounded-full ${
-                      selectedOrder.status === 'delivered' ? 'bg-green-100 text-green-800' :
+                  <div className="bg-gradient-to-r from-red-50 to-white rounded-xl p-4">
+                    <p className="text-sm text-red-600 mb-1">Status</p>
+                    <span className={`inline-block px-3 py-1 text-xs rounded-full ${
+                      selectedOrder.status === 'delivered' || selectedOrder.status === 'completed' ? 'bg-green-100 text-green-800' :
                       selectedOrder.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
-                      'bg-blue-100 text-blue-800'
-                    }`}>{selectedOrder.status}</span>
+                      selectedOrder.status === 'preparing' ? 'bg-blue-100 text-blue-800' :
+                      selectedOrder.status === 'ready' ? 'bg-purple-100 text-purple-800' :
+                      'bg-red-100 text-red-800'
+                    }`}>
+                      {selectedOrder.status}
+                    </span>
                   </div>
-                  <div>
-                    <p className="text-gray-600">Customer</p>
-                    <p className="font-medium">{selectedOrder.user?.name || 'Customer'}</p>
+                  <div className="bg-gradient-to-r from-red-50 to-white rounded-xl p-4">
+                    <p className="text-sm text-red-600 mb-1">Customer</p>
+                    <p className="font-medium text-red-800">{selectedOrder.user?.name || 'Customer'}</p>
+                    {selectedOrder.user?.phone && (
+                      <p className="text-sm text-red-600">{selectedOrder.user.phone}</p>
+                    )}
                   </div>
-                  <div>
-                    <p className="text-gray-600">Total</p>
-                    <p className="font-bold text-green-600">{formatCurrency(selectedOrder.total || selectedOrder.totalAmount)}</p>
+                  <div className="bg-gradient-to-r from-red-50 to-white rounded-xl p-4">
+                    <p className="text-sm text-red-600 mb-1">Total Amount</p>
+                    <p className="text-xl font-bold text-red-800">{formatCurrency(selectedOrder.total || selectedOrder.totalAmount)}</p>
                   </div>
                 </div>
+
                 {selectedOrder.items?.length > 0 && (
                   <div>
-                    <h4 className="font-semibold mb-2">Items</h4>
-                    <div className="space-y-2">
+                    <h4 className="font-semibold text-red-800 mb-3">Order Items</h4>
+                    <div className="space-y-3">
                       {selectedOrder.items.map((item, idx) => (
-                        <div key={idx} className="flex justify-between text-sm border-b pb-2">
-                          <span>{item.quantity}x {item.product?.name || item.productName}</span>
-                          <span>{formatCurrency(item.price * item.quantity)}</span>
+                        <div key={idx} className="flex items-center justify-between bg-white rounded-xl p-3 border border-red-100">
+                          <div className="flex items-center space-x-3">
+                            <span className="w-6 h-6 bg-red-100 rounded-full flex items-center justify-center text-xs font-bold text-red-700">
+                              {item.quantity}
+                            </span>
+                            <div>
+                              <p className="font-medium text-red-800">{item.product?.name || item.productName}</p>
+                              {item.notes && (
+                                <p className="text-xs text-red-500">Note: {item.notes}</p>
+                              )}
+                            </div>
+                          </div>
+                          <p className="font-medium text-red-800">{formatCurrency(item.price * item.quantity)}</p>
                         </div>
                       ))}
                     </div>
                   </div>
                 )}
-                <div className="flex flex-wrap gap-2 pt-4">
+
+                {selectedOrder.deliveryAddress && (
+                  <div>
+                    <h4 className="font-semibold text-red-800 mb-2">Delivery Address</h4>
+                    <div className="bg-gradient-to-r from-red-50 to-white rounded-xl p-4">
+                      <p className="text-red-800">{selectedOrder.deliveryAddress}</p>
+                    </div>
+                  </div>
+                )}
+
+                <div className="flex flex-wrap gap-3 pt-4">
                   {selectedOrder.status === 'pending' && (
                     <>
-                      <button onClick={() => { handleUpdateOrderStatus(selectedOrder._id, 'confirmed'); setShowOrderDetails(false); }} className="flex-1 bg-blue-600 text-white py-2 rounded-lg text-sm">Accept</button>
-                      <button onClick={() => { handleRejectOrder(selectedOrder._id); setShowOrderDetails(false); }} className="flex-1 bg-red-600 text-white py-2 rounded-lg text-sm">Reject</button>
+                      <button
+                        onClick={() => {
+                          handleUpdateOrderStatus(selectedOrder._id, 'confirmed');
+                          setShowOrderDetails(false);
+                        }}
+                        className="flex-1 px-4 py-3 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-xl hover:from-blue-700 hover:to-blue-800 transition-all"
+                      >
+                        Accept Order
+                      </button>
+                      <button
+                        onClick={() => {
+                          handleUpdateOrderStatus(selectedOrder._id, 'cancelled');
+                          setShowOrderDetails(false);
+                        }}
+                        className="flex-1 px-4 py-3 bg-gradient-to-r from-red-600 to-red-700 text-white rounded-xl hover:from-red-700 hover:to-red-800 transition-all"
+                      >
+                        Reject Order
+                      </button>
                     </>
                   )}
+
                   {selectedOrder.status === 'confirmed' && (
                     <>
-                      <button onClick={() => { handleUpdateOrderStatus(selectedOrder._id, 'preparing'); setShowOrderDetails(false); }} className="flex-1 bg-purple-600 text-white py-2 rounded-lg text-sm">Preparing</button>
-                      <button onClick={() => { setSelectedOrderForRider(selectedOrder); setShowRiderAssignment(true); setShowOrderDetails(false); }} className="flex-1 bg-indigo-600 text-white py-2 rounded-lg text-sm">Assign Rider</button>
+                      <button
+                        onClick={() => {
+                          handleUpdateOrderStatus(selectedOrder._id, 'preparing');
+                          setShowOrderDetails(false);
+                        }}
+                        className="flex-1 px-4 py-3 bg-gradient-to-r from-purple-600 to-purple-700 text-white rounded-xl hover:from-purple-700 hover:to-purple-800 transition-all"
+                      >
+                        Start Preparing
+                      </button>
+                      <button
+                        onClick={() => {
+                          setSelectedOrderForRider(selectedOrder);
+                          setShowRiderAssignment(true);
+                          setShowOrderDetails(false);
+                        }}
+                        className="flex-1 px-4 py-3 bg-gradient-to-r from-indigo-600 to-indigo-700 text-white rounded-xl hover:from-indigo-700 hover:to-indigo-800 transition-all"
+                      >
+                        Assign Rider
+                      </button>
                     </>
                   )}
+
                   {selectedOrder.status === 'preparing' && (
-                    <button onClick={() => { handleUpdateOrderStatus(selectedOrder._id, 'ready'); setShowOrderDetails(false); }} className="w-full bg-green-600 text-white py-2 rounded-lg text-sm">Mark Ready</button>
+                    <button
+                      onClick={() => {
+                        handleUpdateOrderStatus(selectedOrder._id, 'ready');
+                        setShowOrderDetails(false);
+                      }}
+                      className="w-full px-4 py-3 bg-gradient-to-r from-green-600 to-green-700 text-white rounded-xl hover:from-green-700 hover:to-green-800 transition-all"
+                    >
+                      Mark as Ready
+                    </button>
                   )}
+
                   {selectedOrder.user?.phone && (
-                    <a href={`tel:${selectedOrder.user.phone}`} className="flex items-center justify-center bg-gray-600 text-white py-2 rounded-lg text-sm">
-                      <Phone className="w-4 h-4 mr-2" /> Call Customer
+                    <a
+                      href={`tel:${selectedOrder.user.phone}`}
+                      className="flex items-center justify-center px-4 py-3 bg-gradient-to-r from-gray-600 to-gray-700 text-white rounded-xl hover:from-gray-700 hover:to-gray-800 transition-all"
+                    >
+                      <Phone className="w-4 h-4 mr-2" />
+                      Call Customer
                     </a>
                   )}
                 </div>
               </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Confirmation Dialog */}
-      {showConfirmDialog && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg shadow-lg max-w-md w-full p-6">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 bg-yellow-100 rounded-full flex items-center justify-center">
-                <AlertTriangle className="text-yellow-600 w-5 h-5" />
-              </div>
-              <h3 className="text-lg font-bold">Confirm</h3>
-            </div>
-            <p className="text-gray-600 mb-6">{confirmMessage}</p>
-            <div className="flex gap-3">
-              <button onClick={handleCancelConfirm} className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-sm">Cancel</button>
-              <button onClick={handleConfirm} className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg text-sm">Confirm</button>
             </div>
           </div>
         </div>
