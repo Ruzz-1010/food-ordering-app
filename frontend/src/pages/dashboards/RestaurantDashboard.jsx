@@ -65,6 +65,23 @@ const RestaurantDashboard = () => {
     location: { type: 'Point', coordinates: [0, 0] }
   });
 
+  // Fix user object on mount
+  useEffect(() => {
+    if (user && user.restaurantId && !user.restaurant) {
+      console.log('🔄 Fixing user object - adding restaurant field');
+      const fixedUser = { ...user, restaurant: user.restaurantId };
+      updateUser(fixedUser);
+      
+      // Also update localStorage directly
+      const userStr = localStorage.getItem('user');
+      if (userStr) {
+        const userData = JSON.parse(userStr);
+        userData.restaurant = userData.restaurantId;
+        localStorage.setItem('user', JSON.stringify(userData));
+      }
+    }
+  }, [user]);
+
   // Get token helper
   const getToken = () => {
     const token = localStorage.getItem('token');
@@ -131,6 +148,21 @@ const RestaurantDashboard = () => {
 
       console.log('Initializing with:', { currentRestaurantId, restaurantData: !!restaurantData });
 
+      // FIX: If user has restaurantId but not restaurant field, update user
+      if (user && user.restaurantId && !user.restaurant) {
+        console.log('⚠️ Fixing user object - adding restaurant field');
+        const updatedUser = { ...user, restaurant: user.restaurantId };
+        updateUser(updatedUser);
+        
+        // Also update localStorage directly
+        const userStr = localStorage.getItem('user');
+        if (userStr) {
+          const userData = JSON.parse(userStr);
+          userData.restaurant = userData.restaurantId;
+          localStorage.setItem('user', JSON.stringify(userData));
+        }
+      }
+
       if (currentRestaurantId && restaurantData) {
         setRestaurantId(currentRestaurantId);
         setRestaurant(restaurantData);
@@ -160,6 +192,18 @@ const RestaurantDashboard = () => {
           currentRestaurantId = data.restaurant._id;
           setRestaurantId(currentRestaurantId);
           setRestaurant(data.restaurant);
+          
+          // FIX: Update user with both restaurantId and restaurant fields
+          const updatedUser = { 
+            ...user, 
+            restaurantId: currentRestaurantId,
+            restaurant: currentRestaurantId 
+          };
+          updateUser(updatedUser);
+          
+          // Update localStorage
+          localStorage.setItem('user', JSON.stringify(updatedUser));
+          
           setProfileData({
             name: data.restaurant.name || '',
             email: data.restaurant.email || user?.email || '',
@@ -267,14 +311,7 @@ const RestaurantDashboard = () => {
       fetchData();
     }
   }, [user]);
-// Fix user object if needed
-useEffect(() => {
-  if (user && user.restaurantId && !user.restaurant) {
-    console.log('🔄 Fixing user object - adding restaurant field');
-    const fixedUser = { ...user, restaurant: user.restaurantId };
-    updateUser(fixedUser);
-  }
-}, [user]);
+
   // Stats calculation
   const stats = {
     totalOrders: orders.length,
@@ -343,7 +380,12 @@ useEffect(() => {
     setLoading(true);
     
     try {
-      // IMPORTANT: Include restaurant field (not restaurantId) as backend expects
+      console.log('🔍 Current state before add:');
+      console.log('Restaurant ID:', restaurantId);
+      console.log('User object:', user);
+      console.log('User restaurantId:', user?.restaurantId);
+      console.log('User restaurant:', user?.restaurant);
+      
       const productData = {
         name: newProduct.name.trim(),
         price: parseFloat(newProduct.price),
@@ -352,7 +394,7 @@ useEffect(() => {
         preparationTime: parseInt(newProduct.preparationTime) || 15,
         ingredients: newProduct.ingredients?.trim() || '',
         image: newProduct.image?.trim() || '',
-        restaurant: restaurantId  // Backend expects 'restaurant' field
+        restaurant: restaurantId
       };
 
       console.log('📤 Sending product data:', productData);
@@ -368,6 +410,7 @@ useEffect(() => {
       
       const data = await res.json();
       console.log('📥 Add product response:', data);
+      console.log('Response status:', res.status);
       
       if (res.ok && data.success) {
         alert('✅ Product added successfully!');
@@ -383,7 +426,6 @@ useEffect(() => {
         });
         await fetchMenu(restaurantId);
         
-        // Add notification
         setNotifications(prev => [{
           id: Date.now(),
           message: `Product "${productData.name}" added successfully`,
@@ -394,6 +436,9 @@ useEffect(() => {
         if (res.status === 401) {
           alert('Session expired. Please login again.');
           logout();
+        } else if (res.status === 403) {
+          alert(`❌ Not authorized: ${data.message || 'You cannot add products to this restaurant'}`);
+          console.error('Auth error details:', data);
         } else {
           alert(`❌ Failed: ${data.message || 'Unknown error'}`);
           console.error('Add product error details:', data);
@@ -423,6 +468,9 @@ useEffect(() => {
     setLoading(true);
     
     try {
+      console.log('🔍 Editing product:', editingProduct._id);
+      console.log('Current restaurant ID:', restaurantId);
+      
       const productData = {
         name: editingProduct.name.trim(),
         price: parseFloat(editingProduct.price),
@@ -432,10 +480,9 @@ useEffect(() => {
         ingredients: editingProduct.ingredients?.trim() || '',
         image: editingProduct.image?.trim() || '',
         isAvailable: editingProduct.isAvailable !== false
-        // Don't send restaurant - it's not needed for updates
       };
 
-      console.log('📤 Updating product:', editingProduct._id, productData);
+      console.log('📤 Updating product with data:', productData);
 
       const res = await fetch(`${API_URL}/products/${editingProduct._id}`, {
         method: 'PUT',
@@ -448,6 +495,7 @@ useEffect(() => {
       
       const data = await res.json();
       console.log('📥 Update response:', data);
+      console.log('Response status:', res.status);
       
       if (res.ok && data.success) {
         alert('✅ Product updated successfully!');
@@ -496,8 +544,52 @@ useEffect(() => {
 
     setLoading(true);
     try {
-      console.log('🗑️ Deleting product:', productId);
+      console.log('========== DELETE DEBUG ==========');
+      console.log('🗑️ Attempting to delete product:', productId);
       
+      // Log current user state
+      console.log('👤 Current user from state:', user);
+      console.log('👤 User from localStorage:', JSON.parse(localStorage.getItem('user')));
+      console.log('🔑 Token exists:', !!token);
+      
+      // Log restaurant IDs
+      console.log('🏪 Restaurant ID from state:', restaurantId);
+      console.log('🏪 User restaurantId:', user?.restaurantId);
+      console.log('🏪 User restaurant field:', user?.restaurant);
+      console.log('🏪 User restaurantData:', user?.restaurantData);
+      console.log('🏪 getRestaurantId():', getRestaurantId());
+      
+      // Try to get the product first
+      console.log('📥 Fetching product details...');
+      const productRes = await fetch(`${API_URL}/products/${productId}`, {
+        headers: { 
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      const productData = await productRes.json();
+      console.log('📦 Product data:', productData);
+      
+      if (productData.success) {
+        console.log('📦 Product restaurant ID:', productData.product.restaurant);
+        console.log('📦 Product restaurant ID type:', typeof productData.product.restaurant);
+        console.log('📦 Product restaurant ID as string:', productData.product.restaurant?.toString());
+        
+        console.log('🏪 Your restaurant ID:', restaurantId);
+        console.log('🏪 Your restaurant ID type:', typeof restaurantId);
+        console.log('🏪 Your restaurant ID as string:', restaurantId?.toString());
+        
+        console.log('🔍 Comparison:', {
+          strict: productData.product.restaurant === restaurantId,
+          toString: productData.product.restaurant?.toString() === restaurantId?.toString(),
+          userRestaurant: productData.product.restaurant?.toString() === user?.restaurant?.toString(),
+          userRestaurantId: productData.product.restaurant?.toString() === user?.restaurantId?.toString()
+        });
+      }
+      
+      // Now try to delete
+      console.log('📤 Sending DELETE request...');
       const res = await fetch(`${API_URL}/products/${productId}`, {
         method: 'DELETE',
         headers: { 
@@ -508,6 +600,8 @@ useEffect(() => {
       
       const data = await res.json();
       console.log('📥 Delete response:', data);
+      console.log('📥 Response status:', res.status);
+      console.log('=================================');
       
       if (res.ok && data.success) {
         alert('✅ Product deleted successfully!');
@@ -524,8 +618,11 @@ useEffect(() => {
           alert('Session expired. Please login again.');
           logout();
         } else if (res.status === 403) {
-          alert('❌ You are not authorized to delete this product.');
-          console.error('Auth error details:', data);
+          console.error('❌ Authorization failed - ownership mismatch');
+          console.error('Response data:', data);
+          
+          // Show more helpful error message
+          alert(`❌ Cannot delete: ${data.message || 'Not authorized'}. Check console for details.`);
         } else {
           alert(`❌ Failed: ${data.message || 'Unknown error'}`);
         }
@@ -535,6 +632,54 @@ useEffect(() => {
       alert('Network error. Please try again.');
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Fix auth issues
+  const fixAuthIssues = async () => {
+    const token = localStorage.getItem('token');
+    try {
+      // Get current user from localStorage
+      const userStr = localStorage.getItem('user');
+      if (userStr) {
+        const userData = JSON.parse(userStr);
+        console.log('Current user data:', userData);
+        
+        // Fix the user object
+        if (userData.restaurantId && !userData.restaurant) {
+          userData.restaurant = userData.restaurantId;
+          localStorage.setItem('user', JSON.stringify(userData));
+          updateUser(userData);
+          console.log('✅ Fixed user object - added restaurant field');
+        }
+        
+        // Try to update via API
+        const res = await fetch(`${API_URL}/users/fix-restaurant-id`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            userId: userData._id,
+            restaurantId: restaurantId || userData.restaurantId
+          })
+        });
+        
+        if (res.ok) {
+          const data = await res.json();
+          if (data.token) {
+            localStorage.setItem('token', data.token);
+          }
+          console.log('API fix response:', data);
+        }
+        
+        alert('✅ Fixed! Please refresh the page.');
+        window.location.reload();
+      }
+    } catch (error) {
+      console.error('Fix error:', error);
+      alert('Error fixing: ' + error.message);
     }
   };
 
@@ -1180,6 +1325,13 @@ useEffect(() => {
             >
               <RefreshCw className="w-4 h-4" />
               <span>Refresh</span>
+            </button>
+            <button
+              onClick={fixAuthIssues}
+              className="flex items-center space-x-2 px-4 py-2 bg-yellow-500 text-white rounded-xl hover:bg-yellow-600 transition-all"
+            >
+              <AlertTriangle className="w-4 h-4" />
+              <span>Fix Auth Issues</span>
             </button>
           </div>
 
