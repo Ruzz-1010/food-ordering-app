@@ -46,12 +46,13 @@ const RiderDashboard = () => {
     return token;
   };
 
-  // Fetch rider profile
+  // ✅ FIXED: Fetch rider profile with better error handling
   const fetchRiderProfile = async () => {
     const token = getToken();
     if (!token) return;
 
     try {
+      console.log('🔄 Fetching rider profile...');
       const res = await fetch(`${API_URL}/riders/profile`, {
         headers: {
           'Content-Type': 'application/json',
@@ -59,14 +60,23 @@ const RiderDashboard = () => {
         }
       });
       
-      if (res.ok) {
-        const data = await res.json();
-        if (data.success && data.rider) {
-          setRiderStatus(data.rider.status || 'offline');
+      const data = await res.json();
+      console.log('📡 Rider profile response:', data);
+      
+      if (res.ok && data.success) {
+        setRiderStatus(data.rider.status || 'offline');
+        console.log('✅ Rider status set to:', data.rider.status);
+      } else {
+        console.error('❌ Failed to fetch rider profile:', data.message);
+        // Try to get status from localStorage as fallback
+        const savedStatus = localStorage.getItem('riderStatus');
+        if (savedStatus) {
+          setRiderStatus(savedStatus);
+          console.log('📦 Using saved status:', savedStatus);
         }
       }
     } catch (error) {
-      console.error('Error fetching rider profile:', error);
+      console.error('❌ Error fetching rider profile:', error);
       const savedStatus = localStorage.getItem('riderStatus');
       if (savedStatus) setRiderStatus(savedStatus);
     }
@@ -87,25 +97,27 @@ const RiderDashboard = () => {
           const location = { lat: latitude, lng: longitude };
           setCurrentLocation(location);
           setLocationError(null);
+          console.log('📍 Location obtained:', location);
           resolve(location);
         },
         (error) => {
           let errorMessage = 'Location error';
           switch (error.code) {
             case error.PERMISSION_DENIED: 
-              errorMessage = 'Location permission denied'; 
+              errorMessage = 'Location permission denied. Please enable GPS.'; 
               break;
             case error.POSITION_UNAVAILABLE: 
-              errorMessage = 'Location unavailable'; 
+              errorMessage = 'Location unavailable. Check your GPS.'; 
               break;
             case error.TIMEOUT: 
-              errorMessage = 'Location timeout'; 
+              errorMessage = 'Location timeout. Try again.'; 
               break;
             default:
               errorMessage = 'Unknown location error';
               break;
           }
           setLocationError(errorMessage);
+          console.error('❌ Location error:', errorMessage);
           reject(new Error(errorMessage));
         },
         { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
@@ -130,27 +142,41 @@ const RiderDashboard = () => {
           longitude: location.lng
         })
       });
+      console.log('📍 Location updated on server');
     } catch (error) {
-      console.error('Error updating location:', error);
+      console.error('❌ Error updating location:', error);
     }
   };
 
-  // Toggle rider status
+  // ✅ FIXED: Toggle rider status with better error handling
   const toggleRiderStatus = async () => {
     const newStatus = riderStatus === 'online' ? 'offline' : 'online';
     const token = getToken();
     
+    if (!token) {
+      alert('❌ Please login again');
+      logout();
+      return;
+    }
+
+    console.log(`🔄 Changing status from ${riderStatus} to ${newStatus}`);
+    
     try {
+      // If going online, try to get location first
       if (newStatus === 'online') {
         try {
           const location = await getCurrentLocation();
           await updateRiderLocation(location);
         } catch (locErr) {
-          const proceed = window.confirm('Location failed. Continue going online?');
-          if (!proceed) return;
+          // Continue even if location fails, but warn user
+          console.warn('⚠️ Location failed, but continuing...');
+          if (!window.confirm('Unable to get your location. Continue going online?')) {
+            return;
+          }
         }
       }
 
+      // Update status on server
       const res = await fetch(`${API_URL}/riders/status`, {
         method: 'PUT',
         headers: {
@@ -161,35 +187,45 @@ const RiderDashboard = () => {
       });
 
       const data = await res.json();
+      console.log('📡 Status update response:', data);
 
       if (res.ok && data.success) {
         setRiderStatus(newStatus);
         localStorage.setItem('riderStatus', newStatus);
         
+        // Add notification
+        const notificationMsg = newStatus === 'online' 
+          ? '✅ You are now online and ready to accept deliveries!' 
+          : '🔴 You are now offline';
+        
+        setNotifications(prev => [{
+          id: Date.now(),
+          message: notificationMsg,
+          time: new Date().toISOString(),
+          type: 'success'
+        }, ...prev]);
+        
+        // Refresh data
         if (newStatus === 'online') {
-          setNotifications(prev => [{
-            id: Date.now(),
-            message: 'You are now online and ready to accept deliveries!',
-            time: new Date().toISOString(),
-            type: 'success'
-          }, ...prev]);
           await fetchAvailable();
         } else {
-          setNotifications(prev => [{
-            id: Date.now(),
-            message: 'You are now offline',
-            time: new Date().toISOString(),
-            type: 'info'
-          }, ...prev]);
           setAvailable([]);
         }
         
         await loadData();
+      } else {
+        // If server update fails, still update UI but warn user
+        console.error('❌ Server status update failed:', data.message);
+        setRiderStatus(newStatus);
+        localStorage.setItem('riderStatus', newStatus);
+        alert(`⚠️ Status changed to ${newStatus} (offline mode)`);
       }
     } catch (error) {
-      console.error('Status update error:', error);
+      console.error('❌ Status update error:', error);
+      // Fallback - update UI anyway
       setRiderStatus(newStatus);
       localStorage.setItem('riderStatus', newStatus);
+      alert(`⚠️ Status changed to ${newStatus} (offline mode)`);
     }
     
     setShowMobileMenu(false);
@@ -201,6 +237,7 @@ const RiderDashboard = () => {
     if (!token) return;
 
     try {
+      console.log('📦 Fetching available orders...');
       const res = await fetch(`${API_URL}/orders/rider/available`, {
         headers: { 
           'Content-Type': 'application/json',
@@ -209,12 +246,15 @@ const RiderDashboard = () => {
       });
       
       const data = await res.json();
+      console.log('📡 Available orders:', data);
       
       if (res.ok && data.success) {
         setAvailable(data.orders || []);
+      } else {
+        console.error('❌ Failed to fetch available orders:', data.message);
       }
     } catch (error) {
-      console.error('Error fetching available orders:', error);
+      console.error('❌ Error fetching available orders:', error);
     }
   };
 
@@ -224,6 +264,7 @@ const RiderDashboard = () => {
     if (!token) return;
 
     try {
+      console.log('🚚 Fetching my deliveries...');
       const res = await fetch(`${API_URL}/orders/rider/my-deliveries`, {
         headers: { 
           'Content-Type': 'application/json',
@@ -232,21 +273,25 @@ const RiderDashboard = () => {
       });
       
       const data = await res.json();
+      console.log('📡 My deliveries:', data);
       
       if (res.ok && data.success) {
         setMyDeliveries(data.orders || []);
+      } else {
+        console.error('❌ Failed to fetch my deliveries:', data.message);
       }
     } catch (error) {
-      console.error('Error fetching my deliveries:', error);
+      console.error('❌ Error fetching my deliveries:', error);
     }
   };
 
-  // Fetch earnings
+  // ✅ FIXED: Fetch earnings from backend first, then calculate locally
   const fetchEarnings = async () => {
     const token = getToken();
     if (!token) return;
 
     try {
+      console.log('💰 Fetching earnings...');
       const res = await fetch(`${API_URL}/riders/earnings`, {
         headers: { 
           'Content-Type': 'application/json',
@@ -256,59 +301,82 @@ const RiderDashboard = () => {
       
       if (res.ok) {
         const data = await res.json();
+        console.log('📡 Earnings data:', data);
         if (data.success && data.earnings) {
           setEarnings(data.earnings);
           return;
         }
       }
     } catch (error) {
-      console.error('Error fetching earnings:', error);
+      console.error('❌ Error fetching earnings:', error);
     }
     
-    calculateEarnings();
+    // Fallback: calculate from deliveries
+    console.log('📊 Calculating earnings from deliveries...');
+    calculateEarningsFromDeliveries();
   };
 
-  // Calculate earnings locally
-  const calculateEarnings = () => {
+  // ✅ FIXED: Calculate earnings from deliveries with proper fee
+  const calculateEarningsFromDeliveries = () => {
+    // Get completed deliveries
     const completedOrders = myDeliveries.filter(order => 
       order.status === 'delivered' || order.status === 'completed'
     );
     
-    const deliveryFee = 45; // Increased delivery fee
+    console.log('📊 Completed orders for earnings:', completedOrders.length);
+    
+    // Get delivery fee from each order or use default
     const now = new Date();
     
     const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    const todayEarnings = completedOrders.filter(order => {
-      const orderDate = new Date(order.updatedAt || order.deliveredAt || order.createdAt);
-      return orderDate >= todayStart;
-    }).length * deliveryFee;
-
     const oneWeekAgo = new Date(now);
     oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
-    const weeklyEarnings = completedOrders.filter(order => {
-      const orderDate = new Date(order.updatedAt || order.deliveredAt || order.createdAt);
-      return orderDate >= oneWeekAgo;
-    }).length * deliveryFee;
-
     const oneMonthAgo = new Date(now);
     oneMonthAgo.setDate(oneMonthAgo.getDate() - 30);
-    const monthlyEarnings = completedOrders.filter(order => {
+
+    let todayTotal = 0;
+    let weeklyTotal = 0;
+    let monthlyTotal = 0;
+    let totalEarnings = 0;
+
+    completedOrders.forEach(order => {
+      // Get delivery fee from order or use default 45
+      const deliveryFee = order.deliveryFee || 45;
       const orderDate = new Date(order.updatedAt || order.deliveredAt || order.createdAt);
-      return orderDate >= oneMonthAgo;
-    }).length * deliveryFee;
+      
+      totalEarnings += deliveryFee;
+      
+      if (orderDate >= todayStart) {
+        todayTotal += deliveryFee;
+      }
+      if (orderDate >= oneWeekAgo) {
+        weeklyTotal += deliveryFee;
+      }
+      if (orderDate >= oneMonthAgo) {
+        monthlyTotal += deliveryFee;
+      }
+    });
+
+    console.log('💰 Calculated earnings:', {
+      today: todayTotal,
+      weekly: weeklyTotal,
+      monthly: monthlyTotal,
+      total: totalEarnings,
+      completedDeliveries: completedOrders.length
+    });
+
+    setEarnings({
+      today: todayTotal,
+      weekly: weeklyTotal,
+      monthly: monthlyTotal,
+      total: totalEarnings,
+      completedDeliveries: completedOrders.length
+    });
 
     // Calculate stats
     const totalDeliveries = completedOrders.length;
-    const avgTime = totalDeliveries > 0 ? 25 + Math.floor(Math.random() * 10) : 28; // Simulated avg delivery time
-    const distance = totalDeliveries * 2.5; // Simulated distance
-
-    setEarnings({
-      today: todayEarnings,
-      weekly: weeklyEarnings,
-      monthly: monthlyEarnings,
-      total: completedOrders.length * deliveryFee,
-      completedDeliveries: completedOrders.length
-    });
+    const avgTime = totalDeliveries > 0 ? 25 + Math.floor(Math.random() * 10) : 28;
+    const distance = totalDeliveries * 2.5;
 
     setStats({
       onlineHours: Math.floor(totalDeliveries * 0.75),
@@ -318,18 +386,21 @@ const RiderDashboard = () => {
     });
   };
 
-  // Accept order
+  // ✅ FIXED: Accept order with better error handling
   const acceptOrder = async (orderId) => {
     const token = getToken();
     if (!token) {
-      alert('Not authenticated');
+      alert('❌ Please login again');
+      logout();
       return;
     }
 
     if (riderStatus === 'offline') {
-      alert('Go online first!');
+      alert('❌ Please go online first to accept orders!');
       return;
     }
+
+    console.log('✅ Accepting order:', orderId);
 
     try {
       const res = await fetch(`${API_URL}/orders/${orderId}/accept`, {
@@ -342,21 +413,22 @@ const RiderDashboard = () => {
       });
 
       const data = await res.json();
+      console.log('📡 Accept response:', data);
 
       if (res.ok && data.success) {
         setNotifications(prev => [{
           id: Date.now(),
-          message: 'Order accepted successfully! Head to the restaurant.',
+          message: '✅ Order accepted! Head to the restaurant.',
           time: new Date().toISOString(),
           type: 'success'
         }, ...prev]);
         await loadData();
       } else {
-        alert(`Failed: ${data.message || 'Unknown error'}`);
+        alert(`❌ Failed: ${data.message || 'Could not accept order'}`);
       }
     } catch (err) {
-      console.error('Accept error:', err);
-      alert('Network error');
+      console.error('❌ Accept error:', err);
+      alert('❌ Network error. Please try again.');
     }
   };
 
@@ -366,6 +438,7 @@ const RiderDashboard = () => {
     if (!token) return;
 
     try {
+      console.log(`🔄 Updating order ${orderId} to ${status}`);
       const res = await fetch(`${API_URL}/orders/${orderId}/delivery-status`, {
         method: 'PUT',
         headers: {
@@ -376,11 +449,12 @@ const RiderDashboard = () => {
       });
 
       const data = await res.json();
+      console.log('📡 Status update response:', data);
 
       if (res.ok && data.success) {
         const statusMessages = {
-          'out_for_delivery': 'On your way to deliver! Stay safe.',
-          'delivered': 'Order delivered! Great job!'
+          'out_for_delivery': '🚚 On your way to deliver!',
+          'delivered': '✅ Order delivered! Great job!'
         };
         
         setNotifications(prev => [{
@@ -392,25 +466,29 @@ const RiderDashboard = () => {
         
         await loadData();
       } else {
-        alert(`Failed: ${data.message || 'Unknown error'}`);
+        alert(`❌ Failed: ${data.message || 'Could not update status'}`);
       }
     } catch (error) {
-      console.error('Update status error:', error);
-      alert('Failed to update status');
+      console.error('❌ Update status error:', error);
+      alert('❌ Failed to update status');
     }
   };
 
   // Load all data
   const loadData = async () => {
     setLoading(true);
+    console.log('🚀 Loading all rider data...');
     
     try {
       await fetchRiderProfile();
       await fetchAvailable();
       await fetchMyDeliveries();
-      await fetchEarnings();
+      // Wait for deliveries to load before calculating earnings
+      setTimeout(async () => {
+        await fetchEarnings();
+      }, 500);
     } catch (error) {
-      console.error('Error loading data:', error);
+      console.error('❌ Error loading data:', error);
     } finally {
       setLoading(false);
     }
@@ -418,6 +496,7 @@ const RiderDashboard = () => {
 
   useEffect(() => {
     if (user?.role === 'rider') {
+      console.log('🔥 RiderDashboard mounted for user:', user._id);
       loadData();
     }
   }, [user]);
@@ -430,6 +509,13 @@ const RiderDashboard = () => {
     }
   }, [riderStatus]);
 
+  // Recalculate earnings when deliveries change
+  useEffect(() => {
+    if (myDeliveries.length > 0) {
+      calculateEarningsFromDeliveries();
+    }
+  }, [myDeliveries]);
+
   // Location tracking when online
   useEffect(() => {
     let interval;
@@ -439,7 +525,7 @@ const RiderDashboard = () => {
           const location = await getCurrentLocation();
           await updateRiderLocation(location);
         } catch (error) {
-          console.error('Location tracking error:', error);
+          console.error('❌ Location tracking error:', error);
         }
       };
       
@@ -535,6 +621,7 @@ const RiderDashboard = () => {
   // Order Card Component
   const OrderCard = ({ order, type }) => {
     const isAvailable = type === 'available';
+    const deliveryFee = order.deliveryFee || 45;
     
     return (
       <div className="bg-white rounded-2xl shadow-lg border border-red-100 overflow-hidden hover:shadow-xl transition-all duration-300 transform hover:scale-[1.02]">
@@ -577,7 +664,7 @@ const RiderDashboard = () => {
           <div className="flex items-center justify-between pt-3 border-t border-red-100">
             <div>
               <p className="text-xs text-red-400 mb-1">Earnings</p>
-              <p className="text-xl font-bold text-red-600">{formatCurrency(order.deliveryFee || 45)}</p>
+              <p className="text-xl font-bold text-red-600">{formatCurrency(deliveryFee)}</p>
             </div>
             <div className="text-right">
               <p className="text-xs text-red-400 mb-1">Order Total</p>
@@ -909,8 +996,13 @@ const RiderDashboard = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-red-50 to-red-100">
+      {/* Debug Banner */}
+      <div className="fixed top-0 left-0 right-0 bg-yellow-50 border-b border-yellow-200 p-2 text-xs font-mono text-yellow-800 z-50 text-center">
+        DEBUG: Status={riderStatus} | Available={available.length} | Deliveries={myDeliveries.length} | Earnings={earnings.total} | Completed={earnings.completedDeliveries}
+      </div>
+
       {/* Sidebar - Desktop */}
-      <aside className="hidden lg:flex flex-col w-80 bg-white shadow-2xl border-r border-red-100 fixed h-full">
+      <aside className="hidden lg:flex flex-col w-80 bg-white shadow-2xl border-r border-red-100 fixed h-full mt-8">
         <div className="p-6 border-b border-red-100 bg-gradient-to-r from-red-600 to-red-700">
           <div className="flex items-center gap-3">
             <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center shadow-lg">
@@ -991,7 +1083,7 @@ const RiderDashboard = () => {
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 lg:ml-80">
+      <main className="flex-1 lg:ml-80 pt-8">
         {/* Mobile Header */}
         <header className="lg:hidden bg-gradient-to-r from-red-600 to-red-700 text-white sticky top-0 z-40 shadow-lg">
           <div className="px-4 py-3 flex items-center justify-between">
