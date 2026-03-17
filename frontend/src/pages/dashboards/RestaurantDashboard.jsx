@@ -66,6 +66,54 @@ const RestaurantDashboard = () => {
     location: { type: 'Point', coordinates: [0, 0] }
   });
 
+  // Test API connection
+  const testAPI = async () => {
+    try {
+      console.log('🧪 Testing API connection...');
+      const res = await fetch(`${API_URL}/products/test`);
+      const data = await res.json();
+      console.log('✅ API test response:', data);
+      alert('API is working! Check console.');
+    } catch (error) {
+      console.error('❌ API test failed:', error);
+      alert('API test failed: ' + error.message);
+    }
+  };
+
+  // Debug user info
+  const debugUser = async () => {
+    const token = localStorage.getItem('token');
+    try {
+      const res = await fetch(`${API_URL}/products/debug-user`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const data = await res.json();
+      console.log('👤 Debug User Info:', data);
+      setDebugInfo(data);
+      setShowDebugPanel(true);
+      alert('Check console for user info');
+    } catch (error) {
+      console.error('Debug user error:', error);
+    }
+  };
+
+  // Check all products
+  const checkAllProducts = async () => {
+    const token = localStorage.getItem('token');
+    try {
+      const res = await fetch(`${API_URL}/products/all`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const data = await res.json();
+      console.log('📦 All Products:', data);
+      setDebugInfo(data);
+      setShowDebugPanel(true);
+      alert(`Found ${data.count} products. Check console.`);
+    } catch (error) {
+      console.error('Check products error:', error);
+    }
+  };
+
   // Debug function to check product ownership
   const debugProductOwnership = async (productId) => {
     const token = localStorage.getItem('token');
@@ -200,7 +248,6 @@ const RestaurantDashboard = () => {
       const fixedUser = { ...user, restaurant: user.restaurantId };
       updateUser(fixedUser);
       
-      // Also update localStorage directly
       const userStr = localStorage.getItem('user');
       if (userStr) {
         const userData = JSON.parse(userStr);
@@ -208,7 +255,7 @@ const RestaurantDashboard = () => {
         localStorage.setItem('user', JSON.stringify(userData));
       }
     }
-  }, [user]);
+  }, [user, updateUser]);
 
   // Get token helper
   const getToken = () => {
@@ -276,13 +323,11 @@ const RestaurantDashboard = () => {
 
       console.log('Initializing with:', { currentRestaurantId, restaurantData: !!restaurantData });
 
-      // FIX: If user has restaurantId but not restaurant field, update user
       if (user && user.restaurantId && !user.restaurant) {
         console.log('⚠️ Fixing user object - adding restaurant field');
         const updatedUser = { ...user, restaurant: user.restaurantId };
         updateUser(updatedUser);
         
-        // Also update localStorage directly
         const userStr = localStorage.getItem('user');
         if (userStr) {
           const userData = JSON.parse(userStr);
@@ -311,7 +356,6 @@ const RestaurantDashboard = () => {
         return currentRestaurantId;
       }
 
-      // Try to fetch restaurant by owner
       if (user?._id) {
         const response = await fetchWithAuth(`${API_URL}/restaurants/owner/${user._id}`);
         const data = await response.json();
@@ -321,7 +365,6 @@ const RestaurantDashboard = () => {
           setRestaurantId(currentRestaurantId);
           setRestaurant(data.restaurant);
           
-          // FIX: Update user with both restaurantId and restaurant fields
           const updatedUser = { 
             ...user, 
             restaurantId: currentRestaurantId,
@@ -329,7 +372,6 @@ const RestaurantDashboard = () => {
           };
           updateUser(updatedUser);
           
-          // Update localStorage
           localStorage.setItem('user', JSON.stringify(updatedUser));
           
           setProfileData({
@@ -675,19 +717,16 @@ const RestaurantDashboard = () => {
       console.log('========== DELETE DEBUG ==========');
       console.log('🗑️ Attempting to delete product:', productId);
       
-      // Log current user state
       console.log('👤 Current user from state:', user);
       console.log('👤 User from localStorage:', JSON.parse(localStorage.getItem('user')));
       console.log('🔑 Token exists:', !!token);
       
-      // Log restaurant IDs
       console.log('🏪 Restaurant ID from state:', restaurantId);
       console.log('🏪 User restaurantId:', user?.restaurantId);
       console.log('🏪 User restaurant field:', user?.restaurant);
       console.log('🏪 User restaurantData:', user?.restaurantData);
       console.log('🏪 getRestaurantId():', getRestaurantId());
       
-      // Try to get the product first
       console.log('📥 Fetching product details...');
       const productRes = await fetch(`${API_URL}/products/${productId}`, {
         headers: { 
@@ -716,7 +755,6 @@ const RestaurantDashboard = () => {
         });
       }
       
-      // Now try to delete
       console.log('📤 Sending DELETE request...');
       const res = await fetch(`${API_URL}/products/${productId}`, {
         method: 'DELETE',
@@ -748,8 +786,6 @@ const RestaurantDashboard = () => {
         } else if (res.status === 403) {
           console.error('❌ Authorization failed - ownership mismatch');
           console.error('Response data:', data);
-          
-          // Show more helpful error message
           alert(`❌ Cannot delete: ${data.message || 'Not authorized'}. Check console for details.`);
         } else {
           alert(`❌ Failed: ${data.message || 'Unknown error'}`);
@@ -767,13 +803,11 @@ const RestaurantDashboard = () => {
   const fixAuthIssues = async () => {
     const token = localStorage.getItem('token');
     try {
-      // Get current user from localStorage
       const userStr = localStorage.getItem('user');
       if (userStr) {
         const userData = JSON.parse(userStr);
         console.log('Current user data:', userData);
         
-        // Fix the user object
         if (userData.restaurantId && !userData.restaurant) {
           userData.restaurant = userData.restaurantId;
           localStorage.setItem('user', JSON.stringify(userData));
@@ -781,7 +815,6 @@ const RestaurantDashboard = () => {
           console.log('✅ Fixed user object - added restaurant field');
         }
         
-        // Try to update via API
         const res = await fetch(`${API_URL}/users/fix-restaurant-id`, {
           method: 'POST',
           headers: {
@@ -1065,46 +1098,7 @@ const RestaurantDashboard = () => {
       endDate: endDate.toLocaleDateString()
     };
   };
-  const testAPI = async () => {
-    try {
-      console.log('🧪 Testing API connection...');
-      const res = await fetch(`${API_URL}/products/test`);
-      const data = await res.json();
-      console.log('✅ API test response:', data);
-      alert('API is working! Check console.');
-    } catch (error) {
-      console.error('❌ API test failed:', error);
-      alert('API test failed: ' + error.message);
-    }
-  };
-  
-  const debugUser = async () => {
-    const token = localStorage.getItem('token');
-    try {
-      const res = await fetch(`${API_URL}/products/debug-user`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      const data = await res.json();
-      console.log('👤 Debug User Info:', data);
-      alert('Check console for user info');
-    } catch (error) {
-      console.error('Debug user error:', error);
-    }
-  };
-  
-  const checkAllProducts = async () => {
-    const token = localStorage.getItem('token');
-    try {
-      const res = await fetch(`${API_URL}/products/all`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      const data = await res.json();
-      console.log('📦 All Products:', data);
-      alert(`Found ${data.count} products. Check console.`);
-    } catch (error) {
-      console.error('Check products error:', error);
-    }
-  };
+
   // Export CSV
   const exportReportToCSV = (report) => {
     const headers = ['Date', 'Order ID', 'Customer', 'Items', 'Total', 'Status'];
@@ -1228,7 +1222,6 @@ const RestaurantDashboard = () => {
             </button>
           </div>
 
-          {/* Debug Info */}
           {debugInfo && (
             <div className="mt-6 p-4 bg-gray-100 rounded-xl text-left">
               <p className="font-bold text-sm mb-2">Debug Info:</p>
@@ -1246,7 +1239,6 @@ const RestaurantDashboard = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-red-50 to-red-100">
-      {/* Sidebar */}
       <div className={`fixed left-0 top-0 h-full bg-gradient-to-b from-red-800 to-red-900 text-white transition-all duration-300 shadow-2xl z-30 ${sidebarCollapsed ? 'w-20' : 'w-64'}`}>
         <div className="p-4">
           <div className="flex items-center justify-between mb-8">
@@ -1320,9 +1312,7 @@ const RestaurantDashboard = () => {
         </div>
       </div>
 
-      {/* Main Content */}
       <div className={`transition-all duration-300 ${sidebarCollapsed ? 'ml-20' : 'ml-64'}`}>
-        {/* Header */}
         <header className="bg-white shadow-lg border-b border-red-100 sticky top-0 z-20">
           <div className="px-6 py-4">
             <div className="flex items-center justify-between">
@@ -1336,7 +1326,6 @@ const RestaurantDashboard = () => {
               </div>
 
               <div className="flex items-center space-x-4">
-                {/* Search Bar */}
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-red-400 w-4 h-4" />
                   <input
@@ -1348,7 +1337,6 @@ const RestaurantDashboard = () => {
                   />
                 </div>
 
-                {/* Notifications */}
                 <div className="relative">
                   <button
                     onClick={() => setShowNotifications(!showNotifications)}
@@ -1384,7 +1372,6 @@ const RestaurantDashboard = () => {
                   )}
                 </div>
 
-                {/* User Menu */}
                 <div className="flex items-center space-x-3">
                   <div className="text-right">
                     <p className="text-sm font-medium text-red-800">{user?.name}</p>
@@ -1408,7 +1395,6 @@ const RestaurantDashboard = () => {
         </header>
 
         <div className="p-6">
-          {/* Stats Cards */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
             <div className="bg-white rounded-2xl shadow-lg p-6 border-l-4 border-red-600 transform hover:scale-105 transition-all">
               <div className="flex items-center justify-between">
@@ -1462,28 +1448,7 @@ const RestaurantDashboard = () => {
               </div>
             </div>
           </div>
-          // Add these buttons
-<button
-  onClick={testAPI}
-  className="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-xl hover:bg-green-700"
->
-  <span>Test API</span>
-</button>
 
-<button
-  onClick={debugUser}
-  className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700"
->
-  <span>Debug User</span>
-</button>
-
-<button
-  onClick={checkAllProducts}
-  className="flex items-center space-x-2 px-4 py-2 bg-purple-600 text-white rounded-xl hover:bg-purple-700"
->
-  <span>Check All Products</span>
-</button>
-          {/* Quick Actions */}
           <div className="flex flex-wrap gap-3 mb-6">
             <button
               onClick={() => setShowAddProduct(true)}
@@ -1529,6 +1494,24 @@ const RestaurantDashboard = () => {
               <span>Fix All Products</span>
             </button>
             <button
+              onClick={testAPI}
+              className="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-xl hover:bg-green-700 transition-all"
+            >
+              <span>Test API</span>
+            </button>
+            <button
+              onClick={debugUser}
+              className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-all"
+            >
+              <span>Debug User</span>
+            </button>
+            <button
+              onClick={checkAllProducts}
+              className="flex items-center space-x-2 px-4 py-2 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 transition-all"
+            >
+              <span>Check All Products</span>
+            </button>
+            <button
               onClick={() => setShowDebugPanel(!showDebugPanel)}
               className="flex items-center space-x-2 px-4 py-2 bg-gray-600 text-white rounded-xl hover:bg-gray-700 transition-all"
             >
@@ -1537,7 +1520,6 @@ const RestaurantDashboard = () => {
             </button>
           </div>
 
-          {/* Debug Panel */}
           {showDebugPanel && debugInfo && (
             <div className="mb-6 p-4 bg-gray-900 text-green-400 rounded-xl overflow-auto max-h-96">
               <div className="flex justify-between items-center mb-2">
@@ -1555,9 +1537,7 @@ const RestaurantDashboard = () => {
             </div>
           )}
 
-          {/* Main Content Area */}
           <div className="bg-white rounded-2xl shadow-xl overflow-hidden">
-            {/* Tab Navigation */}
             <div className="flex border-b border-red-100">
               {['dashboard', 'orders', 'menu', 'earnings'].map(tab => (
                 <button
@@ -1578,7 +1558,6 @@ const RestaurantDashboard = () => {
                 </button>
               ))}
               
-              {/* View Toggle for Menu */}
               {activeTab === 'menu' && (
                 <div className="flex items-center px-4 border-l border-red-100">
                   <button
@@ -1602,7 +1581,6 @@ const RestaurantDashboard = () => {
             </div>
 
             <div className="p-6">
-              {/* Dashboard Tab */}
               {activeTab === 'dashboard' && (
                 <div>
                   <div className="flex justify-between items-center mb-6">
@@ -1656,7 +1634,6 @@ const RestaurantDashboard = () => {
                 </div>
               )}
 
-              {/* Orders Tab */}
               {activeTab === 'orders' && (
                 <div>
                   <div className="flex justify-between items-center mb-6">
@@ -1787,7 +1764,6 @@ const RestaurantDashboard = () => {
                 </div>
               )}
 
-              {/* Menu Tab */}
               {activeTab === 'menu' && (
                 <div>
                   <div className="flex justify-between items-center mb-6">
@@ -1859,14 +1835,12 @@ const RestaurantDashboard = () => {
                                 <button
                                   onClick={() => debugProductOwnership(item._id)}
                                   className="p-2 bg-yellow-100 text-yellow-600 rounded-lg hover:bg-yellow-200 transition-colors"
-                                  title="Debug Product"
                                 >
                                   <AlertTriangle className="w-4 h-4" />
                                 </button>
                                 <button
                                   onClick={() => emergencyFixProduct(item._id)}
                                   className="p-2 bg-purple-100 text-purple-600 rounded-lg hover:bg-purple-200 transition-colors"
-                                  title="Emergency Fix"
                                 >
                                   <Settings className="w-4 h-4" />
                                 </button>
@@ -1932,14 +1906,12 @@ const RestaurantDashboard = () => {
                               <button
                                 onClick={() => debugProductOwnership(item._id)}
                                 className="p-2 bg-yellow-100 text-yellow-600 rounded-lg hover:bg-yellow-200 transition-colors"
-                                title="Debug Product"
                               >
                                 <AlertTriangle className="w-4 h-4" />
                               </button>
                               <button
                                 onClick={() => emergencyFixProduct(item._id)}
                                 className="p-2 bg-purple-100 text-purple-600 rounded-lg hover:bg-purple-200 transition-colors"
-                                title="Emergency Fix"
                               >
                                 <Settings className="w-4 h-4" />
                               </button>
@@ -1967,7 +1939,6 @@ const RestaurantDashboard = () => {
                 </div>
               )}
 
-              {/* Earnings Tab */}
               {activeTab === 'earnings' && (
                 <div>
                   <h2 className="text-xl font-bold text-red-800 mb-6">Earnings Overview</h2>
@@ -2037,7 +2008,6 @@ const RestaurantDashboard = () => {
         </div>
       </div>
 
-      {/* Add Product Modal */}
       {showAddProduct && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full max-h-[90vh] overflow-y-auto">
@@ -2153,7 +2123,6 @@ const RestaurantDashboard = () => {
         </div>
       )}
 
-      {/* Edit Product Modal */}
       {showEditProduct && editingProduct && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full max-h-[90vh] overflow-y-auto">
@@ -2281,7 +2250,6 @@ const RestaurantDashboard = () => {
         </div>
       )}
 
-      {/* Reports Modal */}
       {showReports && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
@@ -2348,7 +2316,6 @@ const RestaurantDashboard = () => {
         </div>
       )}
 
-      {/* Rider Assignment Modal */}
       {showRiderAssignment && selectedOrderForRider && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full max-h-[90vh] overflow-y-auto">
@@ -2404,7 +2371,6 @@ const RestaurantDashboard = () => {
         </div>
       )}
 
-      {/* Profile Modal */}
       {showProfile && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
@@ -2593,7 +2559,6 @@ const RestaurantDashboard = () => {
         </div>
       )}
 
-      {/* Order Details Modal */}
       {showOrderDetails && selectedOrder && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
