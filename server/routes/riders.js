@@ -1,23 +1,23 @@
-// routes/riders.js
 const express = require('express');
 const router = express.Router();
 const { auth, requireRole } = require('../middleware/auth');
-const User = require('../models/User');
+const Rider = require('../models/Rider'); // ✅ FIXED: Use Rider model, not User
 const Order = require('../models/Order');
 
-// ✅ ADD THIS: Get all online riders (for restaurant to assign)
+// ✅ FIXED: Get all online riders (for restaurant to assign)
 router.get('/active', auth, requireRole(['restaurant']), async (req, res) => {
   try {
     console.log('🔎 Fetching active riders for restaurant:', req.user._id);
     
-    const riders = await User.find({ 
-      role: 'rider',
+    // ✅ FIXED: Query Rider model with proper population
+    const riders = await Rider.find({ 
       status: 'online',
-      isActive: true
-    }).select('name phone vehicleType licensePlate rating status location');
-    
+      isActive: true,
+      isVerified: true
+    }).select('name phone vehicleType licensePlate rating status location totalDeliveries');
+
     console.log(`✅ Found ${riders.length} active riders`);
-    
+
     res.json({ 
       success: true, 
       count: riders.length,
@@ -28,6 +28,7 @@ router.get('/active', auth, requireRole(['restaurant']), async (req, res) => {
         vehicleType: r.vehicleType || 'Motorcycle',
         licensePlate: r.licensePlate || 'N/A',
         rating: r.rating || 5.0,
+        totalDeliveries: r.totalDeliveries || 0,
         status: r.status,
         location: r.location
       }))
@@ -41,15 +42,66 @@ router.get('/active', auth, requireRole(['restaurant']), async (req, res) => {
   }
 });
 
+// ✅ NEW: Get nearby riders based on restaurant location
+router.get('/nearby', auth, requireRole(['restaurant']), async (req, res) => {
+  try {
+    const { longitude, latitude, maxDistance = 10000 } = req.query; // maxDistance in meters (default 10km)
+    
+    if (!longitude || !latitude) {
+      return res.status(400).json({
+        success: false,
+        message: 'Longitude and latitude required'
+      });
+    }
+
+    const riders = await Rider.find({
+      status: 'online',
+      isActive: true,
+      location: {
+        $near: {
+          $geometry: {
+            type: 'Point',
+            coordinates: [parseFloat(longitude), parseFloat(latitude)]
+          },
+          $maxDistance: parseInt(maxDistance)
+        }
+      }
+    }).select('name phone vehicleType licensePlate rating status location totalDeliveries');
+
+    res.json({
+      success: true,
+      count: riders.length,
+      riders: riders.map(r => ({
+        _id: r._id,
+        name: r.name,
+        phone: r.phone,
+        vehicleType: r.vehicleType,
+        licensePlate: r.licensePlate,
+        rating: r.rating,
+        totalDeliveries: r.totalDeliveries,
+        status: r.status,
+        location: r.location,
+        distance: r.distance // Will be available if using $near
+      }))
+    });
+  } catch (error) {
+    console.error('❌ Error fetching nearby riders:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch nearby riders: ' + error.message
+    });
+  }
+});
+
 // Get rider profile and status
 router.get('/profile', auth, requireRole(['rider']), async (req, res) => {
   try {
-    const rider = await User.findById(req.user._id).select('-password');
+    const rider = await Rider.findOne({ user: req.user._id });
     
     if (!rider) {
       return res.status(404).json({ 
         success: false, 
-        message: 'Rider not found' 
+        message: 'Rider profile not found' 
       });
     }
 
@@ -63,7 +115,11 @@ router.get('/profile', auth, requireRole(['rider']), async (req, res) => {
         status: rider.status || 'offline',
         vehicleType: rider.vehicleType,
         licensePlate: rider.licensePlate,
-        isActive: rider.isActive
+        isActive: rider.isActive,
+        isVerified: rider.isVerified,
+        rating: rider.rating,
+        totalDeliveries: rider.totalDeliveries,
+        location: rider.location
       }
     });
   } catch (error) {
@@ -75,26 +131,26 @@ router.get('/profile', auth, requireRole(['rider']), async (req, res) => {
   }
 });
 
-// Update rider status (online/offline)
+// Update rider status (online/offline/busy)
 router.put('/status', auth, requireRole(['rider']), async (req, res) => {
   try {
     const { status } = req.body;
     
-    if (!['online', 'offline'].includes(status)) {
+    if (!['online', 'offline', 'busy'].includes(status)) {
       return res.status(400).json({ 
         success: false, 
-        message: 'Invalid status. Must be: online or offline' 
+        message: 'Invalid status. Must be: online, offline, or busy' 
       });
     }
 
-    const rider = await User.findByIdAndUpdate(
-      req.user._id,
+    const rider = await Rider.findOneAndUpdate(
+      { user: req.user._id },
       { 
         status,
         lastActive: new Date()
       },
       { new: true }
-    ).select('-password');
+    );
 
     if (!rider) {
       return res.status(404).json({ 
@@ -131,17 +187,17 @@ router.put('/location', auth, requireRole(['rider']), async (req, res) => {
       });
     }
 
-    const rider = await User.findByIdAndUpdate(
-      req.user._id,
+    const rider = await Rider.findOneAndUpdate(
+      { user: req.user._id },
       { 
         location: {
           type: 'Point',
-          coordinates: [longitude, latitude]
+          coordinates: [parseFloat(longitude), parseFloat(latitude)]
         },
         lastLocationUpdate: new Date()
       },
       { new: true }
-    ).select('-password');
+    );
 
     if (!rider) {
       return res.status(404).json({ 
@@ -154,7 +210,8 @@ router.put('/location', auth, requireRole(['rider']), async (req, res) => {
     
     res.json({ 
       success: true, 
-      message: 'Location updated successfully' 
+      message: 'Location updated successfully',
+      location: rider.location
     });
   } catch (error) {
     console.error('Error updating rider location:', error);
@@ -168,11 +225,14 @@ router.put('/location', auth, requireRole(['rider']), async (req, res) => {
 // Get rider earnings
 router.get('/earnings', auth, requireRole(['rider']), async (req, res) => {
   try {
-    const riderId = req.user._id;
+    const rider = await Rider.findOne({ user: req.user._id });
+    if (!rider) {
+      return res.status(404).json({ success: false, message: 'Rider not found' });
+    }
     
     // Get completed deliveries for this rider
     const completedOrders = await Order.find({
-      rider: riderId,
+      rider: rider._id,
       status: 'delivered'
     }).sort({ deliveredAt: -1 });
 
@@ -215,7 +275,7 @@ router.get('/earnings', auth, requireRole(['rider']), async (req, res) => {
       completedDeliveries: completedOrders.length
     };
 
-    console.log(`💰 Earnings calculated for rider ${riderId}:`, earnings);
+    console.log(`💰 Earnings calculated for rider ${rider._id}:`, earnings);
     
     res.json({ 
       success: true, 
@@ -233,15 +293,18 @@ router.get('/earnings', auth, requireRole(['rider']), async (req, res) => {
 // Get rider statistics
 router.get('/stats', auth, requireRole(['rider']), async (req, res) => {
   try {
-    const riderId = req.user._id;
+    const rider = await Rider.findOne({ user: req.user._id });
+    if (!rider) {
+      return res.status(404).json({ success: false, message: 'Rider not found' });
+    }
     
     const totalDeliveries = await Order.countDocuments({ 
-      rider: riderId, 
+      rider: rider._id, 
       status: 'delivered' 
     });
     
     const pendingDeliveries = await Order.countDocuments({ 
-      rider: riderId, 
+      rider: rider._id, 
       status: { $in: ['assigned', 'out_for_delivery'] } 
     });
     
@@ -249,7 +312,7 @@ router.get('/stats', auth, requireRole(['rider']), async (req, res) => {
     todayStart.setHours(0, 0, 0, 0);
     
     const todayDeliveries = await Order.countDocuments({ 
-      rider: riderId, 
+      rider: rider._id, 
       status: 'delivered',
       deliveredAt: { $gte: todayStart }
     });
@@ -258,7 +321,8 @@ router.get('/stats', auth, requireRole(['rider']), async (req, res) => {
       totalDeliveries,
       pendingDeliveries,
       todayDeliveries,
-      totalEarnings: totalDeliveries * 35
+      totalEarnings: totalDeliveries * 35,
+      rating: rider.rating
     };
 
     res.json({ 
