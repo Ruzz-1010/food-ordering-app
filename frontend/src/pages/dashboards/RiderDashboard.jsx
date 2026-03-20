@@ -494,6 +494,13 @@ const RiderDashboard = () => {
     }
   };
 
+  // ✅ FIXED: Handle logout with menu closing
+  const handleLogout = () => {
+    setShowMobileMenu(false);
+    setShowNotifications(false);
+    logout();
+  };
+
   useEffect(() => {
     if (user?.role === 'rider') {
       console.log('🔥 RiderDashboard mounted for user:', user._id);
@@ -1049,7 +1056,7 @@ const RiderDashboard = () => {
           <NavItem id="earnings" icon={Wallet} label="Earnings" />
         </div>
 
-        {/* User Profile */}
+        {/* User Profile - Desktop */}
         <div className="p-4 border-t border-red-100">
           <div className="bg-gradient-to-r from-red-50 to-white rounded-xl p-4 border border-red-100">
             <div className="flex items-center gap-3 mb-3">
@@ -1061,7 +1068,7 @@ const RiderDashboard = () => {
                 <p className="text-xs text-red-500 truncate">{user.email}</p>
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-2 text-center">
+            <div className="grid grid-cols-2 gap-2 text-center mb-3">
               <div className="bg-white rounded-lg p-2 border border-red-100">
                 <p className="text-xs text-red-500">Rating</p>
                 <p className="font-bold text-red-700">4.9 ★</p>
@@ -1073,7 +1080,7 @@ const RiderDashboard = () => {
             </div>
           </div>
           <button 
-            onClick={logout}
+            onClick={handleLogout}
             className="mt-3 flex items-center justify-center gap-2 w-full p-3 rounded-xl bg-red-600 text-white hover:bg-red-700 transition-colors font-semibold text-sm shadow-lg shadow-red-200"
           >
             <LogOut className="w-4 h-4" />
@@ -1093,7 +1100,7 @@ const RiderDashboard = () => {
               </div>
               <div>
                 <h1 className="font-bold">Rider Pro</h1>
-                <p className="text-xs text-red-100">{user.name}</p>
+                <p className="text-xs text-red-100">{user.name?.split(' ')[0]}</p>
               </div>
             </div>
             <div className="flex items-center gap-2">
@@ -1115,7 +1122,7 @@ const RiderDashboard = () => {
             </div>
           </div>
           
-          {/* Status Bar */}
+          {/* Status Bar - Mobile */}
           <div className="px-4 pb-3">
             <div className={`rounded-xl p-3 ${
               riderStatus === 'online' ? 'bg-green-500' : 'bg-red-500'
@@ -1137,14 +1144,89 @@ const RiderDashboard = () => {
             </div>
           </div>
           
-          {/* Mobile Menu */}
+          {/* Mobile Menu - FIXED with logout button */}
           {showMobileMenu && (
-            <div className="absolute top-full left-0 right-0 bg-white border-b border-red-100 shadow-xl p-4 space-y-2">
-              <button onClick={() => { setActiveTab('home'); setShowMobileMenu(false); }} className="w-full text-left p-3 rounded-xl hover:bg-red-50 text-red-800 font-medium">Dashboard</button>
-              <button onClick={() => { setActiveTab('available'); setShowMobileMenu(false); }} className="w-full text-left p-3 rounded-xl hover:bg-red-50 text-red-800 font-medium">Available Orders ({available.length})</button>
-              <button onClick={() => { setActiveTab('my-deliveries'); setShowMobileMenu(false); }} className="w-full text-left p-3 rounded-xl hover:bg-red-50 text-red-800 font-medium">My Deliveries ({myDeliveries.length})</button>
-              <button onClick={() => { setActiveTab('earnings'); setShowMobileMenu(false); }} className="w-full text-left p-3 rounded-xl hover:bg-red-50 text-red-800 font-medium">Earnings</button>
-              <button onClick={loadData} className="w-full text-left p-3 rounded-xl hover:bg-red-50 text-red-800 font-medium flex items-center gap-2"><RefreshCw className="w-4 h-4" /> Refresh</button>
+            <div className="absolute top-full left-0 right-0 bg-white border-b border-red-100 shadow-xl p-4 space-y-2 z-50 max-h-[80vh] overflow-y-auto">
+              <button 
+                onClick={() => { setActiveTab('home'); setShowMobileMenu(false); }} 
+                className="w-full text-left p-3 rounded-xl hover:bg-red-50 text-red-800 font-medium flex items-center gap-3"
+              >
+                <Home className="w-5 h-5 text-red-500" />
+                Dashboard
+              </button>
+              <button 
+                onClick={() => { setActiveTab('available'); setShowMobileMenu(false); }} 
+                className="w-full text-left p-3 rounded-xl hover:bg-red-50 text-red-800 font-medium flex items-center gap-3"
+              >
+                <Package className="w-5 h-5 text-red-500" />
+                Available Orders 
+                {available.length > 0 && (
+                  <span className="ml-auto bg-red-500 text-white text-xs px-2 py-1 rounded-full">
+                    {available.length}
+                  </span>
+                )}
+              </button>
+              <button 
+                onClick={() => { setActiveTab('my-deliveries'); setShowMobileMenu(false); }} 
+                className="w-full text-left p-3 rounded-xl hover:bg-red-50 text-red-800 font-medium flex items-center gap-3"
+              >
+                <Truck className="w-5 h-5 text-red-500" />
+                My Deliveries 
+                {myDeliveries.length > 0 && (
+                  <span className="ml-auto bg-blue-500 text-white text-xs px-2 py-1 rounded-full">
+                    {myDeliveries.length}
+                  </span>
+                )}
+              </button>
+              <button 
+                onClick={() => { setActiveTab('earnings'); setShowMobileMenu(false); }} 
+                className="w-full text-left p-3 rounded-xl hover:bg-red-50 text-red-800 font-medium flex items-center gap-3"
+              >
+                <Wallet className="w-5 h-5 text-red-500" />
+                Earnings
+              </button>
+              <button 
+                onClick={loadData} 
+                className="w-full text-left p-3 rounded-xl hover:bg-red-50 text-red-800 font-medium flex items-center gap-3"
+              >
+                <RefreshCw className="w-5 h-5 text-red-500" />
+                Refresh
+              </button>
+              
+              {/* Divider */}
+              <div className="border-t border-red-100 my-2"></div>
+              
+              {/* User Info - Mobile */}
+              <div className="p-3 bg-gradient-to-r from-red-50 to-white rounded-xl border border-red-100">
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-red-500 to-red-600 flex items-center justify-center text-white font-bold">
+                    {user.name?.charAt(0) || 'R'}
+                  </div>
+                  <div>
+                    <p className="font-bold text-red-800">{user.name}</p>
+                    <p className="text-xs text-red-500">{user.email}</p>
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-2 text-center">
+                  <div className="bg-white rounded-lg p-2">
+                    <p className="text-xs text-red-500">Rating</p>
+                    <p className="font-bold text-red-700 text-sm">4.9 ★</p>
+                  </div>
+                  <div className="bg-white rounded-lg p-2">
+                    <p className="text-xs text-red-500">Deliveries</p>
+                    <p className="font-bold text-red-700 text-sm">{earnings.completedDeliveries}</p>
+                  </div>
+                </div>
+              </div>
+              
+              {/* Logout Button - Mobile */}
+              <button 
+                onClick={handleLogout}
+                className="w-full p-3 rounded-xl bg-red-600 text-white font-semibold flex items-center justify-center gap-2 hover:bg-red-700 transition-colors shadow-lg shadow-red-200 mt-2"
+              >
+                <LogOut className="w-5 h-5" />
+                Logout
+              </button>
             </div>
           )}
         </header>
@@ -1152,8 +1234,11 @@ const RiderDashboard = () => {
         {/* Notifications Panel */}
         {showNotifications && (
           <div className="absolute top-16 right-4 w-80 bg-white rounded-2xl shadow-2xl border border-red-100 z-50">
-            <div className="p-4 border-b border-red-100 bg-gradient-to-r from-red-600 to-red-700 text-white rounded-t-2xl">
+            <div className="p-4 border-b border-red-100 bg-gradient-to-r from-red-600 to-red-700 text-white rounded-t-2xl flex justify-between items-center">
               <h3 className="font-bold">Notifications</h3>
+              <button onClick={() => setShowNotifications(false)} className="text-white/80 hover:text-white">
+                <X className="w-4 h-4" />
+              </button>
             </div>
             <div className="max-h-96 overflow-y-auto">
               {notifications.length === 0 ? (
